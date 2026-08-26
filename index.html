@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Investment Projection Calculator</title>
+<link rel="stylesheet" href="styles.css">
+<!-- Blocking on purpose: stamps the theme before first paint. -->
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Investment Projection Calculator</h1>
+  <div class="topbar-actions">
+    <div class="theme-toggle" id="theme-toggle" role="group" aria-label="Color theme">
+      <button type="button" data-theme-choice="light" title="Light theme">Light</button>
+      <button type="button" data-theme-choice="dark" title="Dark theme">Dark</button>
+      <button type="button" data-theme-choice="system" title="Follow the system setting">Auto</button>
+    </div>
+    <button id="reset-btn" class="btn btn-ghost" type="button">Reset</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <section class="panel setup" aria-labelledby="setup-h">
+    <h2 id="setup-h">Setup</h2>
+
+    <label class="field">
+      <span class="field-label">Starting amount</span>
+      <span class="money">
+        <span class="affix">$</span>
+        <input id="starting-amount" type="number" min="0" step="100" inputmode="decimal">
+      </span>
+    </label>
+
+    <div class="periods-head">
+      <h3>Periods</h3>
+      <p class="hint">Each period picks up where the previous one ended.</p>
+    </div>
+
+    <ol id="period-list" class="period-list"></ol>
+    <p id="period-empty" class="empty-note" hidden>No periods yet — add one to start projecting.</p>
+
+    <button id="add-period" class="btn btn-primary" type="button">+ Add period</button>
+  </section>
+
+  <section class="panel results" aria-labelledby="results-h">
+    <h2 id="results-h" class="sr-only">Results</h2>
+
+    <div class="hero">
+      <div class="hero-label">Final amount</div>
+      <div class="hero-value" id="final-amount">$0.00</div>
+      <div class="hero-sub" id="final-sub">after 0 mo</div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-label">Total paid in</div>
+        <div class="kpi-value" id="kpi-contributed">$0.00</div>
+        <div class="kpi-note" id="kpi-contributed-note">starting amount + contributions</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total growth</div>
+        <div class="kpi-value" id="kpi-growth">$0.00</div>
+        <div class="kpi-note" id="kpi-growth-note">&nbsp;</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Duration</div>
+        <div class="kpi-value" id="kpi-duration">0 mo</div>
+        <div class="kpi-note" id="kpi-duration-note">&nbsp;</div>
+      </div>
+    </div>
+
+    <figure class="chart-block">
+      <figcaption class="chart-title">Projected balance</figcaption>
+      <div id="chart" class="chart"></div>
+      <div id="legend" class="legend"></div>
+    </figure>
+
+    <div class="table-wrap">
+      <table class="breakdown">
+        <caption class="sr-only">Per-period breakdown</caption>
+        <thead>
+          <tr>
+            <th scope="col">Period</th>
+            <th scope="col" class="num">Length</th>
+            <th scope="col" class="num">Rate</th>
+            <th scope="col" class="num">Paid in</th>
+            <th scope="col" class="num">Growth</th>
+            <th scope="col" class="num">Balance at end</th>
+          </tr>
+        </thead>
+        <tbody id="breakdown-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script src="js/calc.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

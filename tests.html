@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>calc.js tests</title>
+<style>
+  :root { color-scheme: light dark; --surface: #fcfcfb; --ink: #0b0b0b; --muted: #52514e;
+          --line: #e1e0d9; --pass: #006300; --fail: #d03b3b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --surface: #1a1a19; --ink: #fff; --muted: #c3c2b7; --line: #2c2c2a;
+            --pass: #0ca30c; --fail: #e66767; }
+  }
+  body { margin: 0; padding: 32px; background: var(--surface); color: var(--ink);
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  #summary { color: var(--muted); margin-bottom: 20px; }
+  #summary.fail { color: var(--fail); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; max-width: 900px; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.status { width: 60px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  tr.pass .status { color: var(--pass); }
+  tr.fail .status { color: var(--fail); }
+  td.detail { color: var(--fail); font-family: ui-monospace, monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>calc.js tests</h1>
+  <div id="summary">running…</div>
+  <table><tbody id="rows"></tbody></table>
+
+  <script src="js/calc.js"></script>
+  <script src="js/calc.test.js"></script>
+  <script>
+    (function () {
+      var results = window.CalcTests.results;
+      var rows = document.getElementById('rows');
+      var failed = 0;
+
+      results.forEach(function (r) {
+        if (!r.pass) failed++;
+        var tr = document.createElement('tr');
+        tr.className = r.pass ? 'pass' : 'fail';
+        var status = document.createElement('td');
+        status.className = 'status';
+        status.textContent = r.pass ? 'PASS' : 'FAIL';
+        var name = document.createElement('td');
+        name.textContent = r.name;
+        var detail = document.createElement('td');
+        detail.className = 'detail';
+        detail.textContent = r.detail;
+        tr.appendChild(status); tr.appendChild(name); tr.appendChild(detail);
+        rows.appendChild(tr);
+      });
+
+      var summary = document.getElementById('summary');
+      summary.textContent = failed === 0
+        ? results.length + ' tests, all passing.'
+        : failed + ' of ' + results.length + ' tests FAILING.';
+      if (failed) summary.className = 'fail';
+    })();
+  </script>
+</body>
+</html>
