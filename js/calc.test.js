@@ -193,5 +193,31 @@
     close(sum, r.totals.totalGrowth, 1e-6, 'per-period growth sums to total');
   });
 
+  // --- 4% rule ----------------------------------------------------------
+  test('4% rule: 1,000,000 supports 40,000 a year', function () {
+    var w = Calc.safeWithdrawal(1000000);
+    close(w.perYear, 40000, 1e-9, 'per year');
+    close(w.perMonth, 40000 / 12, 1e-9, 'per month');
+  });
+
+  test('4% rule: the rate is overridable', function () {
+    close(Calc.safeWithdrawal(1000000, 3.5).perYear, 35000, 1e-9, 'per year at 3.5%');
+    close(Calc.safeWithdrawal(1000000, 0).perYear, 0, 0, 'per year at 0%');
+  });
+
+  test('4% rule: junk amounts are zero, not NaN', function () {
+    close(Calc.safeWithdrawal(undefined).perYear, 0, 0, 'undefined amount');
+    close(Calc.safeWithdrawal('abc').perMonth, 0, 0, 'string amount');
+    close(Calc.safeWithdrawal(1000, 'abc').perYear, 0, 0, 'junk rate');
+  });
+
+  test('4% rule reads the projected final amount', function () {
+    var r = Calc.project({
+      startingAmount: 100000,
+      periods: [period({ months: 12, monthlyContribution: 0, annualRatePercent: 0 })]
+    });
+    close(Calc.safeWithdrawal(r.totals.finalAmount).perYear, 4000, 1e-9, 'per year');
+  });
+
   global.CalcTests = { results: results };
 })(window);

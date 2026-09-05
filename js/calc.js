@@ -9,6 +9,9 @@
   // 100 years. Keeps the point count and the arithmetic sane.
   var MAX_TOTAL_MONTHS = 1200;
 
+  // The "4% rule" — the conventional first-year safe withdrawal rate.
+  var SAFE_WITHDRAWAL_PERCENT = 4;
+
   function num(v) {
     var n = Number(v);
     return isFinite(n) ? n : 0;
@@ -29,6 +32,15 @@
   // What the nominal rate actually earns over a year, once compounding applies.
   function effectiveAnnualYield(annualRatePercent, compounding) {
     return Math.pow(monthlyGrowthFactor(annualRatePercent, compounding), 12) - 1;
+  }
+
+  /* What a balance supports under the 4% rule: 4% of it in the first year,
+     split evenly across the months. Not a projection — a rule of thumb applied
+     to one number, so it takes an amount rather than the whole state. */
+  function safeWithdrawal(amount, ratePercent) {
+    var rate = (ratePercent === undefined ? SAFE_WITHDRAWAL_PERCENT : num(ratePercent)) / 100;
+    var perYear = num(amount) * rate;
+    return { perYear: perYear, perMonth: perYear / 12 };
   }
 
   /* project(state) -> { points, perPeriod, totals }
@@ -94,7 +106,9 @@
     project: project,
     monthlyGrowthFactor: monthlyGrowthFactor,
     effectiveAnnualYield: effectiveAnnualYield,
+    safeWithdrawal: safeWithdrawal,
     MAX_TOTAL_MONTHS: MAX_TOTAL_MONTHS,
+    SAFE_WITHDRAWAL_PERCENT: SAFE_WITHDRAWAL_PERCENT,
     PER_YEAR: PER_YEAR
   };
 })(window);

@@ -54,6 +54,10 @@ curve smooth.
 Periods run back to back: each one starts from the balance the previous one ended on. Negative
 rates are allowed (useful for modelling a downturn). Total duration caps at 100 years.
 
+Under the chart, a line applies the **4% rule** to the final balance: 4% of it in the first year,
+split across 12 months. It is a retirement rule of thumb (Bengen, 1994; the Trinity study, 1998),
+shown as a rough guide — the math is `Calc.safeWithdrawal`, and the rate is overridable.
+
 ## Notes
 
 - Your setup auto-saves to `localStorage`; **Reset** restores the example projection.

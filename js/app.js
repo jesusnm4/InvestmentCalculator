@@ -25,6 +25,7 @@
     durationNote:   document.getElementById('kpi-duration-note'),
     chart:          document.getElementById('chart'),
     legend:         document.getElementById('legend'),
+    withdrawal:     document.getElementById('withdrawal-note'),
     tbody:          document.getElementById('breakdown-body')
   };
 
@@ -196,10 +197,30 @@
       }
     });
 
+    renderWithdrawal(t.finalAmount);
     renderLegend(projection);
     renderTable(projection);
     Chart.render(el.chart, projection, { periods: periodMeta() });
     lastChartWidth = el.chart.clientWidth;
+  }
+
+  /* The 4% rule, applied to whatever the projection ends on. Nothing to say
+     when the balance never gets above zero. */
+  function renderWithdrawal(finalAmount) {
+    if (!(finalAmount > 0)) { el.withdrawal.hidden = true; return; }
+
+    var w = Calc.safeWithdrawal(finalAmount);
+    el.withdrawal.hidden = false;
+    el.withdrawal.innerHTML =
+      '<span class="lede">Under the ' + Calc.SAFE_WITHDRAWAL_PERCENT + '% rule, ' +
+        Chart.money0.format(finalAmount) + ' would support about ' +
+        '<strong>' + Chart.money0.format(w.perYear) + ' a year</strong> — roughly ' +
+        '<strong>' + Chart.money2.format(w.perMonth) + ' a month</strong>.</span> ' +
+      'The ' + Calc.SAFE_WITHDRAWAL_PERCENT + '% rule is a retirement rule of thumb ' +
+      '(Bengen, 1994; the Trinity study, 1998): withdraw ' + Calc.SAFE_WITHDRAWAL_PERCENT +
+      '% of the balance in the first year, then adjust that dollar amount for inflation ' +
+      'each year after. Historically that has lasted a 30-year retirement — it assumes a ' +
+      'stock-and-bond portfolio and is a rough guide, not a guarantee.';
   }
 
   function renderLegend(projection) {
