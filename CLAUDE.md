@@ -58,12 +58,31 @@ up the chain — `calc.js` must stay DOM-free so `tests.html` can load it standa
 (`-1` for month 0, the starting amount). `perPeriod[i]` carries `startMonth`/`endMonth` offsets into
 `points`, plus `truncated` when the 1200-month (100-year) global cap clipped that period.
 
+**Extras** (`state.windfalls` — the UI says "extras", the code still says windfalls) are lump sums
+anchored to *absolute* months, independent of the period list, summed when several share a month and
+applied at month end like a contribution. An extra may repeat: `repeatEvery` months from `atMonth`
+until `repeatUntil`, or to the end of the timeline when that is null. `Calc.windfallMonths(w, horizon)`
+is the single source of truth for which months an extra lands on — the projection math and the chart
+markers both read it, so they can never disagree. The
+accounting is the part to be careful with: `totals.totalContributed` means *everything paid in* and
+must include them, or `totalGrowth` silently absorbs the lump sum. `perPeriod[i].contributed` stays
+monthly-contributions-only, with one-offs in a sibling `perPeriod[i].windfalls`, so the invariant
+`growth = endBalance - startBalance - contributed - windfalls` holds. Anything scheduled past the
+end never lands and comes back in `unappliedWindfalls` (indices) rather than being dropped silently;
+for a repeat that means its *first* occurrence, since later ones falling off the end are expected.
+
 **Rates** are nominal annual (APR); compounding (`daily`/`monthly`/`yearly` → f = 365/12/1) decides
 how often it is credited. The simulation steps monthly with
 `factor = (1 + r/f)^(f/12)`, contribution at month end (ordinary annuity). Yearly compounding is
 deliberately spread geometrically across the 12 months instead of credited in one lump — same value
 at each year boundary, smooth curve. Negative rates are supported; `monthlyGrowthFactor` returns 0
 when the rate is negative enough to make the base non-positive.
+
+**Extras are shape-coded, never color-coded.** Hue is already spoken for — it means *which period* —
+so `Chart.shapeMark`/`Chart.shapeGlyph` draw the four marker shapes in neutral `INK` tones, and each
+extra owns a stable `shapeSlot` the way a period owns a `colorSlot` (stored, not derived from
+position, so deleting one does not reshuffle the rest). If you add a visual channel for extras, do
+not reach for `PALETTE`.
 
 **Color is owned by `js/chart.js`**, not CSS. `PALETTE.light` / `PALETTE.dark` are eight hues
 pre-validated to stay distinguishable under colorblindness in both themes; the dark column is the

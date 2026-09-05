@@ -44,6 +44,16 @@
     <p id="period-empty" class="empty-note" hidden>No periods yet — add one to start projecting.</p>
 
     <button id="add-period" class="btn btn-primary" type="button">+ Add period</button>
+
+    <div class="periods-head windfall-head">
+      <h3>Extra amounts</h3>
+      <p class="hint">A lump sum on top of the monthly contributions — once, or repeating. Use a negative amount for a large planned expense.</p>
+    </div>
+
+    <ol id="windfall-list" class="windfall-list"></ol>
+    <p id="windfall-empty" class="empty-note" hidden>No extras — the balance just follows the periods.</p>
+
+    <button id="add-windfall" class="btn btn-block" type="button">+ Add extra</button>
   </section>
 
   <section class="panel results" aria-labelledby="results-h">
@@ -77,6 +87,7 @@
       <figcaption class="chart-title">Projected balance</figcaption>
       <div id="chart" class="chart"></div>
       <div id="legend" class="legend"></div>
+      <div id="extras-legend" class="extras-legend" hidden></div>
       <p id="withdrawal-note" class="withdrawal-note" hidden></p>
     </figure>
 
@@ -89,6 +100,7 @@
             <th scope="col" class="num">Length</th>
             <th scope="col" class="num">Rate</th>
             <th scope="col" class="num">Paid in</th>
+            <th scope="col" class="num">Extras</th>
             <th scope="col" class="num">Growth</th>
             <th scope="col" class="num">Balance at end</th>
           </tr>

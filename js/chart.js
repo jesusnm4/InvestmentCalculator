@@ -18,6 +18,12 @@
     dark:  { grid: '#2c2c2a', axis: '#383835', muted: '#898781', surface: '#1a1a19' }
   };
 
+  /* Extras are events, not series, so they must not borrow the period palette —
+     hue already means "which period". Shape is the conventional second channel
+     when hue is taken, and it survives both themes and greyscale. Four is the
+     practical limit at marker size; past that they stop being tellable apart. */
+  var SHAPE_NAMES = ['Circle', 'Square', 'Triangle', 'Diamond'];
+
   var gradSeq = 0;
 
   // theme.js owns the decision and stamps it on <html>; just read it.
@@ -30,6 +36,42 @@
     var c = colors();
     var n = Math.max(0, Math.floor(Number(slot) || 0));
     return c[n % c.length];
+  }
+
+  /* One marker glyph, centred on (cx, cy). Radii are tuned so the four read as
+     the same visual weight rather than the same bounding box. */
+  function shapeMark(slot, cx, cy, r, fill, stroke, sw) {
+    var n = Math.max(0, Math.floor(Number(slot) || 0)) % SHAPE_NAMES.length;
+    var attrs = ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw +
+                '" stroke-linejoin="round"';
+    if (n === 1) {
+      var h = r * 0.9;
+      return '<rect x="' + (cx - h).toFixed(2) + '" y="' + (cy - h).toFixed(2) +
+             '" width="' + (h * 2).toFixed(2) + '" height="' + (h * 2).toFixed(2) + '"' + attrs + '/>';
+    }
+    if (n === 2) {
+      var t = r * 1.25;
+      return '<polygon points="' + cx.toFixed(2) + ',' + (cy - t).toFixed(2) + ' ' +
+             (cx + t * 0.92).toFixed(2) + ',' + (cy + t * 0.72).toFixed(2) + ' ' +
+             (cx - t * 0.92).toFixed(2) + ',' + (cy + t * 0.72).toFixed(2) + '"' + attrs + '/>';
+    }
+    if (n === 3) {
+      var d = r * 1.3;
+      return '<polygon points="' + cx.toFixed(2) + ',' + (cy - d).toFixed(2) + ' ' +
+             (cx + d).toFixed(2) + ',' + cy.toFixed(2) + ' ' +
+             cx.toFixed(2) + ',' + (cy + d).toFixed(2) + ' ' +
+             (cx - d).toFixed(2) + ',' + cy.toFixed(2) + '"' + attrs + '/>';
+    }
+    return '<circle cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r="' + r.toFixed(2) + '"' + attrs + '/>';
+  }
+
+  // The same glyph standalone, for the legend key.
+  function shapeGlyph(slot, size) {
+    var C = ink();
+    var s = size || 11, c = s / 2;
+    return '<svg class="extra-glyph" width="' + s + '" height="' + s +
+           '" viewBox="0 0 ' + s + ' ' + s + '" aria-hidden="true">' +
+           shapeMark(slot, c, c, s * 0.27, C.surface, C.muted, 1.6) + '</svg>';
   }
 
   var money0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -78,8 +120,9 @@
   }
 
   /* render(container, projection, opts)
-       opts.periods : [{ name, colorSlot }] — for tooltip labels and colors
-       opts.height  : plot height in px (default 320) */
+       opts.periods   : [{ name, colorSlot }] — for tooltip labels and colors
+       opts.windfalls : [{ name, atMonth, amount }] — one marker per occurrence
+       opts.height    : plot height in px (default 320) */
   function render(container, projection, opts) {
     opts = opts || {};
     var periods = opts.periods || [];
@@ -167,6 +210,29 @@
                      '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>');
     }
 
+    /* Extra markers, one per occurrence. Neutral ink, never the series palette —
+       a swatch color would read as "another period". The stem sits under the
+       balance line, the dot on top of it.
+
+       A repeat can produce dozens of occurrences, and that many stems would bury
+       the curve, so past STEM_LIMIT the markers drop to bare dots. */
+    var wf = opts.windfalls || [];
+    var STEM_LIMIT = 12;
+    var stems = wf.length <= STEM_LIMIT;
+    // Shape needs size to read at all; the dense case gives up some of it.
+    var markR = stems ? 4.5 : 3.2;
+    var wfDots = [];
+    for (var wi = 0; wi < wf.length; wi++) {
+      var wm = Math.max(0, Math.min(maxMonth, Math.floor(Number(wf[wi].atMonth) || 0)));
+      if (!points[wm]) continue;
+      var wx = x(wm), wy = y(points[wm].balance);
+      if (stems) {
+        svg.push('<line x1="' + wx.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + wx.toFixed(2) +
+                 '" y2="' + wy.toFixed(2) + '" stroke="' + C.muted + '" stroke-width="1" stroke-dasharray="3 3"/>');
+      }
+      wfDots.push(shapeMark(wf[wi].shapeSlot, wx, wy, markR, C.surface, C.muted, 2));
+    }
+
     // Surface-colored divider at each handoff: reads as the boundary and keeps
     // adjacent fills from bleeding together.
     for (var b = 1; b < segs.length; b++) {
@@ -178,6 +244,7 @@
     }
 
     svg.push(lineParts.join(''));
+    svg.push(wfDots.join(''));
 
     // --- axes ---
     svg.push('<line x1="' + m.l + '" y1="' + yBase + '" x2="' + (m.l + plotW) + '" y2="' + yBase +
@@ -199,8 +266,14 @@
     svg.push('</svg>');
 
     container.innerHTML = svg.join('') + '<div class="chart-tooltip" hidden></div>';
+    var wfByMonth = {};
+    for (var wj = 0; wj < wf.length; wj++) {
+      var wjm = Math.max(0, Math.floor(Number(wf[wj].atMonth) || 0));
+      (wfByMonth[wjm] = wfByMonth[wjm] || []).push(wf[wj]);
+    }
+
     container.__chart = { m: m, plotW: plotW, plotH: plotH, maxMonth: maxMonth, x: x, y: y,
-                         points: points, periods: periods, width: width };
+                         points: points, periods: periods, windfalls: wfByMonth, width: width };
     attachHover(container);
   }
 
@@ -234,7 +307,11 @@
         '<div class="tip-value">' + esc(money2.format(pt.balance)) + '</div>' +
         (period
           ? '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>' + esc(period.name || ('Period ' + (pt.periodIndex + 1))) + '</div>'
-          : '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>Starting amount</div>');
+          : '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>Starting amount</div>') +
+        (ctx.windfalls[month] || []).map(function (w) {
+          return '<div class="tip-windfall">' + esc(money2.format(w.amount)) + ' &middot; ' +
+                 esc(w.name || 'one-off') + '</div>';
+        }).join('');
       tip.hidden = false;
 
       // Flip to the left of the crosshair when it would overflow the container.
@@ -263,6 +340,9 @@
     colorNames: COLOR_NAMES,
     slotCount: PALETTE.light.length,
     isDark: isDark,
+    shapeGlyph: shapeGlyph,
+    shapeNames: SHAPE_NAMES,
+    shapeCount: SHAPE_NAMES.length,
     durationLabel: durationLabel,
     money0: money0,
     money2: money2,

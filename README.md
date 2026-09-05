@@ -29,7 +29,7 @@ Open **`tests.html`** in a browser. It runs the assertions in `js/calc.test.js` 
 | `index.html` | Page markup |
 | `styles.css` | Layout and light/dark tokens |
 | `js/theme.js` | Resolves light/dark/system and stamps it on `<html>` |
-| `js/calc.js` | The projection math — pure functions, no DOM |
+| `js/calc.js` | The projection math (periods, one-offs) — pure functions, no DOM |
 | `js/chart.js` | Hand-rolled SVG chart + the color palette |
 | `js/app.js` | State, form wiring, `localStorage`, results rendering |
 | `tests.html`, `js/calc.test.js` | In-browser test runner |
@@ -53,6 +53,24 @@ curve smooth.
 
 Periods run back to back: each one starts from the balance the previous one ended on. Negative
 rates are allowed (useful for modelling a downturn). Total duration caps at 100 years.
+
+**Extra amounts** sit alongside the periods: a named lump sum on top of the monthly contributions
+— an inheritance, a bonus, or (with a negative amount) a large planned expense. Tick **Repeat** to
+make it recur every N months, optionally stopping at a given month; leave the end empty and it runs
+to the end of the projection.
+
+Extras are anchored to *absolute* months, so one stays where you put it when periods are edited or
+reordered; it simply falls inside whichever period covers that month. Each lands at month end, like
+a contribution, and grows from the next month on. An extra whose first occurrence is past the end of
+the projection never lands and says so — later occurrences running off the end are simply ignored.
+The chart marks every occurrence, and the breakdown gives extras their own column so they are never
+mistaken for growth.
+
+Extras are marked by **shape** — circle, square, triangle, diamond — not by color. Color in this
+chart means "which period", and reusing it would make a marker read as another period. Shape is the
+conventional second channel when hue is taken, and it stays readable in both themes, in greyscale,
+and under colorblindness. A quiet key under the period legend names each extra and its schedule, in
+chart order. Four shapes cycle, which is about the limit at which they stay tellable apart.
 
 Under the chart, a line applies the **4% rule** to the final balance: 4% of it in the first year,
 split across 12 months. It is a retirement rule of thumb (Bengen, 1994; the Trinity study, 1998),
