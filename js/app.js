@@ -417,7 +417,23 @@
       el.tbody.innerHTML = '<tr class="empty"><td colspan="7">Add a period to see the breakdown.</td></tr>';
       return;
     }
-    var rows = projection.perPeriod.map(function (pp, i) {
+    /* The starting amount (plus any extra at month 0) gets its own row, so the
+       Paid in and Extras columns each sum to their Total. */
+    var t = projection.totals;
+    var startExtras = t.totalWindfalls - projection.perPeriod.reduce(function (sum, pp) {
+      return sum + pp.windfalls;
+    }, 0);
+    var rows = ['<tr class="start-row">' +
+      '<td>Starting amount</td>' +
+      '<td class="num">&mdash;</td>' +
+      '<td class="num">&mdash;</td>' +
+      '<td class="num">' + Chart.money0.format(t.startingAmount) + '</td>' +
+      '<td class="num ' + extraSign(startExtras) + '">' + extraText(startExtras) + '</td>' +
+      '<td class="num">&mdash;</td>' +
+      '<td class="num">' + Chart.money0.format(projection.points[0].balance) + '</td>' +
+    '</tr>'];
+
+    rows = rows.concat(projection.perPeriod.map(function (pp, i) {
       var p = state.periods[i];
       var sign = pp.growth < 0 ? 'neg' : pp.growth > 0 ? 'pos' : '';
       return '<tr>' +
@@ -431,9 +447,8 @@
         '<td class="num ' + sign + '">' + Chart.money0.format(pp.growth) + '</td>' +
         '<td class="num">' + Chart.money0.format(pp.endBalance) + '</td>' +
       '</tr>';
-    });
+    }));
 
-    var t = projection.totals;
     rows.push('<tr class="total-row">' +
       '<td>Total</td>' +
       '<td class="num">' + Chart.durationLabel(t.totalMonths) + '</td>' +

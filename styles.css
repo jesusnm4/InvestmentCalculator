@@ -304,4 +304,5 @@ input:focus-visible, select:focus-visible, button:focus-visible {
                           border-radius: 3px; margin-right: 8px; vertical-align: baseline; }
 .breakdown .pos { color: var(--good); }
 .breakdown .neg { color: var(--bad); }
+.breakdown .start-row td:first-child { color: var(--ink-2); }
 .breakdown .empty td { color: var(--muted); text-align: center; padding: 20px; }
