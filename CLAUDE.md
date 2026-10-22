@@ -56,7 +56,13 @@ up the chain — `calc.js` must stay DOM-free so `tests.html` can load it standa
 **`Calc.project(state)`** returns `{ points, perPeriod, totals }`. `points` is indexed by month
 (`points[m].month === m`), so consumers can index it directly; each point carries a `periodIndex`
 (`-1` for month 0, the starting amount). `perPeriod[i]` carries `startMonth`/`endMonth` offsets into
-`points`, plus `truncated` when the 1200-month (100-year) global cap clipped that period.
+`points`, plus `truncated` when the 1200-month (100-year) global cap clipped that period. Each point
+also records the month's inflows (`contribution`, `extra`), and `totals.depletedAt` is the first month
+the balance goes below zero (or `null`). `Calc.inTodaysDollars(projection, inflationPercent)` returns
+the same shape restated in today's dollars, discounting each flow by its month so
+`growth = end - start - contributed - windfalls` still holds; it returns the input unchanged at 0%.
+
+**Seasons** are the UI's name for periods (`state.periods`); the code keeps "period".
 
 **Extras** (`state.windfalls` — the UI says "extras", the code still says windfalls) are lump sums
 anchored to *absolute* months, independent of the period list, summed when several share a month and
@@ -66,8 +72,19 @@ is the single source of truth for which months an extra lands on — the project
 markers both read it, so they can never disagree. The
 accounting is the part to be careful with: `totals.totalContributed` means *everything paid in* and
 must include them, or `totalGrowth` silently absorbs the lump sum. `perPeriod[i].contributed` stays
-monthly-contributions-only, with one-offs in a sibling `perPeriod[i].windfalls`, so the invariant
-`growth = endBalance - startBalance - contributed - windfalls` holds. Anything scheduled past the
+monthly-savings-only (never negative), withdrawals sit in `perPeriod[i].withdrawn` (positive), and
+one-offs in a sibling `perPeriod[i].windfalls`, so the invariant
+`growth = endBalance - startBalance - contributed + withdrawn - windfalls` holds (and in totals,
+`final = totalContributed - totalWithdrawn + totalGrowth`). A season's direction is `flow`
+(`'save'` / `'withdraw'`). Saving adds a flat `monthlyContribution`. Withdrawing is in **today's
+dollars and rises with inflation** (`state.inflationPercent`, a plan input that also drives the
+today's-dollars view), either a fixed `monthlyContribution` (`withdrawUnit: 'dollars'`) or the 4%
+rule (`withdrawUnit: 'percent'`, `withdrawPercent`): that percent of the balance the season starts
+with, in its first year, then raised with inflation. `flowAt()` in calc.js is the one place that
+turns a season into a signed monthly amount; `Calc.isWithdrawing(p)` says whether it takes money
+out. A negative amount on a saving season (older saved plans) still means a fixed withdrawal.
+`perPeriod[i].firstWithdrawal` is the season's first monthly withdrawal in today's dollars. `Calc.withdrawalScale(state)` and `Calc.extraStartNeeded(state)` answer "what would
+last" by bisection over full projections. Anything scheduled past the
 end never lands and comes back in `unappliedWindfalls` (indices) rather than being dropped silently;
 for a repeat that means its *first* occurrence, since later ones falling off the end are expected.
 
@@ -107,6 +124,13 @@ changes while the preference is `system`, via `Theme.onSystemChange`). `chart.js
 - Every mutation calls `save()` (writes `investment-projection-v1` to `localStorage`). All
   `localStorage` access is wrapped in try/catch for private-mode browsers — keep that.
 - `load()` re-validates persisted data (unknown `compounding` falls back to `monthly`, `colorSlot` is
-  clamped modulo `Chart.slotCount`). Add validation there for any new persisted field.
+  clamped modulo `Chart.slotCount`, `view` falls back to today's dollars at 2.5%, a malformed
+  `baseline` is dropped). Add validation there for any new persisted field.
+- **Money view.** `renderResults()` projects nominally, then restates through
+  `Calc.inTodaysDollars` when `state.view.money === 'today'`; everything below it renders that one
+  `projection`. Don't mix nominal and today's figures on screen. `viewMoney(amount, month)` converts
+  single values (extra markers, baseline balances).
+- **`save(keepExample)`**: plan edits clear `state.isExample`; view-only changes (money switch,
+  inflation, baseline) pass `true`.
 - Chart re-render on resize watches **width only** — reacting to height would feed the
   `ResizeObserver` its own output.

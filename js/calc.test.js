@@ -410,6 +410,144 @@
     close(r.totals.totalGrowth, expected - 3000, 1e-6, 'growth');
   });
 
+  // --- running out ------------------------------------------------------
+  test('depletedAt is null while the balance stays at or above zero', function () {
+    var r = Calc.project({ startingAmount: 1200, periods: [period({ months: 12, monthlyContribution: -100 })] });
+    ok(r.totals.depletedAt === null, 'expected null, got ' + r.totals.depletedAt);
+    close(r.totals.finalAmount, 0, 1e-9, 'final');
+  });
+
+  test('depletedAt is the first month the balance goes below zero', function () {
+    var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: -300 })] });
+    ok(r.totals.depletedAt === 4, 'expected month 4, got ' + r.totals.depletedAt);
+  });
+
+  test('depletedAt counts across periods', function () {
+    var r = Calc.project({ startingAmount: 500, periods: [
+      period({ months: 6, monthlyContribution: 0 }),
+      period({ months: 6, monthlyContribution: -200 })
+    ] });
+    ok(r.totals.depletedAt === 9, 'expected month 9, got ' + r.totals.depletedAt);
+  });
+
+  // --- today's dollars ----------------------------------------------------
+  test('zero inflation leaves the projection unchanged', function () {
+    var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: 100, annualRatePercent: 6 })] });
+    ok(Calc.inTodaysDollars(r, 0) === r, 'expected the same object back');
+  });
+
+  test('a lump sum after one year is divided by one year of inflation', function () {
+    var r = Calc.project({ startingAmount: 1100, periods: [period({ months: 12 })] });
+    var t = Calc.inTodaysDollars(r, 10);
+    close(t.totals.finalAmount, 1000, 1e-9, 'final');
+    close(t.totals.startingAmount, 1100, 0, 'starting amount is already today');
+    close(t.points[0].balance, 1100, 1e-9, 'month 0 is not discounted');
+  });
+
+  test('today\'s-dollar accounting still reconciles', function () {
+    var r = Calc.project({ startingAmount: 5000, periods: [
+      period({ months: 60, monthlyContribution: 300, annualRatePercent: 7 }),
+      period({ months: 36, monthlyContribution: -100, annualRatePercent: 4, compounding: 'daily' })
+    ], windfalls: [{ atMonth: 30, amount: 2000, repeatEvery: 12 }] });
+    var t = Calc.inTodaysDollars(r, 3);
+    close(t.totals.totalGrowth + t.totals.totalContributed - t.totals.totalWithdrawn, t.totals.finalAmount, 1e-6, 'total identity');
+    t.perPeriod.forEach(function (pp, i) {
+      close(pp.endBalance - pp.startBalance - pp.contributed + pp.withdrawn - pp.windfalls, pp.growth, 1e-6, 'period ' + i);
+    });
+    var sumC = t.perPeriod.reduce(function (a, pp) { return a + pp.contributed + pp.windfalls; }, 5000);
+    close(sumC, t.totals.totalContributed, 1e-6, 'periods sum to total paid in');
+    ok(t.totals.finalAmount < r.totals.finalAmount, 'inflation should shrink the final amount');
+  });
+
+  test('real growth can be negative while nominal growth is positive', function () {
+    var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 120, annualRatePercent: 1 })] });
+    ok(r.totals.totalGrowth > 0, 'nominal growth positive');
+    ok(Calc.inTodaysDollars(r, 3).totals.totalGrowth < 0, 'real growth negative');
+  });
+
+  // --- withdrawals --------------------------------------------------------
+  test('a withdraw season takes its amount out each month', function () {
+    var r = Calc.project({ startingAmount: 10000, periods: [period({ months: 12, monthlyContribution: 500, flow: 'withdraw' })] });
+    close(r.totals.finalAmount, 4000, 1e-9, 'final');
+    close(r.perPeriod[0].withdrawn, 6000, 1e-9, 'withdrawn');
+    close(r.perPeriod[0].contributed, 0, 0, 'contributed stays non-negative');
+    close(r.totals.totalContributed, 10000, 1e-9, 'paid in is just the start');
+    close(r.totals.totalWithdrawn, 6000, 1e-9, 'total withdrawn');
+  });
+
+  test('a negative amount still means a withdrawal', function () {
+    var a = Calc.project({ startingAmount: 5000, periods: [period({ months: 6, monthlyContribution: -100 })] });
+    var b = Calc.project({ startingAmount: 5000, periods: [period({ months: 6, monthlyContribution: 100, flow: 'withdraw' })] });
+    close(a.totals.finalAmount, b.totals.finalAmount, 1e-9, 'final');
+    close(a.totals.totalWithdrawn, 600, 1e-9, 'withdrawn');
+  });
+
+  test('accounting reconciles with savings, withdrawals, growth and extras', function () {
+    var r = Calc.project({ startingAmount: 20000, periods: [
+      period({ months: 60, monthlyContribution: 400, annualRatePercent: 6 }),
+      period({ months: 120, monthlyContribution: 300, annualRatePercent: 4, flow: 'withdraw' })
+    ], windfalls: [{ atMonth: 70, amount: 5000 }] });
+    var t = r.totals;
+    close(t.totalContributed - t.totalWithdrawn + t.totalGrowth, t.finalAmount, 1e-6, 'identity');
+    r.perPeriod.forEach(function (pp, i) {
+      close(pp.endBalance - pp.startBalance - pp.contributed + pp.withdrawn - pp.windfalls, pp.growth, 1e-6, 'period ' + i);
+    });
+  });
+
+  test('a fixed withdrawal is today\'s dollars and rises with inflation', function () {
+    var st = { startingAmount: 100000, inflationPercent: 12,
+      periods: [period({ months: 12, monthlyContribution: 1000, flow: 'withdraw' })] };
+    var r = Calc.project(st);
+    close(-r.points[12].contribution, 1000 * 1.12, 1e-6, 'month 12 is a year of inflation higher');
+    var t = Calc.inTodaysDollars(r, 12);
+    for (var m = 1; m <= 12; m++) close(-t.points[m].contribution, 1000, 1e-6, 'real month ' + m);
+  });
+
+  test('the 4% rule takes 4% of the season\'s start in its first year', function () {
+    var r = Calc.project({ startingAmount: 120000,
+      periods: [period({ months: 12, flow: 'withdraw', withdrawUnit: 'percent', withdrawPercent: 4 })] });
+    close(r.perPeriod[0].withdrawn, 4800, 1e-6, 'first-year withdrawal');
+    close(r.totals.finalAmount, 115200, 1e-6, 'final');
+    close(r.perPeriod[0].firstWithdrawal, 400, 1e-6, 'first month');
+  });
+
+  test('the 4% rule uses the balance the season starts with, then follows inflation', function () {
+    var r = Calc.project({ startingAmount: 0, inflationPercent: 10, periods: [
+      period({ months: 12, monthlyContribution: 10000 }),
+      period({ months: 24, flow: 'withdraw', withdrawUnit: 'percent', withdrawPercent: 4 })
+    ] });
+    var first = 120000 * 0.04 / 12;
+    close(-r.points[13].contribution, first, 1e-6, 'first withdrawal month');
+    close(-r.points[25].contribution, first * 1.1, 1e-6, 'a year later, raised by inflation');
+    close(r.perPeriod[1].firstWithdrawal, first / Math.pow(1.1, 13 / 12), 1e-6, 'card shows today\'s dollars');
+  });
+
+  test('withdrawalScale works on percent seasons', function () {
+    var st = { startingAmount: 1200, periods: [period({ months: 12, flow: 'withdraw', withdrawUnit: 'percent', withdrawPercent: 150 })] };
+    close(Calc.withdrawalScale(st) * 150, 100, 0.01, 'sustainable percent');
+  });
+
+  test('withdrawalScale is null without withdrawals', function () {
+    ok(Calc.withdrawalScale({ startingAmount: 1000, periods: [period({ months: 12, monthlyContribution: 100 })] }) === null, 'null');
+  });
+
+  test('withdrawalScale finds the withdrawal that just lasts', function () {
+    // 12 months, no growth, $1200: exactly $100/month lasts; $150/month asked.
+    var st = { startingAmount: 1200, periods: [period({ months: 12, monthlyContribution: 150, flow: 'withdraw' })] };
+    close(Calc.withdrawalScale(st) * 150, 100, 0.01, 'sustainable monthly withdrawal');
+  });
+
+  test('withdrawalScale reports headroom above 1 when the plan lasts', function () {
+    var st = { startingAmount: 2400, periods: [period({ months: 12, monthlyContribution: 100, flow: 'withdraw' })] };
+    close(Calc.withdrawalScale(st), 2, 0.001, 'could withdraw twice as much');
+  });
+
+  test('extraStartNeeded is the shortfall at zero growth', function () {
+    var st = { startingAmount: 1000, periods: [period({ months: 12, monthlyContribution: 150, flow: 'withdraw' })] };
+    close(Calc.extraStartNeeded(st), 800, 0.01, 'extra start');
+    ok(Calc.extraStartNeeded({ startingAmount: 5000, periods: [period({ months: 12, monthlyContribution: 150, flow: 'withdraw' })] }) === 0, 'already lasts');
+  });
+
   test('a recurring extra is split across the periods it spans', function () {
     var r = Calc.project({
       startingAmount: 0,

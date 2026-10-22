@@ -14,8 +14,8 @@
   var COLOR_NAMES = ['Blue', 'Orange', 'Aqua', 'Yellow', 'Magenta', 'Green', 'Violet', 'Red'];
 
   var INK = {
-    light: { grid: '#e1e0d9', axis: '#c3c2b7', muted: '#898781', surface: '#fcfcfb' },
-    dark:  { grid: '#2c2c2a', axis: '#383835', muted: '#898781', surface: '#1a1a19' }
+    light: { grid: '#e1e0d9', axis: '#c3c2b7', muted: '#6e6c66', surface: '#fcfcfb', bad: '#d03b3b' },
+    dark:  { grid: '#2c2c2a', axis: '#383835', muted: '#898781', surface: '#1a1a19', bad: '#e66767' }
   };
 
   /* Extras are events, not series, so they must not borrow the period palette —
@@ -36,6 +36,41 @@
     var c = colors();
     var n = Math.max(0, Math.floor(Number(slot) || 0));
     return c[n % c.length];
+  }
+
+  /* Ink for a figure set on a series fill (the period number on its timeline
+     node). Several hues are too light for white text, so pick whichever of
+     white or near-black reads better — per slot, per theme. */
+  function luminance(hex) {
+    var ch = [1, 3, 5].map(function (i) {
+      var v = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  }
+  function contrast(a, b) {
+    var la = luminance(a), lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+  function mixBlack(hex, keep) {
+    return '#' + [1, 3, 5].map(function (i) {
+      var v = Math.round(parseInt(hex.slice(i, i + 2), 16) * keep);
+      return (v < 16 ? '0' : '') + v.toString(16);
+    }).join('');
+  }
+  /* Fill and ink for a figure set on a series color (the timeline node number).
+     Most hues take white or graphite; a mid-tone like the light-theme blue clears
+     4.5:1 with neither, so its fill steps darker, a shade at a time, until white
+     does. The hue stays recognisably the period's. */
+  function nodeColors(slot) {
+    var fill = colorFor(slot);
+    var white = contrast(fill, '#ffffff'), ink = contrast(fill, '#0b0b0b');
+    if (Math.max(white, ink) >= 4.5) return { fill: fill, ink: white >= ink ? '#ffffff' : '#0b0b0b' };
+    for (var keep = 0.96; keep > 0.5; keep -= 0.04) {
+      var deeper = mixBlack(fill, keep);
+      if (contrast(deeper, '#ffffff') >= 4.5) return { fill: deeper, ink: '#ffffff' };
+    }
+    return { fill: fill, ink: '#ffffff' };
   }
 
   /* One marker glyph, centred on (cx, cy). Radii are tuned so the four read as
@@ -133,25 +168,44 @@
     var maxMonth = projection.totals.totalMonths;
 
     if (maxMonth <= 0) {
-      container.innerHTML = '<div class="chart-empty">Add a period to see the projection.</div>';
+      container.innerHTML = '<div class="chart-empty">Add a season to see the projection.</div>';
       container.__chart = null;
       return;
     }
 
     var C = ink();
-    var m = { t: 16, r: 18, b: 30, l: 68 };
+    var m = { t: 30, r: 18, b: 30, l: 68 };
     var plotW = width - m.l - m.r;
     var plotH = height - m.t - m.b;
+
+    /* Once the money runs out there is no balance left to plot: the line stops
+       at $0 and the rest of the timeline is shaded instead of charting debt that
+       cannot exist. The table and the hero still report the shortfall. */
+    var dep = (opts.depletedAt === null || opts.depletedAt === undefined) ? null : opts.depletedAt;
+    function val(k) { return dep !== null && k >= dep ? 0 : points[k].balance; }
+    var baseline = opts.baseline ? opts.baseline.map(function (b) { return Math.max(0, b); }) : null;
 
     // --- y domain, snapped to whole ticks ---
     var lo = Infinity, hi = -Infinity;
     for (var i = 0; i < points.length; i++) {
-      if (points[i].balance < lo) lo = points[i].balance;
-      if (points[i].balance > hi) hi = points[i].balance;
+      if (val(i) < lo) lo = val(i);
+      if (val(i) > hi) hi = val(i);
+    }
+    if (baseline) {
+      for (var bi = 0; bi < baseline.length; bi++) {
+        if (baseline[bi] < lo) lo = baseline[bi];
+        if (baseline[bi] > hi) hi = baseline[bi];
+      }
     }
     var yMin = Math.min(0, lo);
     var yMax = Math.max(hi, yMin + 1);
-    var step = niceStep(yMax - yMin, 5);
+    // Try a few tick counts and keep the one that wastes the least headroom.
+    var step = 0, best = Infinity;
+    for (var tc = 4; tc <= 6; tc++) {
+      var st = niceStep(yMax - yMin, tc);
+      var span = Math.ceil(yMax / st) * st - Math.floor(yMin / st) * st;
+      if (span < best - 1e-9) { best = span; step = st; }
+    }
     yMin = Math.floor(yMin / step) * step;
     yMax = Math.ceil(yMax / step) * step;
     if (yMax === yMin) yMax = yMin + step;
@@ -164,7 +218,8 @@
     // --- gridlines + y labels ---
     var svg = [];
     svg.push('<svg class="chart-svg" width="' + width + '" height="' + height +
-             '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Projected balance over time">');
+             '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' +
+             esc(opts.label || 'Projected balance over time') + '">');
 
     var defs = ['<defs>'];
     var gradIds = [];
@@ -174,8 +229,9 @@
       var col = colorFor(periods[g].colorSlot);
       defs.push(
         '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="' + col + '" stop-opacity="0.32"/>' +
-        '<stop offset="100%" stop-color="' + col + '" stop-opacity="0.04"/>' +
+        // Dark: a lighter wash, or warm hues go muddy against the near-black page.
+        '<stop offset="0%" stop-color="' + col + '" stop-opacity="' + (isDark() ? 0.22 : 0.32) + '"/>' +
+        '<stop offset="100%" stop-color="' + col + '" stop-opacity="' + (isDark() ? 0.02 : 0.04) + '"/>' +
         '</linearGradient>'
       );
     }
@@ -187,7 +243,7 @@
       svg.push('<line x1="' + m.l + '" y1="' + gy + '" x2="' + (m.l + plotW) + '" y2="' + gy +
                '" stroke="' + C.grid + '" stroke-width="1"/>');
       svg.push('<text x="' + (m.l - 10) + '" y="' + (gy + 4) + '" text-anchor="end" ' +
-               'fill="' + C.muted + '" font-size="11" style="font-variant-numeric:tabular-nums">' +
+               'fill="' + C.muted + '" font-size="12" style="font-variant-numeric:tabular-nums">' +
                esc(compact.format(v)) + '</text>');
     }
 
@@ -197,15 +253,18 @@
     for (var s = 0; s < segs.length; s++) {
       var pp = segs[s];
       if (pp.months <= 0) continue;
+      // Seasons drawn only up to the month the money runs out.
+      var segEnd = dep !== null ? Math.min(pp.endMonth, dep) : pp.endMonth;
+      if (segEnd <= pp.startMonth) continue;
       var color = colorFor((periods[pp.index] || {}).colorSlot);
       var d = [], a = [];
-      for (var k = pp.startMonth; k <= pp.endMonth; k++) {
-        var px = x(k).toFixed(2), py = y(points[k].balance).toFixed(2);
+      for (var k = pp.startMonth; k <= segEnd; k++) {
+        var px = x(k).toFixed(2), py = y(val(k)).toFixed(2);
         d.push((k === pp.startMonth ? 'M' : 'L') + px + ' ' + py);
         a.push('L' + px + ' ' + py);
       }
       svg.push('<path d="M' + x(pp.startMonth).toFixed(2) + ' ' + yBase.toFixed(2) + a.join('') +
-               'L' + x(pp.endMonth).toFixed(2) + ' ' + yBase.toFixed(2) + 'Z" fill="url(#' + gradIds[pp.index] + ')"/>');
+               'L' + x(segEnd).toFixed(2) + ' ' + yBase.toFixed(2) + 'Z" fill="url(#' + gradIds[pp.index] + ')"/>');
       lineParts.push('<path d="' + d.join('') + '" fill="none" stroke="' + color +
                      '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>');
     }
@@ -225,7 +284,7 @@
     for (var wi = 0; wi < wf.length; wi++) {
       var wm = Math.max(0, Math.min(maxMonth, Math.floor(Number(wf[wi].atMonth) || 0)));
       if (!points[wm]) continue;
-      var wx = x(wm), wy = y(points[wm].balance);
+      var wx = x(wm), wy = y(val(wm));
       if (stems) {
         svg.push('<line x1="' + wx.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + wx.toFixed(2) +
                  '" y2="' + wy.toFixed(2) + '" stroke="' + C.muted + '" stroke-width="1" stroke-dasharray="3 3"/>');
@@ -234,17 +293,69 @@
     }
 
     // Surface-colored divider at each handoff: reads as the boundary and keeps
-    // adjacent fills from bleeding together.
+    // adjacent fills from bleeding together. Above the curve a dashed ruled line
+    // carries the boundary up to the label band, so the plan reads as a sequence.
     for (var b = 1; b < segs.length; b++) {
       if (segs[b].months <= 0 && segs[b - 1].months <= 0) continue;
       var bx = x(segs[b].startMonth).toFixed(2);
-      svg.push('<line x1="' + bx + '" y1="' + yBase.toFixed(2) + '" x2="' + bx + '" y2="' +
-               y(points[segs[b].startMonth].balance).toFixed(2) +
+      var by = y(val(segs[b].startMonth)).toFixed(2);
+      svg.push('<line x1="' + bx + '" y1="' + yBase.toFixed(2) + '" x2="' + bx + '" y2="' + by +
                '" stroke="' + C.surface + '" stroke-width="2"/>');
+      svg.push('<line x1="' + bx + '" y1="' + (m.t - 14) + '" x2="' + bx + '" y2="' + by +
+               '" stroke="' + C.axis + '" stroke-width="1" stroke-dasharray="2 3"/>');
+    }
+
+    /* Period names in the band above the plot, one per stretch of the curve.
+       A name that would not fit its stretch is left out rather than clipped —
+       the legend and tooltip still carry it. */
+    var allLabels = true;
+    for (var lb = 0; lb < segs.length; lb++) {
+      var seg = segs[lb];
+      if (seg.months <= 0) continue;
+      var meta = periods[seg.index] || {};
+      var label = meta.name || ('Season ' + (seg.index + 1));
+      var room = x(seg.endMonth) - x(seg.startMonth) - 12;
+      if (label.length * 6.8 + 14 > room) { allLabels = false; continue; }
+      var lx = x(seg.startMonth) + 6;
+      svg.push('<rect x="' + lx.toFixed(2) + '" y="' + (m.t - 21) + '" width="8" height="8" rx="2" fill="' +
+               colorFor(meta.colorSlot) + '"/>');
+      svg.push('<text x="' + (lx + 13).toFixed(2) + '" y="' + (m.t - 13) + '" fill="' + C.muted +
+               '" font-size="12">' + esc(label) + '</text>');
+    }
+
+    /* The baseline: a kept earlier version of the plan, drawn as a dashed pencil
+       line under the live curve. Neutral ink — it is not a period. */
+    if (baseline && baseline.length > 1) {
+      var bd = [];
+      var bMax = Math.min(baseline.length - 1, maxMonth);
+      for (var bm = 0; bm <= bMax; bm++) {
+        bd.push((bm ? 'L' : 'M') + x(bm).toFixed(2) + ' ' + y(baseline[bm]).toFixed(2));
+      }
+      svg.push('<path class="baseline" d="' + bd.join('') + '" fill="none" stroke="' + C.muted +
+               '" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round" opacity="0.9"/>');
     }
 
     svg.push(lineParts.join(''));
     svg.push(wfDots.join(''));
+
+    /* The month the money runs out: a loss-red rule down to the axis and a label
+       at the zero line. Semantic color, not a series color. */
+    if (dep !== null && dep <= maxMonth) {
+      var dx = x(dep);
+      // The stretch with no money left: a quiet wash, and a flat pencil line at $0.
+      svg.push('<rect x="' + dx.toFixed(2) + '" y="' + m.t + '" width="' + (m.l + plotW - dx).toFixed(2) +
+               '" height="' + plotH + '" fill="' + C.muted + '" opacity="0.08"/>');
+      svg.push('<line x1="' + dx.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + (m.l + plotW).toFixed(2) +
+               '" y2="' + yBase.toFixed(2) + '" stroke="' + C.muted + '" stroke-width="2" stroke-dasharray="2 4"/>');
+      svg.push('<line x1="' + dx.toFixed(2) + '" y1="' + m.t + '" x2="' + dx.toFixed(2) + '" y2="' + (m.t + plotH) +
+               '" stroke="' + C.bad + '" stroke-width="1.5" stroke-dasharray="4 3"/>');
+      // Label at the top of the plot, where the tooltip (which follows the curve near $0) will not cover it.
+      var right = dx < m.l + plotW - 120;
+      svg.push('<text x="' + (right ? dx + 6 : dx - 6).toFixed(2) + '" y="' + (m.t + 14) +
+               '" text-anchor="' + (right ? 'start' : 'end') + '" fill="' + C.bad + '" font-size="12" font-weight="600"' +
+               ' stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
+               esc('Runs out · ' + durationLabel(dep)) + '</text>');
+    }
 
     // --- axes ---
     svg.push('<line x1="' + m.l + '" y1="' + yBase + '" x2="' + (m.l + plotW) + '" y2="' + yBase +
@@ -253,7 +364,7 @@
     var xt = xTicks(maxMonth);
     for (var t = 0; t < xt.length; t++) {
       svg.push('<text x="' + x(xt[t].m).toFixed(2) + '" y="' + (m.t + plotH + 18) +
-               '" text-anchor="middle" fill="' + C.muted + '" font-size="11" ' +
+               '" text-anchor="middle" fill="' + C.muted + '" font-size="12" ' +
                'style="font-variant-numeric:tabular-nums">' + esc(xt[t].label) + '</text>');
     }
 
@@ -273,7 +384,8 @@
     }
 
     container.__chart = { m: m, plotW: plotW, plotH: plotH, maxMonth: maxMonth, x: x, y: y,
-                         points: points, periods: periods, windfalls: wfByMonth, width: width };
+                         points: points, periods: periods, windfalls: wfByMonth, width: width,
+                         baseline: baseline, allLabels: allLabels, dep: dep };
     attachHover(container);
   }
 
@@ -294,7 +406,8 @@
       var pt = ctx.points[month];
       if (!pt) return;
 
-      var cx = ctx.x(month), cy = ctx.y(pt.balance);
+      var ranOut = ctx.dep !== null && month >= ctx.dep;
+      var cx = ctx.x(month), cy = ctx.y(ranOut ? 0 : pt.balance);
       var period = pt.periodIndex >= 0 ? ctx.periods[pt.periodIndex] : null;
       var color = period ? colorFor(period.colorSlot) : ink().muted;
 
@@ -303,14 +416,17 @@
       dot.setAttribute('stroke', color); dot.setAttribute('opacity', '1');
 
       tip.innerHTML =
-        '<div class="tip-head">' + esc(durationLabel(month)) + ' <span class="tip-month">· month ' + month + '</span></div>' +
-        '<div class="tip-value">' + esc(money2.format(pt.balance)) + '</div>' +
+        '<div class="tip-head">' + esc(month ? durationLabel(month) : 'Start') + '</div>' +
+        '<div class="tip-value">' + esc(money0.format(ranOut ? 0 : pt.balance)) + '</div>' +
+        (ranOut ? '<div class="tip-short">Ran out' + (pt.balance < 0 ? ' \u00b7 short by ' + esc(money0.format(-pt.balance)) : '') + '</div>' : '') +
         (period
-          ? '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>' + esc(period.name || ('Period ' + (pt.periodIndex + 1))) + '</div>'
+          ? '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>' + esc(period.name || ('Season ' + (pt.periodIndex + 1))) + '</div>'
           : '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>Starting amount</div>') +
+        (ctx.baseline && ctx.baseline[month] !== undefined
+          ? '<div class="tip-baseline">Baseline ' + esc(money0.format(ctx.baseline[month])) + '</div>' : '') +
         (ctx.windfalls[month] || []).map(function (w) {
-          return '<div class="tip-windfall">' + esc(money2.format(w.amount)) + ' &middot; ' +
-                 esc(w.name || 'one-off') + '</div>';
+          return '<div class="tip-windfall">' + esc(money0.format(w.amount)) + ' &middot; ' +
+                 esc(w.name || 'extra') + '</div>';
         }).join('');
       tip.hidden = false;
 
@@ -331,12 +447,15 @@
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerdown', move);
     target.addEventListener('pointerleave', leave);
+    // A touch that turns into a page scroll cancels the pointer; drop the readout.
+    target.addEventListener('pointercancel', leave);
   }
 
   global.Chart = {
     render: render,
     colors: colors,
     colorFor: colorFor,
+    nodeColors: nodeColors,
     colorNames: COLOR_NAMES,
     slotCount: PALETTE.light.length,
     isDark: isDark,

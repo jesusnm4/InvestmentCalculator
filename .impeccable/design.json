@@ -1,0 +1,695 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T07:02:19+00:00",
+  "title": "Design System: Seasons",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#f9f9f7",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252524",
+          "#424240",
+          "#616160",
+          "#828281",
+          "#a5a5a3",
+          "#c9c9c7",
+          "#eeeeec"
+        ]
+      },
+      "leaf": {
+        "role": "neutral",
+        "displayName": "Leaf",
+        "canonical": "#fcfcfb",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252524",
+          "#424241",
+          "#616160",
+          "#828281",
+          "#a5a5a4",
+          "#c9c9c8",
+          "#eeeeed"
+        ]
+      },
+      "field-white": {
+        "role": "neutral",
+        "displayName": "Field White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#0b0b0b",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "pencil": {
+        "role": "neutral",
+        "displayName": "Pencil",
+        "canonical": "#52514e",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262522",
+          "#43423f",
+          "#62615e",
+          "#83827f",
+          "#a6a5a1",
+          "#cac9c5",
+          "#f0eeeb"
+        ]
+      },
+      "faded-pencil": {
+        "role": "neutral",
+        "displayName": "Faded Pencil",
+        "canonical": "#6e6c66",
+        "tonalRamp": [
+          "#0d0b07",
+          "#272520",
+          "#44423c",
+          "#63615b",
+          "#84827c",
+          "#a7a59e",
+          "#cbc9c2",
+          "#f1eee7"
+        ]
+      },
+      "ruled-line": {
+        "role": "neutral",
+        "displayName": "Ruled Line",
+        "canonical": "#e1e0d9",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423c",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c2",
+          "#f0efe8"
+        ]
+      },
+      "axis-grey": {
+        "role": "neutral",
+        "displayName": "Axis Grey",
+        "canonical": "#c3c2b7",
+        "tonalRamp": [
+          "#0c0b05",
+          "#26251d",
+          "#434239",
+          "#636258",
+          "#848379",
+          "#a7a69b",
+          "#cbcabf",
+          "#f0efe4"
+        ]
+      },
+      "ledger-blue": {
+        "role": "primary",
+        "displayName": "Ledger Blue",
+        "canonical": "#2a78d6",
+        "tonalRamp": [
+          "#000432",
+          "#00215a",
+          "#004085",
+          "#1a60b2",
+          "#3682e0",
+          "#64a7fe",
+          "#90ccff",
+          "#bdf2ff"
+        ]
+      },
+      "gain-green": {
+        "role": "semantic",
+        "displayName": "Gain Green",
+        "canonical": "#006300",
+        "tonalRamp": [
+          "#001200",
+          "#003000",
+          "#0e500b",
+          "#2a7326",
+          "#469841",
+          "#72ba6c",
+          "#9cdd97",
+          "#c8ffc2"
+        ]
+      },
+      "loss-red": {
+        "role": "semantic",
+        "displayName": "Loss Red",
+        "canonical": "#d03b3b",
+        "tonalRamp": [
+          "#2b0000",
+          "#540000",
+          "#7f0612",
+          "#ac292b",
+          "#db4745",
+          "#fc756e",
+          "#ffa198",
+          "#ffcdc3"
+        ]
+      },
+      "night-paper": {
+        "role": "neutral",
+        "displayName": "Night Paper",
+        "canonical": "#0d0d0d",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "night-leaf": {
+        "role": "neutral",
+        "displayName": "Night Leaf",
+        "canonical": "#1a1a19",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252524",
+          "#424241",
+          "#616160",
+          "#828281",
+          "#a5a5a4",
+          "#c9c9c8",
+          "#eeeeed"
+        ]
+      },
+      "night-field": {
+        "role": "neutral",
+        "displayName": "Night Field",
+        "canonical": "#131312",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252524",
+          "#424241",
+          "#616160",
+          "#828281",
+          "#a5a5a4",
+          "#c9c9c8",
+          "#eeeeed"
+        ]
+      },
+      "night-ruled-line": {
+        "role": "neutral",
+        "displayName": "Night Ruled Line",
+        "canonical": "#2c2c2a",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252523",
+          "#424240",
+          "#61615f",
+          "#828280",
+          "#a5a5a3",
+          "#c9c9c7",
+          "#efefec"
+        ]
+      },
+      "night-axis": {
+        "role": "neutral",
+        "displayName": "Night Axis",
+        "canonical": "#383835",
+        "tonalRamp": [
+          "#0b0b09",
+          "#252522",
+          "#42423f",
+          "#61615e",
+          "#82827f",
+          "#a5a5a2",
+          "#c9c9c6",
+          "#efefeb"
+        ]
+      },
+      "night-ledger-blue": {
+        "role": "primary",
+        "displayName": "Ledger Blue (dark)",
+        "canonical": "#3987e5",
+        "tonalRamp": [
+          "#000432",
+          "#002159",
+          "#004084",
+          "#1960b1",
+          "#3582df",
+          "#63a7fd",
+          "#90ccff",
+          "#bcf2ff"
+        ]
+      },
+      "night-gain-green": {
+        "role": "semantic",
+        "displayName": "Gain Green (dark)",
+        "canonical": "#0ca30c",
+        "tonalRamp": [
+          "#001400",
+          "#003300",
+          "#005500",
+          "#007900",
+          "#009e02",
+          "#53c14e",
+          "#85e47f",
+          "#b5ffae"
+        ]
+      },
+      "night-loss-red": {
+        "role": "semantic",
+        "displayName": "Loss Red (dark)",
+        "canonical": "#e66767",
+        "tonalRamp": [
+          "#270000",
+          "#4e0009",
+          "#771a20",
+          "#a3363a",
+          "#d05455",
+          "#f17e7c",
+          "#ffa8a4",
+          "#ffd2cd"
+        ]
+      },
+      "series-blue": {
+        "role": "series",
+        "displayName": "Series Blue",
+        "canonical": "#2a78d6",
+        "tonalRamp": [
+          "#000432",
+          "#00215a",
+          "#004085",
+          "#1a60b2",
+          "#3682e0",
+          "#64a7fe",
+          "#90ccff",
+          "#bdf2ff"
+        ]
+      },
+      "series-orange": {
+        "role": "series",
+        "displayName": "Series Orange",
+        "canonical": "#eb6834",
+        "tonalRamp": [
+          "#290000",
+          "#500000",
+          "#7a1900",
+          "#a73600",
+          "#d4541c",
+          "#f57f53",
+          "#ffa982",
+          "#ffd3b0"
+        ]
+      },
+      "series-aqua": {
+        "role": "series",
+        "displayName": "Series Aqua",
+        "canonical": "#1baf7a",
+        "tonalRamp": [
+          "#001402",
+          "#003215",
+          "#00532f",
+          "#00764a",
+          "#009b68",
+          "#4dbd8d",
+          "#82e0b3",
+          "#b3ffdb"
+        ]
+      },
+      "series-yellow": {
+        "role": "series",
+        "displayName": "Series Yellow",
+        "canonical": "#eda100",
+        "tonalRamp": [
+          "#200000",
+          "#421700",
+          "#683300",
+          "#8f5000",
+          "#b87000",
+          "#d99621",
+          "#f9bd64",
+          "#ffe499"
+        ]
+      },
+      "series-magenta": {
+        "role": "series",
+        "displayName": "Series Magenta",
+        "canonical": "#e87ba4",
+        "tonalRamp": [
+          "#22000b",
+          "#470625",
+          "#6e2142",
+          "#973d62",
+          "#c25a83",
+          "#e382a6",
+          "#ffaaca",
+          "#ffd4ef"
+        ]
+      },
+      "series-green": {
+        "role": "series",
+        "displayName": "Series Green",
+        "canonical": "#008300",
+        "tonalRamp": [
+          "#001300",
+          "#003200",
+          "#005300",
+          "#0b7609",
+          "#2f9b2a",
+          "#63be5c",
+          "#91e18a",
+          "#beffb7"
+        ]
+      },
+      "series-violet": {
+        "role": "series",
+        "displayName": "Series Violet",
+        "canonical": "#4a3aa7",
+        "tonalRamp": [
+          "#0b0032",
+          "#22155a",
+          "#3c3285",
+          "#5950b2",
+          "#7870e1",
+          "#9a96fe",
+          "#bebdff",
+          "#e4e5ff"
+        ]
+      },
+      "series-red": {
+        "role": "series",
+        "displayName": "Series Red",
+        "canonical": "#e34948",
+        "tonalRamp": [
+          "#2c0000",
+          "#550000",
+          "#800111",
+          "#ae252a",
+          "#dd4444",
+          "#fe746d",
+          "#ffa097",
+          "#ffcbc2"
+        ]
+      },
+      "night-faded-pencil": {
+        "role": "neutral",
+        "displayName": "Night Faded Pencil",
+        "canonical": "#898781",
+        "tonalRamp": [
+          "#0d0b07",
+          "#272520",
+          "#44423d",
+          "#63615b",
+          "#84827c",
+          "#a7a59f",
+          "#cbc9c3",
+          "#f1eee8"
+        ]
+      },
+      "ledger-blue-deep": {
+        "role": "primary",
+        "displayName": "Ledger Blue Deep",
+        "canonical": "#256abc",
+        "tonalRamp": [
+          "#00062e",
+          "#002354",
+          "#0a417e",
+          "#2561aa",
+          "#4083d7",
+          "#6ba7f5",
+          "#96ccff",
+          "#c2f2ff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The final amount only."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Summary figures and the result bar, in the serif."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "Panel titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads and the chart title."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Inputs, buttons, running text."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Table cells, affixes, unit pickers."
+      },
+      "note": {
+        "displayName": "Note",
+        "purpose": "Field labels, hints, notes, legend, tooltip."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase labels and chart axes."
+      },
+      "masthead": {
+        "displayName": "Masthead",
+        "purpose": "The name Seasons, only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel-lift",
+        "value": "0 1px 2px rgba(11,11,11,0.06), 0 8px 24px rgba(11,11,11,0.05)",
+        "purpose": "Setup/results panels and chart tooltip, light theme only."
+      },
+      {
+        "name": "pressed-ring",
+        "value": "0 0 0 1px var(--ring)",
+        "purpose": "Pressed theme-toggle segment; inset on swatches."
+      },
+      {
+        "name": "bar-lift",
+        "value": "0 -8px 24px rgba(11,11,11,0.06)",
+        "purpose": "Upward lift on the pinned result bar (narrow screens)."
+      }
+    ],
+    "motion": [],
+    "breakpoints": [
+      {
+        "name": "kpi-stack",
+        "value": "560px"
+      },
+      {
+        "name": "single-column",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single full-width action, + Add period.",
+      "html": "<button class=\"ds-btn ds-btn-primary\" type=\"button\">+ Add period</button>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-primary{background:#256abc;border-color:#256abc;color:var(--accent-ink);width:100%} .ds-btn-primary:hover{filter:brightness(1.06);border-color:var(--accent)}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet full-width action on Field White, e.g. + Add extra.",
+      "html": "<button class=\"ds-btn ds-btn-block\" type=\"button\">+ Add extra</button>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-block{width:100%}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Transparent top-bar action, e.g. Reset.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\" type=\"button\">Reset</button>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-ghost{background:transparent}"
+    },
+    {
+      "name": "Theme Toggle",
+      "kind": "nav",
+      "refersTo": "segmented-toggle",
+      "description": "Light / Dark / Auto segmented control in the top bar.",
+      "html": "<div class=\"ds-toggle\" role=\"group\" aria-label=\"Color theme\"><button type=\"button\" aria-pressed=\"true\">Light</button><button type=\"button\" aria-pressed=\"false\">Dark</button><button type=\"button\" aria-pressed=\"false\">Auto</button></div>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-toggle{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:9px;background:var(--page)} .ds-toggle button{height:26px;padding:0 11px;line-height:1;font:inherit;font-size:13px;font-weight:500;border:none;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer} .ds-toggle button:hover{color:var(--ink)} .ds-toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-toggle button[aria-pressed=\"true\"]{background:var(--field);color:var(--ink);box-shadow:0 0 0 1px var(--ring)}"
+    },
+    {
+      "name": "Money Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled numeric field with a fixed $ affix and tabular figures.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Starting amount</span><span class=\"ds-money\"><span class=\"ds-affix\">$</span><input type=\"number\" value=\"10000\"></span></label>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-field{display:block;max-width:260px} .ds-field-label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:5px} .ds-money{position:relative;display:block} .ds-affix{position:absolute;top:50%;left:10px;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none} .ds-money input{box-sizing:border-box;width:100%;padding:8px 10px 8px 22px;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;font-variant-numeric:tabular-nums} .ds-money input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
+    },
+    {
+      "name": "Period Timeline Entry",
+      "kind": "card",
+      "refersTo": "period-card",
+      "description": "One period hanging off the timeline spine at its numbered node; range line under the name.",
+      "html": "<ol class=\"ds-timeline\"><li class=\"ds-period\"><span class=\"ds-node\">1</span><div class=\"ds-period-head\"><input type=\"text\" value=\"Accumulation\" aria-label=\"Period 1 name\"><button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Move period 1 down\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4 6l4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button><button class=\"ds-icon-btn ds-danger\" type=\"button\" aria-label=\"Delete period 1\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4.5 4.5l7 7M11.5 4.5l-7 7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button></div><p class=\"ds-range\">From the start to 10 yrs</p></li><li class=\"ds-period\" style=\"--period-color:#eb6834\"><span class=\"ds-node\">2</span><div class=\"ds-period-head\"><input type=\"text\" value=\"Coasting\" aria-label=\"Period 2 name\"><button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Move period 2 up\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4 10l4-4 4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button><button class=\"ds-icon-btn ds-danger\" type=\"button\" aria-label=\"Delete period 2\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4.5 4.5l7 7M11.5 4.5l-7 7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button></div><p class=\"ds-range\">From 10 yrs to 20 yrs</p></li></ol>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-timeline{list-style:none;margin:0;padding:0 0 0 32px;display:grid;gap:12px;position:relative;max-width:380px} .ds-timeline::before{content:\"\";position:absolute;left:11px;top:22px;bottom:22px;width:1px;background:var(--axis)} .ds-period{--period-color:#2a78d6;position:relative;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--field)} .ds-node{position:absolute;left:-32px;top:13px;width:23px;height:23px;border-radius:6px;background:var(--period-color);color:#0b0b0b;box-shadow:0 0 0 3px var(--surface);font-size:11px;font-weight:700;display:grid;place-items:center} .ds-period-head{display:flex;align-items:center;gap:6px} .ds-period-head input{flex:1;min-width:0;padding:5px 8px;font:inherit;font-weight:600;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px} .ds-period-head input:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-icon-btn{flex:none;width:26px;height:26px;padding:0;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink-2);cursor:pointer} .ds-icon-btn svg{display:block} .ds-icon-btn:hover{border-color:var(--axis);color:var(--ink)} .ds-danger{margin-left:6px} .ds-icon-btn.ds-danger:hover{color:var(--bad);border-color:var(--bad)} .ds-icon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-range{margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Summary Row",
+      "kind": "custom",
+      "refersTo": "kpi-cell",
+      "description": "Three figures in a ruled row inside the results panel: no boxes, hairlines between.",
+      "html": "<div class=\"ds-kpis\"><div class=\"ds-kpi\"><div class=\"ds-kpi-label\">Total paid in</div><div class=\"ds-kpi-value\">$70,000</div><div class=\"ds-kpi-note\">starting amount + contributions</div></div><div class=\"ds-kpi\"><div class=\"ds-kpi-label\">Total growth</div><div class=\"ds-kpi-value ds-up\">$105,635</div><div class=\"ds-kpi-note\">150.9% of what you paid in</div></div><div class=\"ds-kpi\"><div class=\"ds-kpi-label\">Monthly income</div><div class=\"ds-kpi-value\">$585</div><div class=\"ds-kpi-note\">under the 4% rule</div></div></div>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);max-width:640px} .ds-kpi{padding:12px 16px} .ds-kpi:first-child{padding-left:0} .ds-kpi+.ds-kpi{border-left:1px solid var(--line)} .ds-kpi-label{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em} .ds-kpi-value{font-family:'Source Serif 4',Georgia,serif;font-variant-numeric:lining-nums tabular-nums;font-size:22px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums} .ds-up{color:var(--good)} .ds-kpi-note{font-size:13px;color:var(--muted);margin-top:2px}"
+    },
+    {
+      "name": "Color Swatches",
+      "kind": "custom",
+      "refersTo": "swatch",
+      "description": "Period color picker; each swatch reads Chart.colorFor(slot).",
+      "html": "<div class=\"ds-swatches\"><button class=\"ds-swatch\" style=\"background:#2a78d6\" aria-pressed=\"true\" aria-label=\"Blue\"></button><button class=\"ds-swatch\" style=\"background:#eb6834\" aria-pressed=\"false\" aria-label=\"Orange\"></button><button class=\"ds-swatch\" style=\"background:#1baf7a\" aria-pressed=\"false\" aria-label=\"Aqua\"></button><button class=\"ds-swatch\" style=\"background:#eda100\" aria-pressed=\"false\" aria-label=\"Yellow\"></button><button class=\"ds-swatch\" style=\"background:#e87ba4\" aria-pressed=\"false\" aria-label=\"Magenta\"></button><button class=\"ds-swatch\" style=\"background:#008300\" aria-pressed=\"false\" aria-label=\"Green\"></button><button class=\"ds-swatch\" style=\"background:#4a3aa7\" aria-pressed=\"false\" aria-label=\"Violet\"></button><button class=\"ds-swatch\" style=\"background:#e34948\" aria-pressed=\"false\" aria-label=\"Red\"></button></div>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-swatches{display:flex;gap:6px;flex-wrap:wrap} .ds-swatch{width:22px;height:22px;border-radius:6px;cursor:pointer;border:2px solid transparent;padding:0;box-shadow:inset 0 0 0 1px var(--ring)} .ds-swatch[aria-pressed=\"true\"]{border-color:var(--ink)} .ds-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
+    },
+    {
+      "name": "Undo Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Offered after a delete or Reset instead of a confirm dialog.",
+      "html": "<div class=\"ds-toast\" role=\"status\"><span>“Coasting” deleted</span><button type=\"button\" class=\"ds-undo\">Undo</button></div>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-toast{display:inline-flex;align-items:center;gap:14px;padding:8px 8px 8px 14px;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--ring);border-radius:10px;box-shadow:0 1px 2px rgba(11,11,11,.06),0 8px 24px rgba(11,11,11,.05)} .ds-undo{font:inherit;font-weight:600;color:var(--accent);cursor:pointer;background:transparent;border:none;border-radius:6px;padding:4px 8px} .ds-undo:hover{background:rgba(42,120,214,.10)} .ds-undo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
+    },
+    {
+      "name": "Masthead",
+      "kind": "nav",
+      "refersTo": "masthead",
+      "description": "Name, mark, tagline and theme toggle on the page itself; no bar.",
+      "html": "<header class=\"ds-mast\"><div class=\"ds-brand\"><svg viewBox=\"0 0 28 28\" width=\"28\" height=\"28\" aria-hidden=\"true\"><path d=\"M3 23 L10 16 L16 17.5 L25 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><rect x=\"8\" y=\"14\" width=\"4\" height=\"4\" rx=\"1\" fill=\"currentColor\"/><rect x=\"14\" y=\"15.5\" width=\"4\" height=\"4\" rx=\"1\" fill=\"currentColor\"/></svg><h1>Seasons</h1></div><p class=\"ds-tag\">Investment projections for a plan that changes over time.</p></header>",
+      "css": "@font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} .ds-mast{display:grid;grid-template-columns:minmax(0,1fr) auto;color:#0b0b0b;font:15px/1.5 'Source Sans 3',system-ui,sans-serif} .ds-brand{display:flex;align-items:center;gap:12px} .ds-brand svg{color:#52514e} .ds-brand h1{margin:0;font-family:'Source Serif 4',Georgia,serif;font-size:30px;font-weight:600;line-height:1.1;letter-spacing:-.015em} .ds-tag{grid-column:1/-1;margin:4px 0 0 40px;color:#6e6c66}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Field Notebook",
+    "overview": "The calculator reads like a carefully kept notebook: warm off-white paper, graphite and pencil-grey text, hairline ruled lines, and one hand-drawn curve that carries nearly all of the color. Each period is a different ink on that curve. Everything around the chart is calm, precise and unshowy. It is there to record the plan and report the numbers, never to compete with them.\n\nDensity is moderate and work-focused. A fixed-width column on the left holds the plan, written as a timeline: a ruled spine with each period hanging off a numbered node in its own ink. The results column on the right puts the final amount first, then a ruled row of three supporting figures (paid in, growth, monthly income), the chart with each period's stretch labeled above it, and the ledger-style breakdown. Type pairs a serif for the answers (figures and headings, like ink in a ledger) with a quiet sans for the working parts, on a role scale of eight sizes. The one large number on the page is the final amount.\n\nDark mode is the same notebook read by lamplight: the same roles and the same hues, re-stepped for a near-black page. It is never a separate look.",
+    "keyCharacteristics": [
+      "Warm neutral paper surfaces; color is reserved for data and the single action accent.",
+      "The plan reads as a sequence: a timeline spine down the setup column, labeled stretches on the chart.",
+      "Color encodes *which period*; shape encodes *which extra*. Neither channel is borrowed for decoration.",
+      "Soft-edged, quiet controls with hairline borders and almost no shadow.",
+      "Serif figures with tabular numerals wherever money answers the question.",
+      "One display-size number per screen: the final amount."
+    ],
+    "rules": [
+      {
+        "name": "The One Meaning Rule",
+        "body": "Hue on the chart, legend, swatches and table dots means *which period* and nothing else. Extras are told apart by shape (circle, square, triangle, diamond) drawn in neutral pencil tones, never by a palette color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Palette Lives in JS Rule",
+        "body": "No series hex is ever written in `styles.css` or markup. Every series color is read through `Chart.colorFor(slot)`, and periods store a slot index, never a hex.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Ink Rule",
+        "body": "A figure set on a series fill (the period node number) takes white or graphite per slot, whichever contrasts more, via `Chart.inkOn(slot)`. Never hardcode white on a palette hue: yellow, aqua and magenta fail with it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Is for Data Rule",
+        "body": "Outside the chart and its keys, the only saturated color is Ledger Blue on the primary action and focus. Gain and loss colors tint text only.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ledger Ink Rule",
+        "body": "Money that answers the user's question (final amount, summary figures, result bar, tooltip balance) is set in the serif with lining tabular numerals. Money in the table and the inputs stays in the sans: those are working figures, not answers.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Figures Rule",
+        "body": "Every money, percentage or time figure that sits near another figure uses tabular numerals: inputs, figures, table cells, tooltips, axis labels. Free-text inputs turn it back off.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Big Number Rule",
+        "body": "Only the final amount is set at display size. If another figure seems to need it, it belongs in the summary row at figure size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Today's Money Rule",
+        "body": "Amounts are shown in today's dollars by default (2.5% inflation, editable), with a Today's $ / Future $ switch beside the final amount. The math stays nominal; `Calc.inTodaysDollars` restates a projection so every figure, the chart and the table move together, and the accounting still reconciles. Growth in today's dollars is labeled \"Growth after inflation\".",
+        "section": "typography"
+      },
+      {
+        "name": "The No Green Shortfall Rule",
+        "body": "Once the balance goes below zero, the plan is short: the final amount turns Loss Red under \"Shortfall at the end\", a Loss Red warning names the month the money runs out, the chart marks it, and nothing about that plan's growth is tinted green.",
+        "section": "typography"
+      },
+      {
+        "name": "The Whole Dollars Rule",
+        "body": "Projections are estimates, so every figure on screen rounds to whole dollars. Cents imply a precision the model does not have.",
+        "section": "typography"
+      },
+      {
+        "name": "The Role Token Rule",
+        "body": "A new text element picks one of the nine `--text-*` roles. If none fits, the role list changes in DESIGN.md first; no one-off sizes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper Doesn't Float Rule",
+        "body": "Cards inside a panel (period cards, extra cards) never get a shadow; a hairline border and a tonal step are enough. Shadow is for the panels and for anything that overlays content (tooltip, toast, result bar), and nothing else.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No Card in a Card Rule",
+        "body": "Inside the results panel, summary figures sit in a ruled row, not in boxes. A new grouping inside a panel uses hairline rules or spacing before it uses a border box.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** read every series color through `Chart.colorFor(slot)` and store a slot index on the data.",
+      "**Do** distinguish extras by shape glyph in neutral pencil tones.",
+      "**Do** use tabular figures on every number that sits near another number.",
+      "**Do** separate layers with a tonal step plus a 1px Ruled Line border before reaching for a shadow.",
+      "**Do** keep uppercase labels in Pencil at 12px, 600, with 0.06em tracking.",
+      "**Do** set sizes with the `--text-*` role tokens only.",
+      "**Do** define every new neutral as a token in both the light `:root` block and the `[data-theme=\"dark\"]` block.",
+      "**Do** draw icons as inline SVG at one stroke weight (1.6 at 14px).",
+      "**Do** make destructive actions undoable with the toast rather than gating them behind a dialog.",
+      "**Do** round on-screen money to whole dollars."
+    ],
+    "donts": [
+      "**Don't** hardcode a series hex in `styles.css` or markup, or use a palette hue for anything other than a period.",
+      "**Don't** give extras a color of their own.",
+      "**Don't** set a second figure at display size; only the final amount is 46px.",
+      "**Don't** add a third font family, or load the fonts from a CDN; they ship in `fonts/`.",
+      "**Don't** put shadows on cards nested inside a panel, or any shadow in dark mode.",
+      "**Don't** use Gain Green or Loss Red as background fills; they tint text and borders only.",
+      "**Don't** add a second accent color for interface chrome. Ledger Blue is the only action color.",
+      "**Don't** mark a card with a thick colored edge; a period's color lives on its timeline node.",
+      "**Don't** use unicode glyphs or emoji as icons, or the native `confirm()` dialog.",
+      "**Don't** box figures inside a panel; use a ruled row."
+    ]
+  }
+}

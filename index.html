@@ -3,47 +3,69 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Investment Projection Calculator</title>
+<title>Seasons · Investment projection calculator</title>
+<meta name="description" content="Investment projections for a plan that changes over time: save in phases, add lump sums, see where you end up.">
+<link rel="preload" href="fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 <!-- Blocking on purpose: stamps the theme before first paint. -->
 <script src="js/theme.js"></script>
 </head>
 <body>
 
-<header class="topbar">
-  <h1>Investment Projection Calculator</h1>
-  <div class="topbar-actions">
-    <div class="theme-toggle" id="theme-toggle" role="group" aria-label="Color theme">
-      <button type="button" data-theme-choice="light" title="Light theme">Light</button>
-      <button type="button" data-theme-choice="dark" title="Dark theme">Dark</button>
-      <button type="button" data-theme-choice="system" title="Follow the system setting">Auto</button>
-    </div>
-    <button id="reset-btn" class="btn btn-ghost" type="button">Reset</button>
+<!-- First Tab stop: straight to the answer, past every season card. -->
+<a class="skip-link" href="#results">Skip to results</a>
+
+<!-- A notebook cover, not a toolbar: the name sits on the page itself. -->
+<header class="masthead">
+  <div class="brand">
+    <!-- One line, bending where the plan changes season. Neutral ink: hue means "which period". -->
+    <svg class="brand-mark" viewBox="0 0 28 28" width="28" height="28" aria-hidden="true">
+      <path d="M3 23 L10 16 L16 17.5 L25 6" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="8" y="14" width="4" height="4" rx="1" fill="currentColor"/>
+      <rect x="14" y="15.5" width="4" height="4" rx="1" fill="currentColor"/>
+    </svg>
+    <h1>Seasons</h1>
+  </div>
+  <p class="tagline">Investment projections for a plan that changes over time.</p>
+  <div class="segmented" id="theme-toggle" role="group" aria-label="Color theme">
+    <button type="button" data-theme-choice="light" title="Light theme">Light</button>
+    <button type="button" data-theme-choice="dark" title="Dark theme">Dark</button>
+    <button type="button" data-theme-choice="system" title="Follow the system setting">Auto</button>
   </div>
 </header>
 
 <main class="layout">
 
   <section class="panel setup" aria-labelledby="setup-h">
-    <h2 id="setup-h">Setup</h2>
+    <div class="panel-head">
+      <h2 id="setup-h">Your plan</h2>
+      <span class="panel-actions">
+        <button id="undo-link" class="link-btn" type="button" hidden>Undo</button>
+        <button id="reset-btn" class="link-btn" type="button">Start from the example</button>
+      </span>
+    </div>
+    <p class="example-note" id="example-note" hidden>This is an example plan. Change anything to make it yours.</p>
 
     <label class="field">
       <span class="field-label">Starting amount</span>
       <span class="money">
         <span class="affix">$</span>
-        <input id="starting-amount" type="number" min="0" step="100" inputmode="decimal">
+        <!-- Text, not number: so it can show thousands separators. Formatted on blur. -->
+        <input id="starting-amount" type="text" inputmode="decimal" autocomplete="off">
       </span>
     </label>
 
     <div class="periods-head">
-      <h3>Periods</h3>
-      <p class="hint">Each period picks up where the previous one ended.</p>
+      <h3>Seasons</h3>
+      <p class="hint">The seasons of your plan, in order: saving hard, slowing down, retiring. Each one picks up where the previous one ended.</p>
     </div>
 
     <ol id="period-list" class="period-list"></ol>
-    <p id="period-empty" class="empty-note" hidden>No periods yet — add one to start projecting.</p>
+    <p id="period-empty" class="empty-note" hidden>No seasons yet. Add one to start projecting.</p>
 
-    <button id="add-period" class="btn btn-primary" type="button">+ Add period</button>
+    <button id="add-period" class="btn btn-primary" type="button">+ Add a season</button>
 
     <div class="periods-head windfall-head">
       <h3>Extra amounts</h3>
@@ -51,35 +73,58 @@
     </div>
 
     <ol id="windfall-list" class="windfall-list"></ol>
-    <p id="windfall-empty" class="empty-note" hidden>No extras — the balance just follows the periods.</p>
+    <p id="windfall-empty" class="empty-note" hidden>No extras. The balance just follows the seasons.</p>
 
     <button id="add-windfall" class="btn btn-block" type="button">+ Add extra</button>
   </section>
 
-  <section class="panel results" aria-labelledby="results-h">
+  <section class="panel results" id="results" tabindex="-1" aria-labelledby="results-h">
     <h2 id="results-h" class="sr-only">Results</h2>
 
     <div class="hero">
-      <div class="hero-label">Final amount</div>
-      <div class="hero-value" id="final-amount">$0.00</div>
+      <div class="hero-top">
+        <div class="hero-label" id="final-label">Final amount</div>
+        <!-- Amounts in today's money by default: a future dollar buys less. -->
+        <div class="money-mode">
+          <div class="segmented" id="money-mode" role="group" aria-label="Show amounts in">
+            <button type="button" data-money="today" title="Adjusted for inflation: what the money would buy now">Today&rsquo;s $</button>
+            <button type="button" data-money="future" title="The dollar amounts on the day you reach them">Future $</button>
+          </div>
+          <label class="inflation" id="inflation-field">
+            <span class="pct"><span class="affix">%</span>
+              <input id="inflation" type="number" step="0.1" min="0" inputmode="decimal" aria-label="Inflation per year">
+            </span>
+            <span>inflation</span>
+          </label>
+        </div>
+      </div>
+      <div class="hero-value" id="final-amount">$0</div>
       <div class="hero-sub" id="final-sub">after 0 mo</div>
+      <p class="hero-warn" id="depletion-warn" hidden></p>
+      <!-- What would change the outcome: how much a plan could withdraw, or what would make it last. -->
+      <p class="lever" id="lever-note" hidden></p>
+      <div class="baseline-row">
+        <button type="button" class="link-btn" id="keep-baseline">Keep as baseline</button>
+        <span class="baseline-delta" id="baseline-delta" hidden></span>
+        <button type="button" class="link-btn" id="clear-baseline" hidden>Clear baseline</button>
+      </div>
     </div>
 
     <div class="kpis">
       <div class="kpi">
         <div class="kpi-label">Total paid in</div>
-        <div class="kpi-value" id="kpi-contributed">$0.00</div>
+        <div class="kpi-value" id="kpi-contributed">$0</div>
         <div class="kpi-note" id="kpi-contributed-note">starting amount + contributions</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Total growth</div>
-        <div class="kpi-value" id="kpi-growth">$0.00</div>
+        <div class="kpi-label" id="kpi-growth-label">Total growth</div>
+        <div class="kpi-value" id="kpi-growth">$0</div>
         <div class="kpi-note" id="kpi-growth-note">&nbsp;</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Duration</div>
-        <div class="kpi-value" id="kpi-duration">0 mo</div>
-        <div class="kpi-note" id="kpi-duration-note">&nbsp;</div>
+        <div class="kpi-label" id="kpi-third-label">Monthly income</div>
+        <div class="kpi-value" id="kpi-income">$0</div>
+        <div class="kpi-note" id="kpi-income-note">under the 4% rule</div>
       </div>
     </div>
 
@@ -88,29 +133,34 @@
       <div id="chart" class="chart"></div>
       <div id="legend" class="legend"></div>
       <div id="extras-legend" class="extras-legend" hidden></div>
-      <p id="withdrawal-note" class="withdrawal-note" hidden></p>
+      <div id="withdrawal-note" class="withdrawal-note"></div>
     </figure>
 
     <div class="table-wrap">
       <table class="breakdown">
-        <caption class="sr-only">Per-period breakdown</caption>
-        <thead>
-          <tr>
-            <th scope="col">Period</th>
-            <th scope="col" class="num">Length</th>
-            <th scope="col" class="num">Rate</th>
-            <th scope="col" class="num">Paid in</th>
-            <th scope="col" class="num">Extras</th>
-            <th scope="col" class="num">Growth</th>
-            <th scope="col" class="num">Balance at end</th>
-          </tr>
-        </thead>
+        <caption class="sr-only">Breakdown by season</caption>
+        <thead id="breakdown-head"></thead>
         <tbody id="breakdown-body"></tbody>
       </table>
     </div>
   </section>
 
 </main>
+
+<!-- Narrow screens only: the result stays in reach while the plan is edited. -->
+<a class="result-bar" id="result-bar" href="#results" hidden>
+  <span class="result-bar-label">Final amount</span>
+  <span class="result-bar-value" id="result-bar-value">$0</span>
+  <span class="result-bar-go">See results</span>
+</a>
+
+<div class="toast" id="toast" role="status" hidden>
+  <span id="toast-text"></span>
+  <button type="button" class="toast-undo" id="toast-undo">Undo</button>
+</div>
+
+<!-- Announces the result after typing settles; visible results update live. -->
+<p class="sr-only" id="live-summary" aria-live="polite"></p>
 
 <script src="js/calc.js"></script>
 <script src="js/chart.js"></script>
