@@ -392,9 +392,19 @@ Quiet and soft-edged. They read as part of the page until hovered.
   inflation raise in numbers ("≈$585/mo when this season starts, $1,083 by its end"), and sizes it
   against the 4% rule. The first card's returns hint is one line with a "What's typical?" disclosure.
 
+### Phone season rows
+- At 560px and below, every season but the one being edited collapses to a single summary row
+  (name, then "10 yrs · $500/mo saved · 7%" in Faded Pencil), a 44px tap target that opens it. In an
+  open card the range line ("20–45 yrs", compact form) shares a row with the reorder and delete
+  buttons. Icon-button hover colours apply only under `(hover: hover)`, so a red ✕ never sticks
+  under a thumb after a delete.
+
 ### Edge states
 - A season past the 100-year cap keeps its name and the reason, and hides its inputs (`.capped`).
-- A ninth season sharing an earlier hue gets a hollow timeline node (`.color-reused`).
+- A ninth season sharing an earlier hue gets a hollow timeline node (`.color-reused`), a hollow
+  legend dot and a dashed chart line.
+- When withdrawals outrun the money, they stop at what was there: the hero says "Short by $X",
+  the table's balance cell shows $0 with a Loss Red "short $X" line, and nothing goes negative.
 - On wide screens the pinned result is a compact floating card at the bottom right; on phones it is
   the full-width bar, and the undo toast moves to the top so it never covers the field being edited.
 - In today's dollars, the paid-in figure and table cells carry the as-typed sum beneath ("$60,000

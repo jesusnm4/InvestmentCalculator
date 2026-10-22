@@ -140,6 +140,7 @@
     var totalContributed = starting + atZero;
     var totalWindfalls = atZero;
     var totalWithdrawn = 0;
+    var totalShortfall = 0;
     var monthsUsed = 0;
     var dippedAt = null;
 
@@ -154,6 +155,7 @@
       var startBalance = balance;
       var contributed = 0;
       var withdrawn = 0;
+      var shortfall = 0;
       var windfalled = 0;
 
       var firstWithdrawal = 0;
@@ -162,19 +164,32 @@
         var contribution = flowAt(p, monthsUsed + 1, startMonth, startBalance, inflation);
         if (m === 0 && contribution < 0) firstWithdrawal = -contribution;
         // Contribution lands at month end (ordinary annuity).
-        balance = balance * g + contribution;
+        balance = balance * g;
+        /* A withdrawal can only take what is there. Once the money runs out the
+           unpaid part is a shortfall, not a growing debt: "withdrawn" counts only
+           money that was actually paid out. */
+        var short = 0;
+        if (contribution < 0) {
+          var paid = Math.min(-contribution, Math.max(0, balance));
+          short = -contribution - paid;
+          contribution = -paid;
+          shortfall += short;
+        }
+        balance += contribution;
         if (contribution >= 0) contributed += contribution; else withdrawn -= contribution;
         monthsUsed++;
         // A one-off lands at month end too, so it grows from the next month on.
+        // A planned expense must be paid, so it can still take the balance below zero.
         var extra = windfalls[monthsUsed] || 0;
         if (extra) { balance += extra; windfalled += extra; }
-        points.push({ month: monthsUsed, balance: balance, periodIndex: i, contribution: contribution, extra: extra });
-        // The first month the balance goes below zero at all (it may recover).
-        if (dippedAt === null && balance < 0) dippedAt = monthsUsed;
+        points.push({ month: monthsUsed, balance: balance, periodIndex: i, contribution: contribution, extra: extra, short: short });
+        // The first month the plan falls short at all (it may recover).
+        if (dippedAt === null && (balance < 0 || short > 0)) dippedAt = monthsUsed;
       }
 
       totalContributed += contributed + windfalled;
       totalWithdrawn += withdrawn;
+      totalShortfall += shortfall;
       totalWindfalls += windfalled;
       perPeriod.push({
         index: i,
@@ -186,6 +201,8 @@
         endBalance: balance,
         contributed: contributed,
         withdrawn: withdrawn,
+        // What it asked to withdraw but could not, because the money had run out.
+        shortfall: shortfall,
         // The season's first monthly withdrawal in today's dollars, for its card.
         firstWithdrawal: firstWithdrawal / deflator(startMonth + 1, inflation),
         windfalls: windfalled,
@@ -197,10 +214,12 @@
     /* The money has run out only if the plan ends short: depletedAt is where
        that final stretch below zero begins. A dip that later recovers (say a
        big expense paid back by later saving) is dippedAt, not a run-out. */
+    function falling(pt) { return pt.balance < 0 || pt.short > 0; }
     var depletedAt = null;
-    if (balance < 0) {
+    var last = points[points.length - 1];
+    if (points.length > 1 && falling(last)) {
       depletedAt = points.length - 1;
-      while (depletedAt > 1 && points[depletedAt - 1].balance < 0) depletedAt--;
+      while (depletedAt > 1 && falling(points[depletedAt - 1])) depletedAt--;
     }
 
     /* An extra whose FIRST occurrence is past the end never lands at all. Later
@@ -220,6 +239,7 @@
         totalContributed: totalContributed,
         totalWindfalls: totalWindfalls,
         totalWithdrawn: totalWithdrawn,
+        totalShortfall: totalShortfall,
         totalGrowth: balance - totalContributed + totalWithdrawn,
         totalMonths: monthsUsed,
         depletedAt: depletedAt,
@@ -247,7 +267,7 @@
     for (var m = 0; m < pts.length; m++) {
       var d = deflator(m, inflationPercent);
       points.push({ month: m, balance: pts[m].balance / d, periodIndex: pts[m].periodIndex,
-                    contribution: pts[m].contribution / d, extra: pts[m].extra / d });
+                    contribution: pts[m].contribution / d, extra: pts[m].extra / d, short: (pts[m].short || 0) / d });
       var c = num(pts[m].contribution);
       realIn.push(Math.max(0, c) / d);
       realOut.push(Math.max(0, -c) / d);
@@ -260,10 +280,12 @@
       var contributed = pp.months ? sum(realIn, pp.startMonth + 1, pp.endMonth) : 0;
       var windfalls = pp.months ? sum(realExtra, pp.startMonth + 1, pp.endMonth) : 0;
       var withdrawn = pp.months ? sum(realOut, pp.startMonth + 1, pp.endMonth) : 0;
+      var shortfall = 0;
+      for (var q = pp.startMonth + 1; pp.months && q <= pp.endMonth; q++) shortfall += points[q].short;
       var out = {};
       for (var k in pp) if (Object.prototype.hasOwnProperty.call(pp, k)) out[k] = pp[k];
       out.startBalance = start; out.endBalance = end;
-      out.contributed = contributed; out.withdrawn = withdrawn; out.windfalls = windfalls;
+      out.contributed = contributed; out.withdrawn = withdrawn; out.windfalls = windfalls; out.shortfall = shortfall;
       out.growth = end - start - contributed + withdrawn - windfalls;
       return out;
     });
@@ -283,6 +305,7 @@
         totalContributed: totalContributed,
         totalWindfalls: totalWindfalls,
         totalWithdrawn: totalWithdrawn,
+        totalShortfall: points.reduce(function (a, pt) { return a + pt.short; }, 0),
         totalGrowth: points[last].balance - totalContributed + totalWithdrawn,
         totalMonths: t.totalMonths,
         depletedAt: t.depletedAt,
@@ -358,7 +381,46 @@
     return hi;
   }
 
+  /* The largest share of extra `index` (a planned expense) the plan can absorb
+     and still last: 0.6 means "an expense 40% smaller would make it". */
+  function extraScale(state, index) {
+    var ok = function (k) {
+      var copy = {};
+      for (var key in state) if (Object.prototype.hasOwnProperty.call(state, key)) copy[key] = state[key];
+      copy.windfalls = state.windfalls.map(function (w, i) {
+        if (i !== index) return w;
+        var q = {};
+        for (var k2 in w) if (Object.prototype.hasOwnProperty.call(w, k2)) q[k2] = w[k2];
+        q.amount = num(w.amount) * k;
+        return q;
+      });
+      return lasts(copy);
+    };
+    if (ok(1)) return 1;
+    if (!ok(0)) return 0;
+    var lo = 0, hi = 1;
+    for (var i = 0; i < 40; i++) { var mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; }
+    return lo;
+  }
+
+  /* How much more the plan ends with if every saving season puts in `more`
+     extra dollars a month: the answer to "what if I saved a bit more?". */
+  function savingMoreAdds(state, more) {
+    var copy = {};
+    for (var key in state) if (Object.prototype.hasOwnProperty.call(state, key)) copy[key] = state[key];
+    copy.periods = (state.periods || []).map(function (p) {
+      if (isWithdrawing(p) || p.flow === 'withdraw') return p;
+      var q = {};
+      for (var k2 in p) if (Object.prototype.hasOwnProperty.call(p, k2)) q[k2] = p[k2];
+      q.monthlyContribution = num(p.monthlyContribution) + more;
+      return q;
+    });
+    return project(copy);
+  }
+
   global.Calc = {
+    extraScale: extraScale,
+    savingMoreAdds: savingMoreAdds,
     isWithdrawing: isWithdrawing,
     hasWithdrawals: hasWithdrawals,
     withdrawalScale: withdrawalScale,

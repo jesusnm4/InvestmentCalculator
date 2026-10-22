@@ -68,6 +68,10 @@
      it follows a card through reorders; not persisted — it is view state. */
   var openOptions = typeof WeakSet === 'function' ? new WeakSet() : null;
 
+  /* Phones collapse every season but the one being edited to a single summary
+     row, so the answer is not three screens away. View state, like openOptions. */
+  var expanded = null;
+
   var state = load() || defaultState();
 
   // ---------------------------------------------------------------- state
@@ -265,7 +269,9 @@
 
   function periodMeta() {
     return state.periods.map(function (p, i) {
-      return { name: seasonName(p, i), colorSlot: p.colorSlot };
+      // A ninth season shares a hue; the chart and legend draw it dashed / hollow.
+      var reused = state.periods.slice(0, i).some(function (q) { return q.colorSlot % Chart.slotCount === p.colorSlot % Chart.slotCount; });
+      return { name: seasonName(p, i), colorSlot: p.colorSlot, reused: reused };
     });
   }
 
@@ -326,6 +332,7 @@
          two never read as the same season. */
       var reused = state.periods.slice(0, i).some(function (q) { return q.colorSlot % Chart.slotCount === p.colorSlot % Chart.slotCount; });
       li.classList.toggle('color-reused', reused);
+      li.classList.toggle('collapsed', expanded !== p);
 
       var compOptions = COMPOUNDING.map(function (c) {
         return '<option value="' + c.value + '"' + (c.value === p.compounding ? ' selected' : '') + '>' + c.label + '</option>';
@@ -343,13 +350,19 @@
       var open = openOptions && openOptions.has(p);
       li.innerHTML =
         '<span class="period-node" aria-hidden="true">' + n + '</span>' +
+        // Phones: a collapsed season is this one row; tap it to edit.
+        '<button type="button" class="card-summary" data-action="expand" aria-label="Edit season ' + n + '">' +
+          '<span class="card-summary-name" data-role="sum-name"></span>' +
+          '<span class="card-summary-meta" data-role="sum-meta"></span>' +
+        '</button>' +
         '<div class="period-head">' +
           '<input type="text" data-field="name" value="' + escapeAttr(p.name) + '" aria-label="Season ' + n + ' name">' +
           '<button type="button" class="icon-btn" data-action="up" title="Move up" aria-label="Move season ' + n + ' up"' + (i === 0 ? ' disabled' : '') + '>' + ICON.up + '</button>' +
           '<button type="button" class="icon-btn" data-action="down" title="Move down" aria-label="Move season ' + n + ' down"' + (i === state.periods.length - 1 ? ' disabled' : '') + '>' + ICON.down + '</button>' +
+          // Inside the head so phones can put it on the same row as the buttons.
+          '<p class="period-range" data-role="range"></p>' +
           '<button type="button" class="icon-btn danger" data-action="delete" title="Delete season" aria-label="Delete season ' + n + '">' + ICON.close + '</button>' +
         '</div>' +
-        '<p class="period-range" data-role="range"></p>' +
         '<div class="period-grid">' +
           '<div class="field">' +
             '<span class="field-label">Length</span>' +
@@ -445,6 +458,15 @@
     li.querySelector('[data-role="more-sum"]').textContent =
       '· ' + (comp ? comp.label.toLowerCase() : 'monthly') + ' compounding, ' +
       Chart.colorNames[p.colorSlot % Chart.slotCount].toLowerCase();
+    // The collapsed row: name, then length · what it does each month · return.
+    var mode = flowMode(p);
+    var each = mode === 'save'
+      ? (Number(p.monthlyContribution) ? Chart.money0.format(Number(p.monthlyContribution)) + '/mo saved' : 'no saving')
+      : mode === 'percent' ? (Number(p.withdrawPercent) || 0) + '% withdrawn'
+      : Chart.money0.format(Math.abs(Number(p.monthlyContribution) || 0)) + '/mo withdrawn';
+    li.querySelector('[data-role="sum-name"]').textContent = p.name || 'Untitled season';
+    li.querySelector('[data-role="sum-meta"]').textContent =
+      (months ? Chart.durationLabel(months) : 'no length') + ' \u00b7 ' + each + ' \u00b7 ' + (Number(p.annualRatePercent) || 0) + '%';
   }
 
   /* Structural render: rebuilds every row. Add / delete only — same rule as the
@@ -566,8 +588,20 @@
     var moneyNote = today ? 'today\u2019s dollars at ' + state.inflationPercent + '% inflation' : 'future dollars';
     var seasons = state.periods.length + (state.periods.length === 1 ? ' season' : ' seasons');
     // How far into its season the money runs out: "7y 6m into Retirement".
-    var runsOut = '';
+    /* Which planned expense (negative extra), if any, lands in the month the
+       money runs out: then it is the cause, and the page names it. */
+    var culprit = -1;
     if (depleted) {
+      state.windfalls.forEach(function (w, wi) {
+        if (culprit < 0 && Number(w.amount) < 0 &&
+            Calc.windfallMonths(w, t.totalMonths).indexOf(t.depletedAt) >= 0) culprit = wi;
+      });
+    }
+    var runsOut = '';
+    if (depleted && culprit >= 0) {
+      runsOut = 'Runs out at ' + Chart.durationLabel(t.depletedAt) + ', when ' +
+        (state.windfalls[culprit].name || 'Extra ' + (culprit + 1)) + ' lands';
+    } else if (depleted) {
       var inSeason = seasonAt(projection, t.depletedAt);
       runsOut = inSeason
         ? 'Runs out ' + Chart.durationLabel(t.depletedAt - inSeason.pp.startMonth) + ' into ' + inSeason.name
@@ -579,13 +613,22 @@
       // "Lasts through Retirement", not "lasts all 45 yrs": the saving years are not the question.
       var lastDraw = drawing[drawing.length - 1];
       var drawMonths = drawing.reduce(function (sum, pp) { return sum + pp.months; }, 0);
+      // Months of withdrawals actually paid before the money ran out.
+      var paidMonths = !depleted ? drawMonths : drawing.reduce(function (sum, pp) {
+        // Up to and including the month it ran out, so it matches "Runs out 10y 10m into…".
+        return sum + Math.max(0, Math.min(pp.endMonth, t.depletedAt) - pp.startMonth);
+      }, 0);
+      var shortBy = t.totalShortfall + Math.max(0, -t.finalAmount);
       var through = 'Lasts through ' + seasonName(state.periods[lastDraw.index], lastDraw.index);
       el.finalAmount.textContent = depleted ? runsOut : through;
       // One line: where it ends, then the frame (withdrawal years, money).
       el.finalSub.textContent = (depleted
-        ? 'Year ' + (Math.floor(t.depletedAt / 12) + 1) + ' of the plan'
+        ? 'Short by ' + Chart.money0.format(shortBy)
         : Chart.money0.format(t.finalAmount) + ' left at the end') +
-        ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals \u00b7 ' + moneyNote;
+        (!depleted ? ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals'
+          : paidMonths > 0 ? ' \u00b7 ' + Chart.durationLabel(paidMonths) + ' of ' + Chart.durationLabel(drawMonths) + ' of withdrawals'
+          : '') +
+        ' \u00b7 ' + moneyNote;
       el.resultBarValue.textContent = depleted ? runsOut : 'Lasts \u00b7 ' + Chart.money0.format(t.finalAmount) + ' left';
     } else {
       el.finalLabel.textContent = short ? 'Shortfall at the end' : 'Final amount';
@@ -609,9 +652,9 @@
       // A recovered dip is still worth saying: for those months the money was not there.
       el.depletionWarn.textContent = 'The balance goes below zero at ' + Chart.durationLabel(at) +
         (during ? ', during ' + during : '') +
-        (dipOnly ? ', and only recovers later.' : '. After that the plan is short.');
+        (dipOnly ? ', then recovers.' : '. After that the plan is short.');
     }
-    renderLever(depleted, drawdown);
+    renderLever(depleted, drawdown, culprit, today);
 
     /* Paid in counts money going in. A negative extra (a planned expense) is
        money out, so it is reported beside it rather than netted into it. In
@@ -624,7 +667,7 @@
     var spent = -expenses(projection);
     el.contributed.textContent = Chart.money0.format(paidIn);
     el.contributedNote.textContent = (today && Math.abs(paidTyped - paidIn) >= 1
-      ? Chart.money0.format(paidTyped) + ' as typed, worth this today'
+      ? 'You put in ' + Chart.money0.format(paidTyped) + ', worth this today'
       : 'starting amount + savings' + (t.totalWindfalls + spent > 0 ? ' + extras' : '')) +
       (spent >= 1 ? ' \u00b7 ' + Chart.money0.format(spent) + ' of planned expenses taken out' : '');
     el.growthLabel.textContent = today ? 'Growth after inflation' : 'Total growth';
@@ -645,7 +688,9 @@
       var monthly = outs.length === 1 ? nominal.perPeriod[outs[0]] && nominal.perPeriod[outs[0]].firstWithdrawal : 0;
       // In the money the page is in: today's (constant), or future dollars at the start, rising.
       var startOf = outs.length === 1 ? nominal.perPeriod[outs[0]] : null;
-      el.incomeNote.textContent = !(monthly > 0) ? 'taken out over the withdrawing seasons'
+      el.incomeNote.textContent = depleted && t.totalShortfall >= 1
+        ? 'then ' + Chart.money0.format(t.totalShortfall) + ' more it couldn\u2019t pay'
+        : !(monthly > 0) ? 'taken out over the withdrawing seasons'
         : today ? Chart.money0.format(monthly) + '/month in today\u2019s dollars'
         : Chart.money0.format(monthly * Calc.deflator(startOf.startMonth + 1, state.inflationPercent)) + '/month to start, rising with inflation';
     } else {
@@ -663,9 +708,13 @@
       refreshFlowNote(li, state.periods[i], nominal.perPeriod[i]);
       // Past the 100-year cap a season gets no time: its inputs would only mislead.
       li.classList.toggle('capped', !pp.months && pp.truncated);
-      li.querySelector('[data-role="range"]').textContent = pp.months
-        ? (pp.startMonth ? 'From ' + Chart.durationLabel(pp.startMonth) : 'From the start') +
-          ' to ' + Chart.durationLabel(pp.endMonth)
+      // Long form, plus a compact one ("20–45 yrs") phones use beside the buttons.
+      var rangeEl = li.querySelector('[data-role="range"]');
+      rangeEl.innerHTML = pp.months
+        ? '<span class="range-long">' + (pp.startMonth ? 'From ' + Chart.durationLabel(pp.startMonth) : 'From the start') +
+          ' to ' + Chart.durationLabel(pp.endMonth) + '</span><span class="range-short">' +
+          (pp.startMonth ? Chart.durationLabel(pp.startMonth).replace(/ yrs?$/, '') : '0') + '\u2013' +
+          Chart.durationLabel(pp.endMonth) + '</span>'
         : pp.truncated
           ? 'No time left: earlier seasons already reach the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year cap'
           : 'No length yet';
@@ -707,7 +756,7 @@
      withdraw, or how much more to start with. Lasting: how much more could be
      withdrawn. Withdrawal amounts are the ones typed into the cards (dollars of
      the day they are spent), so they are not restated in today's money. */
-  function renderLever(depleted, drawdown) {
+  function renderLever(depleted, drawdown, culprit, today) {
     var text = '';
     var withdrawing = state.periods.filter(Calc.isWithdrawing);
     var scale = drawdown ? Calc.withdrawalScale(state) : null;
@@ -722,6 +771,14 @@
     }
     if (depleted) {
       var parts = [];
+      // An expense caused it: the first lever is a smaller expense.
+      if (culprit >= 0) {
+        var k = Calc.extraScale(state, culprit);
+        if (k > 0 && k < 1) {
+          var cost = Math.floor(Math.abs(Number(state.windfalls[culprit].amount)) * k / 100) * 100;
+          parts.push('An expense of ' + Chart.money0.format(cost) + ' or less would make it last');
+        }
+      }
       if (scale !== null && scale > 0 && scale < 1) {
         parts.push(one
           ? 'Withdrawing ' + amount(one * scale, true) + ' instead of ' + amount(one) + ' would make it last'
@@ -730,9 +787,12 @@
       var more = Calc.extraStartNeeded(state);
       if (isFinite(more) && more > 0) {
         var startMore = Chart.money0.format(Math.ceil(more / 1000) * 1000);
-        parts.push(parts.length ? 'or starting with ' + startMore + ' more would' : 'Starting with ' + startMore + ' more would make it last');
+        parts.push(parts.length ? 'starting with ' + startMore + ' more would' : 'Starting with ' + startMore + ' more would make it last');
       }
-      text = parts.length ? parts.join(', ') + '.' : '';
+      // "A, or b." / "A, b, or c." — later options continue the sentence in lower case.
+      var tail = parts.slice(1).map(function (x) { return x.charAt(0).toLowerCase() + x.slice(1); });
+      text = !parts.length ? ''
+        : parts[0] + (tail.length ? (tail.length > 1 ? ', ' + tail.slice(0, -1).join(', ') : '') + ', or ' + tail[tail.length - 1] : '') + '.';
     } else if (drawdown && scale !== null && scale > 1.05) {
       // Past 5x the precise figure stops meaning anything; say it plainly.
       text = scale >= 5
@@ -742,6 +802,20 @@
           : scale >= 2
             ? 'You could withdraw about ' + (Math.floor(scale * 10) / 10) + '\u00d7 as much in each withdrawing season and it would still last.'
             : 'You could withdraw about ' + Math.floor((scale - 1) * 100) + '% more in each withdrawing season and it would still last.';
+    }
+    /* A plan that only saves still gets a lever: what a little more each month
+       would add, in the money the page is in. */
+    if (!text && !drawdown && !depleted) {
+      var savers = state.periods.filter(function (p) { return !Calc.isWithdrawing(p) && Number(p.months) > 0; });
+      if (savers.length) {
+        var base = Calc.project(state), bumped = Calc.savingMoreAdds(state, 100);
+        if (today) {
+          base = Calc.inTodaysDollars(base, state.inflationPercent);
+          bumped = Calc.inTodaysDollars(bumped, state.inflationPercent);
+        }
+        var gain = bumped.totals.finalAmount - base.totals.finalAmount;
+        if (gain >= 1) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
+      }
     }
     el.leverNote.hidden = !text;
     el.leverNote.textContent = text;
@@ -767,11 +841,14 @@
       if (!(monthly > 0)) {
         html = p.withdrawUnit === 'percent' ? 'Nothing to withdraw: the season starts with no money.' : '';
       } else {
-        html = '<strong>' + Chart.money0.format(monthly) + '/month</strong> in today\u2019s money' +
-          (Number(infl) > 0
-            ? ', raised with inflation: \u2248' + Chart.money0.format(monthly * Calc.deflator(pp.startMonth + 1, infl)) +
-              '/mo when this season starts, ' + Chart.money0.format(monthly * Calc.deflator(pp.endMonth, infl)) + ' by its end. '
-            : ', the same every month (inflation is 0%). ');
+        // One kind of dollar in the sentence; the future-dollar figures sit behind a toggle.
+        var future = Number(infl) > 0
+          ? ' <details class="hint-more"><summary>In future dollars</summary>\u2248' +
+            Chart.money0.format(monthly * Calc.deflator(pp.startMonth + 1, infl)) + '/month when this season starts, ' +
+            Chart.money0.format(monthly * Calc.deflator(pp.endMonth, infl)) + ' by its end.</details>'
+          : '';
+        html = '<strong>' + Chart.money0.format(monthly) + ' a month</strong> in today\u2019s money' +
+          (Number(infl) > 0 ? ', rising with prices. ' : ', the same every month (inflation is 0%). ');
         if (p.withdrawUnit === 'percent') {
           html += (Number(p.withdrawPercent) || 0) + '% of the ' + Chart.money0.format(start) +
             ' it starts with, in its first year (the 4% rule).';
@@ -782,6 +859,7 @@
         } else {
           html += 'It starts with no money, so it is short from the first month.';
         }
+        html += future;
       }
     }
     note.innerHTML = html;
@@ -885,14 +963,14 @@
     var seasons = namesOnChart ? '' : state.periods.map(function (p, i) {
       var pp = projection.perPeriod[i];
       return '<span class="legend-item">' +
-        '<span class="legend-dot" style="background:' + Chart.colorFor(p.colorSlot) + '"></span>' +
+        '<span class="legend-dot' + (periodMeta()[i].reused ? ' hollow' : '') + '" style="background:' + Chart.colorFor(p.colorSlot) + ';color:' + Chart.colorFor(p.colorSlot) + '"></span>' +
         escapeHtml(seasonName(p, i)) +
         '<span class="legend-meta">\u00b7 ' + (pp && pp.months ? Chart.durationLabel(pp.months) : 'no time left') + '</span>' +
         '</span>';
     }).join('');
     el.legend.innerHTML = seasons + (baseline
       ? '<span class="legend-item"><svg class="legend-dash" width="18" height="10" aria-hidden="true">' +
-        '<line x1="1" y1="5" x2="17" y2="5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"/></svg>Baseline</span>'
+        '<line x1="1" y1="5" x2="17" y2="5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"/></svg>Dashed: your kept plan</span>'
       : '');
     el.legend.hidden = !el.legend.innerHTML;
   }
@@ -952,7 +1030,7 @@
     function paid(view, asTyped) {
       if (!view) return '&mdash;';
       return Chart.money0.format(view) +
-        (typed && Math.abs(asTyped - view) >= 1 ? '<span class="typed">' + Chart.money0.format(asTyped) + ' typed</span>' : '');
+        (typed && Math.abs(asTyped - view) >= 1 ? '<span class="typed">of ' + Chart.money0.format(asTyped) + ' put in</span>' : '');
     }
     cols = ['Season', 'Length', 'Return', 'Paid in'].concat(drawdown ? ['Withdrawn'] : [], ['Extras', 'Growth', 'Balance at end']);
     el.thead.innerHTML = '<tr>' + cols.map(function (c, k) {
@@ -988,7 +1066,9 @@
       ].concat(out(pp.withdrawn), [
         { html: extraText(pp.windfalls) },
         { html: Chart.money0.format(pp.growth), cls: growthCls(pp.growth, pp.endBalance) },
-        { html: Chart.money0.format(pp.endBalance), cls: pp.endBalance < 0 ? 'neg' : '' }
+        { html: Chart.money0.format(pp.endBalance) +
+            (pp.shortfall >= 1 ? '<span class="typed short">short ' + Chart.money0.format(pp.shortfall) + '</span>' : ''),
+          cls: pp.endBalance < 0 ? 'neg' : '' }
       ]));
     }));
 
@@ -1000,7 +1080,9 @@
     ].concat(out(t.totalWithdrawn), [
       { html: extraText(t.totalWindfalls) },
       { html: Chart.money0.format(t.totalGrowth), cls: t.depletedAt !== null ? '' : growthCls(t.totalGrowth, t.finalAmount) },
-      { html: Chart.money0.format(t.finalAmount), cls: t.finalAmount < 0 ? 'neg' : '' }
+      { html: Chart.money0.format(t.finalAmount) +
+          (t.totalShortfall >= 1 ? '<span class="typed short">short ' + Chart.money0.format(t.totalShortfall) + '</span>' : ''),
+        cls: t.finalAmount < 0 ? 'neg' : '' }
     ])));
 
     el.tbody.innerHTML = rows.join('');
@@ -1100,6 +1182,18 @@
     var btn = ev.target.closest('[data-action]');
     if (!btn) return;
     var action = btn.dataset.action;
+
+    // Phones: open this season, close the one that was open.
+    if (action === 'expand') {
+      expanded = state.periods[index];
+      Array.prototype.forEach.call(el.periodList.children, function (c, k) {
+        c.classList.toggle('collapsed', state.periods[k] !== expanded);
+      });
+      var nameInput = li.querySelector('[data-field="name"]');
+      if (nameInput) nameInput.focus({ preventScroll: true });
+      li.scrollIntoView({ block: 'nearest' });
+      return;
+    }
 
     var focusAt = index, focusSel = '[data-field="name"]';
     if (action === 'delete') {
@@ -1340,6 +1434,7 @@
       lengthUnit: unitOf(last.lengthUnit, last.months),
       colorSlot: nextColorSlot()
     } : { colorSlot: nextColorSlot() }));
+    expanded = state.periods[state.periods.length - 1];
     save();
     renderPeriods();
     renderResults();

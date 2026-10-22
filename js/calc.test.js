@@ -446,6 +446,25 @@
     ok(r.totals.depletedAt > 6, 'the final run-out comes later, got ' + r.totals.depletedAt);
   });
 
+  test('a withdrawal only takes what is there; the rest is a shortfall', function () {
+    var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 12, monthlyContribution: 300, flow: 'withdraw' })] });
+    close(r.totals.totalWithdrawn, 1000, 1e-9, 'withdrawn is only what was there');
+    close(r.totals.totalShortfall, 2600, 1e-9, 'the rest went unpaid');
+    close(r.totals.finalAmount, 0, 1e-9, 'never below zero from withdrawals');
+    ok(r.totals.depletedAt === 4, 'runs out in month 4, got ' + r.totals.depletedAt);
+    close(r.totals.totalContributed - r.totals.totalWithdrawn + r.totals.totalGrowth, r.totals.finalAmount, 1e-9, 'identity');
+  });
+
+  test('extraScale finds the expense the plan can absorb', function () {
+    var st = { startingAmount: 1000, periods: [period({ months: 12 })], windfalls: [{ atMonth: 6, amount: -4000 }] };
+    close(Calc.extraScale(st, 0) * 4000, 1000, 0.01, 'an expense of $1,000 or less lasts');
+  });
+
+  test('savingMoreAdds adds the extra savings with growth', function () {
+    var st = { startingAmount: 0, periods: [period({ months: 12, monthlyContribution: 100 })] };
+    close(Calc.savingMoreAdds(st, 50).totals.finalAmount, 1800, 1e-9, '12 x 150');
+  });
+
   // --- today's dollars ----------------------------------------------------
   test('zero inflation leaves the projection unchanged', function () {
     var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: 100, annualRatePercent: 6 })] });

@@ -266,8 +266,10 @@
       }
       svg.push('<path d="M' + x(pp.startMonth).toFixed(2) + ' ' + yBase.toFixed(2) + a.join('') +
                'L' + x(segEnd).toFixed(2) + ' ' + yBase.toFixed(2) + 'Z" fill="url(#' + gradIds[pp.index] + ')"/>');
+      // A season sharing an earlier season's hue (past eight) is drawn dashed.
       lineParts.push('<path d="' + d.join('') + '" fill="none" stroke="' + color +
-                     '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>');
+                     '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+                     ((periods[pp.index] || {}).reused ? ' stroke-dasharray="6 3"' : '') + '/>');
     }
 
     /* Extra markers, one per occurrence. Neutral ink, never the series palette —

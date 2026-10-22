@@ -65,7 +65,10 @@ up the chain — `calc.js` must stay DOM-free so `tests.html` can load it standa
 also records the month's inflows (`contribution`, `extra`). `totals.depletedAt` is where the plan's
 *final* stretch below zero begins, so it is set only when the plan ends short; `totals.dippedAt` is
 the first month below zero at all (a dip that later recovers is reported, not treated as running
-out). `Calc.inTodaysDollars(projection, inflationPercent)` returns
+out). A withdrawal only takes what is there: once the balance is empty the unpaid part goes to
+`shortfall` (`perPeriod[i].shortfall`, `totals.totalShortfall`) and `withdrawn` counts only money
+actually paid, so withdrawals never drive the balance below zero (a planned expense still can).
+`Calc.extraScale` and `Calc.savingMoreAdds` power the expense and "save more" levers. `Calc.inTodaysDollars(projection, inflationPercent)` returns
 the same shape restated in today's dollars, discounting each flow by its month so
 `growth = end - start - contributed - windfalls` still holds; it returns the input unchanged at 0%.
 

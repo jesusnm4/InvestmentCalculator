@@ -63,7 +63,10 @@ stretch of the curve, and the accounting never lets a lump sum masquerade as gro
   starting-amount row.
 - Money: shown in today's dollars by default (2.5% inflation, editable), switchable to future
   dollars. Growth in today's dollars is real growth.
-- Running out: the month the balance first goes below zero is reported on the page and the chart.
+- Running out: withdrawals stop at what is there; the page reports when the money runs out, how
+  much went unpaid ("Short by $X"), and names a planned expense if it caused it. A dip below zero
+  that recovers is reported separately. Inflation is a plan setting (owner's choice), under the
+  starting amount.
 - The example plan ("Saving", "Letting it grow", "Retirement" on the 4% rule) lasts, so first-time
   visitors see the "will it last?" question answered. Running out is anchored to the season ("Runs
   out 6y 3m into Retirement"); the owner chose not to ask for an age.

@@ -225,6 +225,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   border: 1px solid var(--line); border-radius: 9px; background: var(--page);
 }
 .segmented button {
+  white-space: nowrap;
   height: 26px; padding: 0 11px; line-height: 1;
   display: grid; place-items: center; font: inherit; font-size: var(--text-note); font-weight: 500;
   border: none; border-radius: 7px; background: transparent;
@@ -268,13 +269,31 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   font-size: var(--text-caps); font-weight: 700; display: grid; place-items: center;
   font-variant-numeric: tabular-nums;
 }
-.period-head { display: flex; align-items: center; gap: 6px; }
+.period-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
 .period-head input[type="text"] { flex: 1; min-width: 0; padding: 5px 8px; font-weight: 600; }
 .period-head .danger { margin-left: 6px; }
 .period-range {
-  margin: 4px 0 10px; font-size: var(--text-note); color: var(--muted);
+  order: 9; flex-basis: 100%;
+  margin: -2px 0 0; font-size: var(--text-note); color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* The collapsed season row (phones only): name, then its numbers. */
+.card-summary { display: none; }
+.range-short { display: none; }
+@media (max-width: 560px) {
+  .period.collapsed > :not(.period-node):not(.card-summary) { display: none; }
+  .period.collapsed .card-summary {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    width: 100%; min-height: 44px; padding: 2px 0; text-align: left;
+    background: none; border: none; color: var(--ink); font: inherit; cursor: pointer; border-radius: 6px;
+  }
+  .period.collapsed { padding-top: 8px; padding-bottom: 8px; }
+  .period.collapsed .period-node { top: 12px; }
+}
+.card-summary-name { font-weight: 600; }
+.card-summary-meta { font-size: var(--text-note); color: var(--muted); font-variant-numeric: tabular-nums; }
+.card-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .icon-btn {
   flex: none; width: 26px; height: 26px; padding: 0; line-height: 1;
   display: grid; place-items: center;
@@ -282,9 +301,12 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   background: transparent; color: var(--ink-2); cursor: pointer;
 }
 .icon-btn svg { display: block; }
-.icon-btn:hover:not(:disabled) { border-color: var(--axis); color: var(--ink); }
+/* Hover only where there is real hover: on touch it sticks to the next card's button after a delete. */
+@media (hover: hover) {
+  .icon-btn:hover:not(:disabled) { border-color: var(--axis); color: var(--ink); }
+  .icon-btn.danger:hover { color: var(--bad); border-color: var(--bad); }
+}
 .icon-btn:disabled { opacity: 0.3; cursor: default; }
-.icon-btn.danger:hover { color: var(--bad); border-color: var(--bad); }
 
 .period-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .period-grid .field { margin: 0; }
@@ -293,6 +315,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .flow-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
 .flow-row .segmented { flex: none; }
 .flow-row .money, .flow-row .pct { flex: 1 1 90px; }
+.breakdown .typed.short { color: var(--bad); }
+.inflation-row .pct { max-width: 140px; }
 .flow-row .segmented button { height: auto; min-height: 30px; }
 /* On a card the track and the pressed segment are both near-white, so the
    choice is marked with a Ledger Blue tint instead. */
@@ -410,6 +434,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 }
 
 .field-note strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.panel .hero-label { margin: 0; font-family: var(--font-ui); line-height: 1.4; }
 .hero-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .hero-value { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; margin-top: 2px; }
 .hero-sub { font-size: var(--text-body); color: var(--muted); }
@@ -462,6 +487,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .tip-short { color: var(--bad); font-size: var(--text-note); font-weight: 600; }
 .tip-baseline { color: var(--muted); font-size: var(--text-note); font-variant-numeric: tabular-nums; }
 .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+/* A ninth season sharing a hue: hollow in the legend, dashed on the chart. */
+.legend-dot.hollow { background: transparent !important; box-shadow: inset 0 0 0 2px currentColor; }
 
 /* Extras key. Deliberately quieter than the period legend above it: they
    annotate the curve rather than being series of their own. */
@@ -531,8 +558,12 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .period-grid, .windfall-grid, .repeat-fields { grid-template-columns: minmax(0, 1fr); }
   /* The name gets the full row; reorder and delete drop beneath it. */
   .period-head { flex-wrap: wrap; }
+  /* The name gets the full row; the range line and the buttons share the next. */
   .period-head input[type="text"] { flex-basis: 100%; }
-  .period-head .icon-btn:first-of-type { margin-left: auto; }
+  .period-range { order: 1; flex: 1; flex-basis: auto; margin: 0; }
+  .range-long { display: none; }
+  .range-short { display: inline; }
+  .period-head .icon-btn { order: 2; }
   /* The choices summary moves under "More options" instead of squeezing beside it. */
   .more summary { flex-wrap: wrap; }
   /* Save / Withdraw gets its own row, so the amount keeps room for its digits. */
@@ -601,6 +632,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .result-bar-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .result-bar-value { font-size: var(--text-figure); font-weight: 600; }
 .result-bar-go { margin-left: auto; font-size: var(--text-body); font-weight: 600; color: var(--accent); }
+/* Light theme: the raw accent is 4.3:1 on paper, so the link text steps one shade deeper. */
+:root:not([data-theme="dark"]) .result-bar-go { color: color-mix(in srgb, var(--accent) 88%, #000); }
 .result-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* --- undo toast --- */
@@ -639,6 +672,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .link-btn { display: inline-flex; align-items: center; }
   /* 16px inputs stop iOS from zooming the page when a field takes focus. */
   input[type="number"], input[type="text"], select, .unit-select select { font-size: 16px; }
-  .more summary, .why summary { padding: 12px 0; }
-  .hint-more summary { display: inline-block; padding: 12px 0; }
+  .more summary, .why summary { padding: 12px 0; min-height: 44px; align-items: center; }
+  /* Own line on touch, so a 44px target does not spread the hint's line spacing. */
+  .hint-more summary { display: block; min-height: 44px; line-height: 44px; }
 }
