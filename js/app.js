@@ -585,6 +585,10 @@
     // Withdrawing seasons that actually get time (one past the 100-year cap gets none).
     var drawing = nominal.perPeriod.filter(function (pp, i) { return pp.months > 0 && Calc.isWithdrawing(state.periods[i]); });
     var drawdown = t.totalMonths > 0 && drawing.length > 0;
+    // A withdrawing season pushed past the 100-year cap: say so rather than quietly switching questions.
+    var cappedDraw = !drawdown && nominal.perPeriod.filter(function (pp, i) {
+      return !pp.months && pp.truncated && Calc.isWithdrawing(state.periods[i]);
+    })[0];
     var moneyNote = today ? 'today\u2019s dollars at ' + state.inflationPercent + '% inflation' : 'future dollars';
     var seasons = state.periods.length + (state.periods.length === 1 ? ' season' : ' seasons');
     // How far into its season the money runs out: "7y 6m into Retirement".
@@ -592,15 +596,20 @@
        money runs out: then it is the cause, and the page names it. */
     var culprit = -1;
     if (depleted) {
+      // The latest expense landing in the run-out's season, at or before it.
+      var inOut = seasonAt(projection, t.depletedAt);
+      var from = inOut ? inOut.pp.startMonth + 1 : 1, latest = -1;
       state.windfalls.forEach(function (w, wi) {
-        if (culprit < 0 && Number(w.amount) < 0 &&
-            Calc.windfallMonths(w, t.totalMonths).indexOf(t.depletedAt) >= 0) culprit = wi;
+        if (!(Number(w.amount) < 0)) return;
+        Calc.windfallMonths(w, t.totalMonths).forEach(function (mth) {
+          if (mth >= from && mth <= t.depletedAt && mth > latest) { latest = mth; culprit = wi; }
+        });
       });
     }
     var runsOut = '';
     if (depleted && culprit >= 0) {
-      runsOut = 'Runs out at ' + Chart.durationLabel(t.depletedAt) + ', when ' +
-        (state.windfalls[culprit].name || 'Extra ' + (culprit + 1)) + ' lands';
+      runsOut = 'Runs out at ' + Chart.durationLabel(t.depletedAt) + ', after ' +
+        (state.windfalls[culprit].name || 'Extra ' + (culprit + 1));
     } else if (depleted) {
       var inSeason = seasonAt(projection, t.depletedAt);
       runsOut = inSeason
@@ -630,6 +639,12 @@
           : '') +
         ' \u00b7 ' + moneyNote;
       el.resultBarValue.textContent = depleted ? runsOut : 'Lasts \u00b7 ' + Chart.money0.format(t.finalAmount) + ' left';
+    } else if (cappedDraw) {
+      el.finalLabel.textContent = 'Will it last?';
+      el.finalAmount.textContent = seasonName(state.periods[cappedDraw.index], cappedDraw.index) + ' gets no time';
+      el.finalSub.textContent = 'The plan already reaches the ' + (Calc.MAX_TOTAL_MONTHS / 12) +
+        '-year limit. Shorten an earlier season. \u00b7 ' + Chart.money0.format(t.finalAmount) + ' at the end';
+      el.resultBarValue.textContent = 'Gets no time';
     } else {
       el.finalLabel.textContent = short ? 'Shortfall at the end' : 'Final amount';
       el.finalAmount.textContent = Chart.money0.format(t.finalAmount);
@@ -639,8 +654,8 @@
       el.resultBarValue.textContent = Chart.money0.format(t.finalAmount);
     }
     el.finalAmount.classList.toggle('short', drawdown ? depleted : short);
-    el.finalAmount.classList.toggle('answer', drawdown);
-    document.querySelector('.result-bar-label').textContent = drawdown ? 'Will it last?' : 'Final amount';
+    el.finalAmount.classList.toggle('answer', drawdown || !!cappedDraw);
+    document.querySelector('.result-bar-label').textContent = drawdown || cappedDraw ? 'Will it last?' : 'Final amount';
 
     /* Running out without any withdrawals (a big negative extra) still needs
        saying; with withdrawals the headline already says it. */
@@ -665,11 +680,12 @@
     var paidIn = t.totalContributed - expenses(projection);
     var paidTyped = nominal.totals.totalContributed - expenses(nominal);
     var spent = -expenses(projection);
-    el.contributed.textContent = Chart.money0.format(paidIn);
-    el.contributedNote.textContent = (today && Math.abs(paidTyped - paidIn) >= 1
-      ? 'You put in ' + Chart.money0.format(paidTyped) + ', worth this today'
+    // What you typed leads: your own sum. Its worth today, and planned expenses, are notes beneath.
+    el.contributed.textContent = Chart.money0.format(paidTyped);
+    el.contributedNote.innerHTML = (today && Math.abs(paidTyped - paidIn) >= 1
+      ? 'worth ' + Chart.money0.format(paidIn) + ' today'
       : 'starting amount + savings' + (t.totalWindfalls + spent > 0 ? ' + extras' : '')) +
-      (spent >= 1 ? ' \u00b7 ' + Chart.money0.format(spent) + ' of planned expenses taken out' : '');
+      (spent >= 1 ? '<br>' + Chart.money0.format(spent) + ' of planned expenses taken out' : '');
     el.growthLabel.textContent = today ? 'Growth after inflation' : 'Total growth';
     el.growth.textContent = Chart.money0.format(t.totalGrowth);
     // Once the money has run out, "growth" mixes gains with a shrinking debt: no green.
@@ -692,7 +708,8 @@
         ? 'then ' + Chart.money0.format(t.totalShortfall) + ' more it couldn\u2019t pay'
         : !(monthly > 0) ? 'taken out over the withdrawing seasons'
         : today ? Chart.money0.format(monthly) + '/month in today\u2019s dollars'
-        : Chart.money0.format(monthly * Calc.deflator(startOf.startMonth + 1, state.inflationPercent)) + '/month to start, rising with inflation';
+        : Chart.money0.format(monthly * Calc.deflator(startOf.startMonth + 1, state.inflationPercent)) +
+          (Number(state.inflationPercent) > 0 ? '/month to start, rising with inflation' : '/month');
     } else {
       var income = t.totalMonths && t.finalAmount > 0 ? Calc.safeWithdrawal(t.finalAmount).perMonth : 0;
       el.thirdLabel.textContent = 'Monthly income';
@@ -765,9 +782,10 @@
     var one = only ? (asPct ? Number(only.withdrawPercent) : Math.abs(Number(only.monthlyContribution) || 0)) : 0;
     function roundDown(v) { return Math.floor(v / 10) * 10; }
     // Say a withdrawal the way it was typed: a percent, or today's dollars a month.
-    var tagToday = state.view.money === 'future' ? ' (today\u2019s dollars)' : '';
+    // In Future $ mode, typed dollar amounts are still today's: say so once, at the end.
+    var tagToday = state.view.money === 'future' && !asPct;
     function amount(v, down) {
-      return asPct ? (Math.floor(v * 10) / 10) + '%' : Chart.money0.format(down ? roundDown(v) : v) + '/month' + tagToday;
+      return asPct ? (Math.floor(v * 10) / 10) + '%' : Chart.money0.format(down ? roundDown(v) : v) + '/month';
     }
     if (depleted) {
       var parts = [];
@@ -789,10 +807,15 @@
         var startMore = Chart.money0.format(Math.ceil(more / 1000) * 1000);
         parts.push(parts.length ? 'starting with ' + startMore + ' more would' : 'Starting with ' + startMore + ' more would make it last');
       }
-      // "A, or b." / "A, b, or c." — later options continue the sentence in lower case.
-      var tail = parts.slice(1).map(function (x) { return x.charAt(0).toLowerCase() + x.slice(1); });
+      /* "A would make it last." then "So would b, or c." — later options are
+         phrases, so "would make it last" is said once. */
+      var tail = parts.slice(1).map(function (x) {
+        return (x.charAt(0).toLowerCase() + x.slice(1)).replace(/ (would make it last|more would|would)$/, function (m) {
+          return m === ' more would' ? ' more' : '';
+        });
+      });
       text = !parts.length ? ''
-        : parts[0] + (tail.length ? (tail.length > 1 ? ', ' + tail.slice(0, -1).join(', ') : '') + ', or ' + tail[tail.length - 1] : '') + '.';
+        : parts[0] + '.' + (tail.length ? ' So would ' + (tail.length > 1 ? tail.slice(0, -1).join(', ') + ', or ' : '') + tail[tail.length - 1] + '.' : '');
     } else if (drawdown && scale !== null && scale > 1.05) {
       // Past 5x the precise figure stops meaning anything; say it plainly.
       text = scale >= 5
@@ -817,6 +840,7 @@
         if (gain >= 1) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
       }
     }
+    if (tagToday && text && /\$[\d,]+\/month/.test(text)) text = text.replace(/\.$/, ' (in today\u2019s dollars).');
     el.leverNote.hidden = !text;
     el.leverNote.textContent = text;
   }
@@ -921,7 +945,7 @@
     el.baselineDelta.innerHTML = rounded
       ? '<span class="' + (rounded > 0 ? 'up' : 'down') + '">' + (rounded > 0 ? '+' : '−') +
         Chart.money0.format(Math.abs(rounded)) + '</span> vs baseline ending at ' + Chart.money0.format(then)
-      : 'Same as baseline (' + Chart.money0.format(then) + ')';
+      : 'Kept. The dashed line is this plan; change anything to compare.';
   }
 
   /* Screen readers hear the result once typing settles, not on every keystroke,
@@ -1190,7 +1214,9 @@
         c.classList.toggle('collapsed', state.periods[k] !== expanded);
       });
       var nameInput = li.querySelector('[data-field="name"]');
-      if (nameInput) nameInput.focus({ preventScroll: true });
+      // On touch, focus the card: putting the cursor in the name would raise the keyboard.
+      if (touch()) { li.tabIndex = -1; li.focus({ preventScroll: true }); }
+      else if (nameInput) nameInput.focus({ preventScroll: true });
       li.scrollIntoView({ block: 'nearest' });
       return;
     }
@@ -1250,8 +1276,8 @@
           ? Math.round(monthlyToday / 10) * 10
           : 0;
         if (from === 'percent' && monthlyToday > 0) {
-          note = 'Switched to a fixed ' + Chart.money0.format(p.monthlyContribution) + '/month, about what ' +
-            (Number(p.withdrawPercent) || 0) + '% came to';
+          note = 'Now a fixed ' + Chart.money0.format(p.monthlyContribution) + '/month (about ' +
+            (Number(p.withdrawPercent) || 0) + '%)';
         }
       } else if (!(Number(p.withdrawPercent) > 0)) {
         p.withdrawPercent = Calc.SAFE_WITHDRAWAL_PERCENT;
@@ -1425,12 +1451,15 @@
     }
     var last = state.periods[state.periods.length - 1];
     var lastName = last ? seasonName(last, state.periods.length - 1) : '';
+    /* After a saving season, copy it. After a withdrawing one, start a plain
+       saving season at $0: a second retirement is rarely what someone means. */
+    var copying = last && !Calc.isWithdrawing(last) && last.flow !== 'withdraw';
     state.periods.push(makePeriod(state.periods.length, last ? {
       months: last.months,
-      monthlyContribution: last.monthlyContribution,
+      monthlyContribution: copying ? last.monthlyContribution : 0,
       annualRatePercent: last.annualRatePercent,
       compounding: last.compounding,
-      flow: last.flow,
+      flow: 'save',
       lengthUnit: unitOf(last.lengthUnit, last.months),
       colorSlot: nextColorSlot()
     } : { colorSlot: nextColorSlot() }));
@@ -1446,7 +1475,7 @@
     }
     // A new season copies the last one's numbers; say so, and offer the way back.
     var at = state.periods.length - 1;
-    offerUndo(last ? 'Copied \u201c' + lastName + '\u201d' : 'Season added', function () {
+    offerUndo(copying ? 'Copied \u201c' + lastName + '\u201d' : 'Season added, saving $0 a month', function () {
       state.periods.splice(at, 1);
       save();
       renderPeriods();

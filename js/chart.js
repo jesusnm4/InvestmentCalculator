@@ -311,15 +311,22 @@
     /* Period names in the band above the plot, one per stretch of the curve.
        A name that would not fit its stretch is left out rather than clipped —
        the legend and tooltip still carry it. */
+    /* All or nothing: a band missing some names looks broken, so if any name
+       will not fit its stretch the band stays empty and the legend names them. */
+    var labels = [];
     var allLabels = true;
     for (var lb = 0; lb < segs.length; lb++) {
       var seg = segs[lb];
       if (seg.months <= 0) continue;
-      var meta = periods[seg.index] || {};
-      var label = meta.name || ('Season ' + (seg.index + 1));
-      var room = x(seg.endMonth) - x(seg.startMonth) - 12;
-      if (label.length * 6.8 + 14 > room) { allLabels = false; continue; }
-      var lx = x(seg.startMonth) + 6;
+      var meta0 = periods[seg.index] || {};
+      var label0 = meta0.name || ('Season ' + (seg.index + 1));
+      if (label0.length * 6.8 + 14 > x(seg.endMonth) - x(seg.startMonth) - 12) { allLabels = false; break; }
+      labels.push({ seg: seg, meta: meta0, label: label0 });
+    }
+    if (!allLabels) labels = [];
+    for (var li2 = 0; li2 < labels.length; li2++) {
+      var meta = labels[li2].meta, label = labels[li2].label;
+      var lx = x(labels[li2].seg.startMonth) + 6;
       svg.push('<rect x="' + lx.toFixed(2) + '" y="' + (m.t - 21) + '" width="8" height="8" rx="2" fill="' +
                colorFor(meta.colorSlot) + '"/>');
       svg.push('<text x="' + (lx + 13).toFixed(2) + '" y="' + (m.t - 13) + '" fill="' + C.muted +

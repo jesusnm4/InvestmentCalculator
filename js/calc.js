@@ -214,12 +214,18 @@
     /* The money has run out only if the plan ends short: depletedAt is where
        that final stretch below zero begins. A dip that later recovers (say a
        big expense paid back by later saving) is dippedAt, not a run-out. */
+    /* Run out = the first shortfall after the plan last had money. Scanning
+       from the last month with a positive balance means a later season that
+       starts empty (say a 4% rule season: 4% of nothing is never "short")
+       cannot hide an earlier run-out. */
     function falling(pt) { return pt.balance < 0 || pt.short > 0; }
     var depletedAt = null;
-    var last = points[points.length - 1];
-    if (points.length > 1 && falling(last)) {
-      depletedAt = points.length - 1;
-      while (depletedAt > 1 && falling(points[depletedAt - 1])) depletedAt--;
+    var lastHad = -1;
+    for (var h = points.length - 1; h >= 0; h--) if (points[h].balance > 0) { lastHad = h; break; }
+    if (lastHad < points.length - 1) {
+      for (var f = Math.max(1, lastHad + 1); f < points.length; f++) {
+        if (falling(points[f])) { depletedAt = f; break; }
+      }
     }
 
     /* An extra whose FIRST occurrence is past the end never lands at all. Later
@@ -336,7 +342,11 @@
     return copy;
   }
 
-  function lasts(state) { return project(state).totals.depletedAt === null; }
+  // Strict, for the levers: never short and never below zero, not even briefly.
+  function lasts(state) {
+    var t = project(state).totals;
+    return t.depletedAt === null && t.dippedAt === null;
+  }
 
   /* The largest multiple of today's withdrawals the plan can sustain to the end:
      0.8 means "withdraw 20% less", 1.5 means "you could withdraw half again".

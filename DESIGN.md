@@ -385,7 +385,8 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - Each season card's "Each month" field is one visible three-way choice, **Save / Withdraw % /
   Withdraw $**, beside a positive amount with a plain `$` or `%` affix. Direction is a choice, never
   a minus sign, and how to withdraw is never hidden in a unit picker. On a card the pressed segment
-  is a Ledger Blue tint (14%) with a 45% ring. The row wraps when the card is narrow.
+  is a Ledger Blue tint (14%) with a 45% ring. The choice always takes its own full-width row with
+  the amount on the row below it, the same for all three options at every width.
 - Switching never brings in an amount nobody typed: % to $ starts at what the % came to (rounded to
   $10), anything to Save starts at $0, and the switch is announced in the undo toast.
 - The note under a withdrawing amount leads with the bold monthly figure in today's money, shows the
@@ -406,13 +407,22 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - When withdrawals outrun the money, they stop at what was there: the hero says "Short by $X",
   the table's balance cell shows $0 with a Loss Red "short $X" line, and nothing goes negative.
 - On wide screens the pinned result is a compact floating card at the bottom right; on phones it is
-  the full-width bar, and the undo toast moves to the top so it never covers the field being edited.
-- In today's dollars, the paid-in figure and table cells carry the as-typed sum beneath ("$60,000
-  typed"), in caps-size Faded Pencil.
+  the full-width bar, and the undo toast moves to the top, full width, clamped to two lines.
+- Paid in leads with the as-typed sum ("$70,000", "worth $63,111 today" beneath); planned expenses
+  get their own line. Table cells stay in today's dollars with "of $60,000 put in" beneath.
+- A season added after a withdrawing one starts as a plain saving season at $0 (not a copy).
+- The chart's season-name band is all or nothing: if any name will not fit, the band stays empty and
+  the legend names them.
 
 ### About these numbers
 - One closed disclosure under the chart (`.why` styling) holding today's dollars, saving and
   withdrawing, the baseline and the 4% rule. The 4% sentence no longer repeats the figures above it.
+
+### Desktop layout
+- The plan and results columns share their own grid (`.layout-cols`); the breakdown table is a
+  separate full-width panel below both. At 901px+ (and 760px+ tall) the results column is
+  `position: sticky`, so the answer, figures and chart stay beside whichever season is being edited
+  and release where the plan ends. A "Back to your plan" link closes the results for keyboard users.
 
 ### Pinned result bar and skip link
 - The result bar shows at every width whenever the headline is out of view (desktop too), padded to

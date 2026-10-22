@@ -465,6 +465,27 @@
     close(Calc.savingMoreAdds(st, 50).totals.finalAmount, 1800, 1e-9, '12 x 150');
   });
 
+  test('a later season starting empty does not hide an earlier run-out', function () {
+    // Season 1 runs out; season 2 is the 4% rule on what is left: nothing, so it is never "short".
+    var r = Calc.project({ startingAmount: 1000, periods: [
+      period({ months: 12, monthlyContribution: 300, flow: 'withdraw' }),
+      period({ months: 12, flow: 'withdraw', withdrawUnit: 'percent', withdrawPercent: 4 })
+    ] });
+    ok(r.totals.depletedAt === 4, 'ran out in month 4, got ' + r.totals.depletedAt);
+  });
+
+  test('withdrawalScale does not claim headroom when a later season starts empty', function () {
+    var st = { startingAmount: 100000, periods: [
+      period({ months: 120, flow: 'withdraw', withdrawUnit: 'percent', withdrawPercent: 4 }),
+      period({ months: 120, flow: 'withdraw', withdrawUnit: 'percent', withdrawPercent: 4 })
+    ] };
+    var k = Calc.withdrawalScale(st);
+    ok(isFinite(k) && k < 20, 'expected a finite limit, got ' + k);
+    var over = { startingAmount: 100000, periods: st.periods.map(function (p) {
+      var q = {}; for (var x in p) q[x] = p[x]; q.withdrawPercent = 4 * (k + 0.5); return q; }) };
+    ok(Calc.project(over).totals.depletedAt !== null, 'withdrawing above the limit should run out');
+  });
+
   // --- today's dollars ----------------------------------------------------
   test('zero inflation leaves the projection unchanged', function () {
     var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: 100, annualRatePercent: 6 })] });

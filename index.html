@@ -8,9 +8,9 @@
 <link rel="preload" href="fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!-- ?v= busts browser caches: bump it whenever CSS or JS changes (see CLAUDE.md). -->
-<link rel="stylesheet" href="styles.css?v=2026-10-22.5">
+<link rel="stylesheet" href="styles.css?v=2026-10-22.11">
 <!-- Blocking on purpose: stamps the theme before first paint. -->
-<script src="js/theme.js?v=2026-10-22.5"></script>
+<script src="js/theme.js?v=2026-10-22.11"></script>
 </head>
 <body>
 
@@ -38,8 +38,10 @@
 </header>
 
 <main class="layout">
+<!-- The two columns get their own grid, so the pinned results column stops where the plan ends. -->
+<div class="layout-cols">
 
-  <section class="panel setup" aria-labelledby="setup-h">
+  <section class="panel setup" id="plan" tabindex="-1" aria-labelledby="setup-h">
     <div class="panel-head">
       <h2 id="setup-h">Your plan</h2>
       <span class="panel-actions">
@@ -140,6 +142,14 @@
       <div id="withdrawal-note" class="withdrawal-note"></div>
     </figure>
 
+
+  </section>
+
+</div>
+
+  <!-- The breakdown spans both columns, so the results column stays short enough to pin beside the plan. -->
+  <section class="panel details" aria-labelledby="details-h">
+    <h2 id="details-h" class="sr-only">Breakdown by season</h2>
     <div class="table-wrap">
       <table class="breakdown">
         <caption class="sr-only">Breakdown by season</caption>
@@ -147,6 +157,8 @@
         <tbody id="breakdown-body"></tbody>
       </table>
     </div>
+    <!-- The way back up for keyboard users who skipped to the results. -->
+    <a class="back-link link-btn" href="#plan">Back to your plan</a>
   </section>
 
 </main>
@@ -166,8 +178,8 @@
 <!-- Announces the result after typing settles; visible results update live. -->
 <p class="sr-only" id="live-summary" aria-live="polite"></p>
 
-<script src="js/calc.js?v=2026-10-22.5"></script>
-<script src="js/chart.js?v=2026-10-22.5"></script>
-<script src="js/app.js?v=2026-10-22.5"></script>
+<script src="js/calc.js?v=2026-10-22.11"></script>
+<script src="js/chart.js?v=2026-10-22.11"></script>
+<script src="js/app.js?v=2026-10-22.11"></script>
 </body>
 </html>

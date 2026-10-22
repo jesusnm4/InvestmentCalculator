@@ -54,6 +54,8 @@ what it could pay out each month in retirement.
   5 yrs, when Extra 1 lands", with "An expense of $22,700 or less would make it last"). Plans that
   only save get a lever too ("Saving $100 more a month would add about $56,300").
 - **Inflation** is a plan setting under the starting amount ("Prices rise each year").
+- **On a desktop**, the answer and chart stay pinned beside whichever season you're editing; the
+  breakdown table sits below both columns.
 - **On a phone**, seasons you aren't editing collapse to one line ("10 yrs · $500/mo saved · 7%");
   tap one to open it.
 - **Paid in matches your maths.** In today's dollars it also shows the sum as typed ("$70,000 as
