@@ -17,6 +17,11 @@ filesystem or a plain static server:
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
+**Cache busting:** `index.html` loads every CSS/JS file with a `?v=YYYY-MM-DD` query. Bump it (all
+five at once) whenever any of those files change, or browsers keep serving stale copies and the
+new HTML runs against old JS. The fonts are left unversioned so the preload and `@font-face` URLs
+match.
+
 `index.html` also works when opened directly over `file://` — this is why every JS file is a plain
 IIFE that attaches to `window` (`window.Calc`, `window.Chart`, `window.Theme`) rather than an ES
 module. Keep it that way; `<script type="module">` breaks under `file://`.

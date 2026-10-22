@@ -390,6 +390,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .field-aside { color: var(--muted); }
 .field-note.wide { grid-column: 1 / -1; margin: -2px 0 0; }
 .field-note { display: block; margin-top: 5px; font-size: var(--text-note); color: var(--muted); text-wrap: pretty; }
+.field-note strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .hero-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .hero-value { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; margin-top: 2px; }
 .hero-sub { font-size: var(--text-body); color: var(--muted); }

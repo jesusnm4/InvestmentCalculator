@@ -608,7 +608,12 @@
     if (drawdown) {
       el.thirdLabel.textContent = 'Withdrawn';
       el.income.textContent = Chart.money0.format(t.totalWithdrawn);
-      el.incomeNote.textContent = 'taken out over the withdrawing seasons';
+      // With one withdrawing season, say what it is per month (today's dollars, constant).
+      var outs = state.periods.map(function (p, i) { return Calc.isWithdrawing(p) ? i : -1; }).filter(function (i) { return i >= 0; });
+      var monthly = outs.length === 1 ? nominal.perPeriod[outs[0]] && nominal.perPeriod[outs[0]].firstWithdrawal : 0;
+      el.incomeNote.textContent = monthly > 0
+        ? Chart.money0.format(monthly) + '/month in today\u2019s dollars'
+        : 'taken out over the withdrawing seasons';
     } else {
       var income = t.totalMonths && t.finalAmount > 0 ? Calc.safeWithdrawal(t.finalAmount).perMonth : 0;
       el.thirdLabel.textContent = 'Monthly income';
@@ -707,22 +712,40 @@
   function refreshFlowNote(li, p, pp) {
     var note = li.querySelector('[data-role="flow-note"]');
     if (!note) return;
-    var text = '';
-    if (p.flow === 'withdraw') {
-      if (p.withdrawUnit === 'percent') {
-        text = (Number(p.withdrawPercent) || 0) + '% of what this season starts with, in its first year, then raised ' +
-          'with inflation each year (the 4% rule). ' +
-          (pp && pp.months
-            ? (pp.firstWithdrawal > 0
-                ? 'About ' + Chart.money0.format(pp.firstWithdrawal) + '/month to start, in today\u2019s dollars.'
-                : 'Nothing to withdraw: the season starts with no money.')
-            : '');
+    var html = '';
+    if (p.flow === 'withdraw' && pp && pp.months) {
+      /* Lead with the dollars, then show the inflation raise in real numbers —
+         "today's dollars" alone does not say whether the amount stays put or
+         grows. Then size it against what the season starts with, so both kinds
+         of withdrawal get the same "is this reasonable?" check against the 4% rule. */
+      var infl = state.inflationPercent;
+      var monthly = pp.firstWithdrawal; // today's dollars, the same every month of the season
+      var start = pp.startBalance / Calc.deflator(pp.startMonth, infl);
+      var pctYear = start > 0 ? monthly * 12 / start * 100 : 0;
+      var rule = Calc.SAFE_WITHDRAWAL_PERCENT;
+      if (!(monthly > 0)) {
+        html = p.withdrawUnit === 'percent' ? 'Nothing to withdraw: the season starts with no money.' : '';
       } else {
-        text = 'In today\u2019s dollars: it rises with inflation each year, so it keeps buying the same.';
+        html = '<strong>' + Chart.money0.format(monthly) + '/month</strong> in today’s money. ' +
+          (Number(infl) > 0
+            ? 'It’s raised with inflation each year so it always buys the same: about ' +
+              Chart.money0.format(monthly * Calc.deflator(pp.startMonth + 1, infl)) + '/month when this season starts, and ' +
+              Chart.money0.format(monthly * Calc.deflator(pp.endMonth, infl)) + ' by its end. '
+            : 'With inflation at 0%, it stays the same amount every month. ');
+        if (p.withdrawUnit === 'percent') {
+          html += 'That’s ' + (Number(p.withdrawPercent) || 0) + '% of the ' + Chart.money0.format(start) +
+            ' this season starts with, in its first year (the 4% rule).';
+        } else if (start > 0) {
+          var shown = pctYear < 10 ? pctYear.toFixed(1) : String(Math.round(pctYear));
+          html += 'That’s about ' + shown + '% a year of the ' + Chart.money0.format(start) + ' this season starts with, ' +
+            (pctYear > rule + 0.5 ? 'well above' : pctYear < rule - 0.5 ? 'below' : 'close to') + ' the ' + rule + '% rule.';
+        } else {
+          html += 'This season starts with no money, so it is short from the first month.';
+        }
       }
     }
-    note.textContent = text;
-    note.hidden = !text;
+    note.innerHTML = html;
+    note.hidden = !html;
   }
 
   // The season an absolute month falls in, with its numbers, or null.
