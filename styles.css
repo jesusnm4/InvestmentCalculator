@@ -290,8 +290,9 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .period-grid .field { margin: 0; }
 .period-grid .wide { grid-column: 1 / -1; }
 /* Save / Withdraw beside the monthly amount: the direction is a choice, the amount stays positive. */
-.flow-row { display: flex; gap: 8px; align-items: stretch; }
+.flow-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
 .flow-row .segmented { flex: none; }
+.flow-row .money, .flow-row .pct { flex: 1 1 90px; }
 .flow-row .segmented button { height: auto; min-height: 30px; }
 /* On a card the track and the pressed segment are both near-white, so the
    choice is marked with a Ledger Blue tint instead. */
@@ -390,6 +391,24 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .field-aside { color: var(--muted); }
 .field-note.wide { grid-column: 1 / -1; margin: -2px 0 0; }
 .field-note { display: block; margin-top: 5px; font-size: var(--text-note); color: var(--muted); text-wrap: pretty; }
+.hint-more { display: inline; }
+.hint-more summary {
+  display: inline; cursor: pointer; color: var(--ink-2); list-style: none; border-radius: var(--radius-focus);
+  text-decoration: underline; text-decoration-color: var(--axis); text-underline-offset: 3px;
+}
+.hint-more summary::-webkit-details-marker { display: none; }
+.hint-more summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint-more[open] summary { display: block; margin-bottom: 4px; }
+
+/* Past the 100-year cap a season gets no time: keep its name and why, drop the inputs. */
+.period.capped .period-grid, .period.capped .more { display: none; }
+
+/* A ninth season shares a hue with an earlier one: hollow node, so they never read as one season. */
+.period.color-reused .period-node {
+  background: var(--surface); color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--period-color), 0 0 0 3px var(--surface);
+}
+
 .field-note strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .hero-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .hero-value { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; margin-top: 2px; }
@@ -541,6 +560,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .breakdown .neg { color: var(--bad); }
 .breakdown .start-row td:first-child { color: var(--ink-2); }
 .breakdown .unit { color: var(--muted); }
+/* The as-typed sum under a today's-dollar figure. */
+.breakdown .typed { display: block; font-size: var(--text-caps); color: var(--muted); font-weight: 400; }
 .breakdown .empty td { color: var(--muted); text-align: center; padding: 20px; }
 
 /* Phones: one block per season, each figure beside its column name, instead of
@@ -570,6 +591,13 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   color: var(--ink); text-decoration: none;
 }
 .result-bar[hidden] { display: none; }
+/* Wide screens: a compact floating card at the corner, not a full-width strip. */
+@media (min-width: 901px) {
+  .result-bar {
+    left: auto; right: 24px; bottom: 20px; width: auto; gap: 16px;
+    padding: 12px 18px; border: 1px solid var(--ring); border-radius: 12px; box-shadow: var(--shadow);
+  }
+}
 .result-bar-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .result-bar-value { font-size: var(--text-figure); font-weight: 600; }
 .result-bar-go { margin-left: auto; font-size: var(--text-body); font-weight: 600; color: var(--accent); }
@@ -590,11 +618,17 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 }
 .toast-undo:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .result-bar:not([hidden]) ~ .toast { bottom: 76px; }
+/* Phones: the toast moves to the top, so it never covers the field you are editing. */
+@media (max-width: 900px) {
+  .toast, .result-bar:not([hidden]) ~ .toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
+}
 
 /* --- touch: fingers need bigger targets than pointers --- */
 @media (pointer: coarse) {
-  .icon-btn { width: 40px; height: 40px; }
-  .period-head input[type="text"] { min-height: 40px; }
+  .icon-btn { width: 44px; height: 44px; }
+  .btn { min-height: 44px; }
+  input[type="number"], input[type="text"], .unit-field input { min-height: 44px; }
+  .period-head input[type="text"] { min-height: 44px; }
   .swatches { gap: 8px; }
   .swatch { width: 34px; height: 34px; }
   .segmented button { height: 44px; }
@@ -606,4 +640,5 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   /* 16px inputs stop iOS from zooming the page when a field takes focus. */
   input[type="number"], input[type="text"], select, .unit-select select { font-size: 16px; }
   .more summary, .why summary { padding: 12px 0; }
+  .hint-more summary { display: inline-block; padding: 12px 0; }
 }

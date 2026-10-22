@@ -79,7 +79,7 @@
         makePeriod(0, { name: 'Saving',          months: 120, monthlyContribution: 500, annualRatePercent: 7 }),
         makePeriod(1, { name: 'Letting it grow', months: 120, monthlyContribution: 0,   annualRatePercent: 5 }),
         // Retirement is where the question "will it last?" lives, so the example shows it.
-        makePeriod(2, { name: 'Retirement',      months: 300, annualRatePercent: 4,
+        makePeriod(2, { name: 'Retirement',      months: 300, annualRatePercent: 4, monthlyContribution: 0,
                         flow: 'withdraw', withdrawUnit: 'percent', withdrawPercent: 4 })
       ],
       windfalls: [],
@@ -278,11 +278,11 @@
       if (projection.unappliedWindfalls.indexOf(i) >= 0) return;
       var amount = Number(w.amount) || 0;
       if (!amount) return;
-      /* A long-running repeat would bead the whole curve with markers; past a
+      /* A long-running repeat would bead the whole curve with markers; past two
          dozen, show every Nth (always the first and last) — the key below the
          chart still counts them all. */
       var months = Calc.windfallMonths(w, horizon).filter(function (mth) { return mth <= horizon; });
-      var step = Math.ceil(months.length / 12);
+      var step = months.length > 24 ? Math.ceil(months.length / 24) : 1;
       months.forEach(function (mth, k) {
         if (k % step && k !== months.length - 1) return;
         out.push({ name: w.name || ('Extra ' + (i + 1)), atMonth: mth, amount: viewMoney(amount, mth), shapeSlot: w.shapeSlot });
@@ -322,6 +322,10 @@
       li.dataset.index = i;
       li.style.setProperty('--period-color', Chart.colorFor(p.colorSlot));
       setNodeColors(li, p.colorSlot);
+      /* Eight hues, and a ninth season shares one: its node turns hollow so the
+         two never read as the same season. */
+      var reused = state.periods.slice(0, i).some(function (q) { return q.colorSlot % Chart.slotCount === p.colorSlot % Chart.slotCount; });
+      li.classList.toggle('color-reused', reused);
 
       var compOptions = COMPOUNDING.map(function (c) {
         return '<option value="' + c.value + '"' + (c.value === p.compounding ? ' selected' : '') + '>' + c.label + '</option>';
@@ -362,18 +366,21 @@
           '<div class="field wide">' +
             '<span class="field-label" id="flow-label-' + n + '">Each month</span>' +
             '<div class="flow-row">' +
+              // One visible choice: what the season does with money, and for withdrawals how.
               '<div class="segmented" role="group" aria-labelledby="flow-label-' + n + '">' +
-                '<button type="button" data-flow="save" aria-pressed="' + (p.flow !== 'withdraw') + '">Save</button>' +
-                '<button type="button" data-flow="withdraw" aria-pressed="' + (p.flow === 'withdraw') + '">Withdraw</button>' +
+                flowButton(p, 'save', 'Save') +
+                flowButton(p, 'percent', 'Withdraw %') +
+                flowButton(p, 'dollars', 'Withdraw $') +
               '</div>' +
               amountField(p, n) +
             '</div>' +
             '<p class="field-note" data-role="flow-note"></p>' +
           '</div>' +
           // Said once, on the first card, where the question first comes up.
-          (i === 0 ? '<p class="field-note wide">Returns are before inflation; the results take inflation off for you. ' +
+          (i === 0 ? '<div class="field-note wide">Enter returns before inflation; the results take it off for you. ' +
+            '<details class="hint-more"><summary>What\u2019s typical?</summary>' +
             'The S&amp;P 500 has averaged about 10% a year before inflation since the 1920s (about 7% after); ' +
-            'a mix with bonds usually earns less. Past returns don\u2019t guarantee future ones.</p>' : '') +
+            'a mix with bonds usually earns less. Past returns don\u2019t guarantee future ones.</details></div>' : '') +
         '</div>' +
         '<details class="more" data-role="more"' + (open ? ' open' : '') + '>' +
           '<summary>More options <span class="more-sum" data-role="more-sum"></span></summary>' +
@@ -402,25 +409,27 @@
     });
   }
 
-  /* The monthly amount. Saving: dollars. Withdrawing: today's dollars, or a
-     percent under the 4% rule, chosen with a picker inside the field. */
+  // Which of Save / Withdraw % / Withdraw $ a season is.
+  function flowMode(p) {
+    return p.flow !== 'withdraw' ? 'save' : p.withdrawUnit === 'dollars' ? 'dollars' : 'percent';
+  }
+  function flowButton(p, mode, label) {
+    return '<button type="button" data-flow="' + mode + '" aria-pressed="' + (flowMode(p) === mode) + '">' + label + '</button>';
+  }
+
+  /* The monthly amount, with its unit as a plain affix: dollars to save, a
+     percent under the 4% rule, or a fixed amount of today's dollars. */
   function amountField(p, n) {
-    if (p.flow !== 'withdraw') {
-      return '<span class="money"><span class="affix">$</span>' +
-        '<input type="number" min="0" step="50" data-field="monthlyContribution" aria-label="Amount saved each month, season ' + n + '" value="' +
-        escapeAttr(Math.abs(Number(p.monthlyContribution) || 0)) + '"></span>';
+    var mode = flowMode(p);
+    if (mode === 'percent') {
+      return '<span class="pct"><span class="affix">%</span>' +
+        '<input type="number" min="0" step="0.1" inputmode="decimal" data-field="withdrawPercent" aria-label="Percent withdrawn, season ' + n + '"' +
+        ' value="' + escapeAttr(p.withdrawPercent) + '"></span>';
     }
-    var pct = p.withdrawUnit === 'percent';
-    return '<span class="unit-field">' +
-      '<input type="number" min="0" data-field="' + (pct ? 'withdrawPercent' : 'monthlyContribution') + '"' +
-        (pct ? ' step="0.1" inputmode="decimal"' : ' step="50"') +
-        ' aria-label="' + (pct ? 'Percent withdrawn, season ' + n : 'Amount withdrawn each month, in today\u2019s dollars, season ' + n) + '"' +
-        ' value="' + escapeAttr(pct ? p.withdrawPercent : Math.abs(Number(p.monthlyContribution) || 0)) + '">' +
-      '<span class="unit-select"><select data-withdraw-unit aria-label="How to withdraw, season ' + n + '">' +
-        '<option value="percent"' + (pct ? ' selected' : '') + '>%</option>' +
-        '<option value="dollars"' + (!pct ? ' selected' : '') + '>$ / month</option>' +
-      '</select></span>' +
-    '</span>';
+    return '<span class="money"><span class="affix">$</span>' +
+      '<input type="number" min="0" step="50" data-field="monthlyContribution" aria-label="' +
+        (mode === 'save' ? 'Amount saved each month' : 'Amount withdrawn each month, in today’s dollars') + ', season ' + n + '"' +
+      ' value="' + escapeAttr(Math.abs(Number(p.monthlyContribution) || 0)) + '"></span>';
   }
 
   // Non-structural bits that change as you type.
@@ -509,7 +518,13 @@
       if (every && months.length > 1) {
         var amount = Number(w.amount) || 0;
         lands += ', then every ' + Chart.durationLabel(every) + ' \u2014 ' + months.length + ' payments' +
-                 (amount ? ', ' + Chart.money0.format(amount * months.length) + ' in total' : '');
+                 (amount ? ', ' + Chart.money0.format(amount * months.length) + ' in total' +
+                   (state.view.money === 'today' && Number(state.inflationPercent) > 0
+                     ? ' (worth ' + Chart.money0.format(months.reduce(function (sum, mth) {
+                         return sum + amount / Calc.deflator(mth, state.inflationPercent);
+                       }, 0)) + ' today)'
+                     : '')
+                 : '');
       }
       li.querySelector('[data-role="at-note"]').textContent = lands;
 
@@ -545,7 +560,9 @@
     var depleted = t.depletedAt !== null;
     var short = t.finalAmount < 0;
     // Once a season withdraws, the question is no longer "how much" but "will it last".
-    var drawdown = t.totalMonths > 0 && Calc.hasWithdrawals(state);
+    // Withdrawing seasons that actually get time (one past the 100-year cap gets none).
+    var drawing = nominal.perPeriod.filter(function (pp, i) { return pp.months > 0 && Calc.isWithdrawing(state.periods[i]); });
+    var drawdown = t.totalMonths > 0 && drawing.length > 0;
     var moneyNote = today ? 'today\u2019s dollars at ' + state.inflationPercent + '% inflation' : 'future dollars';
     var seasons = state.periods.length + (state.periods.length === 1 ? ' season' : ' seasons');
     // How far into its season the money runs out: "7y 6m into Retirement".
@@ -559,13 +576,17 @@
 
     if (drawdown) {
       el.finalLabel.textContent = 'Will it last?';
-      el.finalAmount.textContent = depleted ? runsOut : 'Lasts all ' + Chart.durationLabel(t.totalMonths);
-      // One line: where it ends, then the frame (length, seasons, money).
+      // "Lasts through Retirement", not "lasts all 45 yrs": the saving years are not the question.
+      var lastDraw = drawing[drawing.length - 1];
+      var drawMonths = drawing.reduce(function (sum, pp) { return sum + pp.months; }, 0);
+      var through = 'Lasts through ' + seasonName(state.periods[lastDraw.index], lastDraw.index);
+      el.finalAmount.textContent = depleted ? runsOut : through;
+      // One line: where it ends, then the frame (withdrawal years, money).
       el.finalSub.textContent = (depleted
         ? 'Year ' + (Math.floor(t.depletedAt / 12) + 1) + ' of the plan'
-        : 'Ends with ' + Chart.money0.format(t.finalAmount)) +
-        ' \u00b7 ' + Chart.durationLabel(t.totalMonths) + ', ' + seasons + ' \u00b7 ' + moneyNote;
-      el.resultBarValue.textContent = depleted ? runsOut : 'Lasts';
+        : Chart.money0.format(t.finalAmount) + ' left at the end') +
+        ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals \u00b7 ' + moneyNote;
+      el.resultBarValue.textContent = depleted ? runsOut : 'Lasts \u00b7 ' + Chart.money0.format(t.finalAmount) + ' left';
     } else {
       el.finalLabel.textContent = short ? 'Shortfall at the end' : 'Final amount';
       el.finalAmount.textContent = Chart.money0.format(t.finalAmount);
@@ -580,21 +601,32 @@
 
     /* Running out without any withdrawals (a big negative extra) still needs
        saying; with withdrawals the headline already says it. */
-    el.depletionWarn.hidden = !depleted || drawdown;
-    if (depleted && !drawdown) {
-      var during = periodAt(projection, t.depletedAt);
-      // Say whether it recovers, so a positive final amount does not read as a contradiction.
-      el.depletionWarn.textContent = 'The balance goes below zero at ' + Chart.durationLabel(t.depletedAt) +
+    var dipOnly = !depleted && t.dippedAt !== null;
+    el.depletionWarn.hidden = !(dipOnly || (depleted && !drawdown));
+    if (!el.depletionWarn.hidden) {
+      var at = dipOnly ? t.dippedAt : t.depletedAt;
+      var during = periodAt(projection, at);
+      // A recovered dip is still worth saying: for those months the money was not there.
+      el.depletionWarn.textContent = 'The balance goes below zero at ' + Chart.durationLabel(at) +
         (during ? ', during ' + during : '') +
-        (t.finalAmount > 0 ? ', and only recovers later.' : '. After that the plan is short.');
+        (dipOnly ? ', and only recovers later.' : '. After that the plan is short.');
     }
     renderLever(depleted, drawdown);
 
-    el.contributed.textContent = Chart.money0.format(t.totalContributed);
-    // One-offs are money in too, so name them once they exist.
-    el.contributedNote.textContent = t.totalWindfalls
-      ? 'starting amount + savings + extras'
-      : 'starting amount + savings';
+    /* Paid in counts money going in. A negative extra (a planned expense) is
+       money out, so it is reported beside it rather than netted into it. In
+       today's dollars, the as-typed sum is shown too, so it matches your maths. */
+    function expenses(proj) {
+      return proj.points.reduce(function (sum, pt) { return sum + Math.min(0, Number(pt.extra) || 0); }, 0);
+    }
+    var paidIn = t.totalContributed - expenses(projection);
+    var paidTyped = nominal.totals.totalContributed - expenses(nominal);
+    var spent = -expenses(projection);
+    el.contributed.textContent = Chart.money0.format(paidIn);
+    el.contributedNote.textContent = (today && Math.abs(paidTyped - paidIn) >= 1
+      ? Chart.money0.format(paidTyped) + ' as typed, worth this today'
+      : 'starting amount + savings' + (t.totalWindfalls + spent > 0 ? ' + extras' : '')) +
+      (spent >= 1 ? ' \u00b7 ' + Chart.money0.format(spent) + ' of planned expenses taken out' : '');
     el.growthLabel.textContent = today ? 'Growth after inflation' : 'Total growth';
     el.growth.textContent = Chart.money0.format(t.totalGrowth);
     // Once the money has run out, "growth" mixes gains with a shrinking debt: no green.
@@ -611,9 +643,11 @@
       // With one withdrawing season, say what it is per month (today's dollars, constant).
       var outs = state.periods.map(function (p, i) { return Calc.isWithdrawing(p) ? i : -1; }).filter(function (i) { return i >= 0; });
       var monthly = outs.length === 1 ? nominal.perPeriod[outs[0]] && nominal.perPeriod[outs[0]].firstWithdrawal : 0;
-      el.incomeNote.textContent = monthly > 0
-        ? Chart.money0.format(monthly) + '/month in today\u2019s dollars'
-        : 'taken out over the withdrawing seasons';
+      // In the money the page is in: today's (constant), or future dollars at the start, rising.
+      var startOf = outs.length === 1 ? nominal.perPeriod[outs[0]] : null;
+      el.incomeNote.textContent = !(monthly > 0) ? 'taken out over the withdrawing seasons'
+        : today ? Chart.money0.format(monthly) + '/month in today\u2019s dollars'
+        : Chart.money0.format(monthly * Calc.deflator(startOf.startMonth + 1, state.inflationPercent)) + '/month to start, rising with inflation';
     } else {
       var income = t.totalMonths && t.finalAmount > 0 ? Calc.safeWithdrawal(t.finalAmount).perMonth : 0;
       el.thirdLabel.textContent = 'Monthly income';
@@ -627,6 +661,8 @@
       var li = el.periodList.children[i];
       if (!li) return;
       refreshFlowNote(li, state.periods[i], nominal.perPeriod[i]);
+      // Past the 100-year cap a season gets no time: its inputs would only mislead.
+      li.classList.toggle('capped', !pp.months && pp.truncated);
       li.querySelector('[data-role="range"]').textContent = pp.months
         ? (pp.startMonth ? 'From ' + Chart.durationLabel(pp.startMonth) : 'From the start') +
           ' to ' + Chart.durationLabel(pp.endMonth)
@@ -646,7 +682,7 @@
     refreshWindfallNotes(projection);
     renderAbout();
     renderExtrasLegend(projection);
-    renderTable(projection, drawdown);
+    renderTable(projection, drawdown, today ? nominal : null);
     var summary = !t.totalMonths ? 'No seasons yet.'
       : drawdown
         ? (depleted ? 'The money runs out at ' + Chart.durationLabel(t.depletedAt) + '.'
@@ -663,7 +699,8 @@
     lastChartWidth = el.chart.clientWidth;
     // After the chart: the legend repeats season names only when the chart could not fit them.
     renderLegend(projection, baseline, !!(el.chart.__chart && el.chart.__chart.allLabels));
-    announce(summary + (el.leverNote.hidden ? '' : ' ' + el.leverNote.textContent));
+    announce(summary + (el.leverNote.hidden ? '' : ' ' + el.leverNote.textContent) +
+      (el.baselineDelta.hidden ? '' : ' ' + el.baselineDelta.textContent + '.'));
   }
 
   /* One sentence on what would change the outcome. Short: how much less to
@@ -679,8 +716,9 @@
     var one = only ? (asPct ? Number(only.withdrawPercent) : Math.abs(Number(only.monthlyContribution) || 0)) : 0;
     function roundDown(v) { return Math.floor(v / 10) * 10; }
     // Say a withdrawal the way it was typed: a percent, or today's dollars a month.
+    var tagToday = state.view.money === 'future' ? ' (today\u2019s dollars)' : '';
     function amount(v, down) {
-      return asPct ? (Math.floor(v * 10) / 10) + '%' : Chart.money0.format(down ? roundDown(v) : v) + '/month';
+      return asPct ? (Math.floor(v * 10) / 10) + '%' : Chart.money0.format(down ? roundDown(v) : v) + '/month' + tagToday;
     }
     if (depleted) {
       var parts = [];
@@ -696,11 +734,14 @@
       }
       text = parts.length ? parts.join(', ') + '.' : '';
     } else if (drawdown && scale !== null && scale > 1.05) {
-      text = scale === Infinity
-        ? 'It lasts comfortably: even far larger withdrawals would.'
+      // Past 5x the precise figure stops meaning anything; say it plainly.
+      text = scale >= 5
+        ? 'It lasts comfortably: you could withdraw more than 5\u00d7 as much and it would still last.'
         : one
           ? 'You could withdraw up to about ' + amount(one * scale, true) + ' and it would still last.'
-          : 'You could withdraw about ' + Math.floor((scale - 1) * 100) + '% more in each withdrawing season and it would still last.';
+          : scale >= 2
+            ? 'You could withdraw about ' + (Math.floor(scale * 10) / 10) + '\u00d7 as much in each withdrawing season and it would still last.'
+            : 'You could withdraw about ' + Math.floor((scale - 1) * 100) + '% more in each withdrawing season and it would still last.';
     }
     el.leverNote.hidden = !text;
     el.leverNote.textContent = text;
@@ -726,21 +767,20 @@
       if (!(monthly > 0)) {
         html = p.withdrawUnit === 'percent' ? 'Nothing to withdraw: the season starts with no money.' : '';
       } else {
-        html = '<strong>' + Chart.money0.format(monthly) + '/month</strong> in today’s money. ' +
+        html = '<strong>' + Chart.money0.format(monthly) + '/month</strong> in today\u2019s money' +
           (Number(infl) > 0
-            ? 'It’s raised with inflation each year so it always buys the same: about ' +
-              Chart.money0.format(monthly * Calc.deflator(pp.startMonth + 1, infl)) + '/month when this season starts, and ' +
-              Chart.money0.format(monthly * Calc.deflator(pp.endMonth, infl)) + ' by its end. '
-            : 'With inflation at 0%, it stays the same amount every month. ');
+            ? ', raised with inflation: \u2248' + Chart.money0.format(monthly * Calc.deflator(pp.startMonth + 1, infl)) +
+              '/mo when this season starts, ' + Chart.money0.format(monthly * Calc.deflator(pp.endMonth, infl)) + ' by its end. '
+            : ', the same every month (inflation is 0%). ');
         if (p.withdrawUnit === 'percent') {
-          html += 'That’s ' + (Number(p.withdrawPercent) || 0) + '% of the ' + Chart.money0.format(start) +
-            ' this season starts with, in its first year (the 4% rule).';
+          html += (Number(p.withdrawPercent) || 0) + '% of the ' + Chart.money0.format(start) +
+            ' it starts with, in its first year (the 4% rule).';
         } else if (start > 0) {
           var shown = pctYear < 10 ? pctYear.toFixed(1) : String(Math.round(pctYear));
-          html += 'That’s about ' + shown + '% a year of the ' + Chart.money0.format(start) + ' this season starts with, ' +
+          html += '\u2248' + shown + '% a year of the ' + Chart.money0.format(start) + ' it starts with, ' +
             (pctYear > rule + 0.5 ? 'well above' : pctYear < rule - 0.5 ? 'below' : 'close to') + ' the ' + rule + '% rule.';
         } else {
-          html += 'This season starts with no money, so it is short from the first month.';
+          html += 'It starts with no money, so it is short from the first month.';
         }
       }
     }
@@ -907,7 +947,13 @@
     return growth < 0 ? 'neg' : growth > 0 ? 'pos' : '';
   }
 
-  function renderTable(projection, drawdown) {
+  function renderTable(projection, drawdown, typed) {
+    // In today's dollars, paid-in cells also show the sum as typed, so it matches your maths.
+    function paid(view, asTyped) {
+      if (!view) return '&mdash;';
+      return Chart.money0.format(view) +
+        (typed && Math.abs(asTyped - view) >= 1 ? '<span class="typed">' + Chart.money0.format(asTyped) + ' typed</span>' : '');
+    }
     cols = ['Season', 'Length', 'Return', 'Paid in'].concat(drawdown ? ['Withdrawn'] : [], ['Extras', 'Growth', 'Balance at end']);
     el.thead.innerHTML = '<tr>' + cols.map(function (c, k) {
       return '<th scope="col"' + (k ? ' class="num"' : '') + '>' + c + '</th>';
@@ -938,7 +984,7 @@
         { html: '<span class="swatch-dot" style="background:' + Chart.colorFor(p.colorSlot) + '"></span>' + escapeHtml(seasonName(p, i)) },
         { html: Chart.durationLabel(pp.months) },
         { html: (Number(p.annualRatePercent) || 0) + '%<span class="unit"> / yr</span>' },
-        { html: pp.contributed ? Chart.money0.format(pp.contributed) : '&mdash;' }
+        { html: paid(pp.contributed, typed && typed.perPeriod[i].contributed) }
       ].concat(out(pp.withdrawn), [
         { html: extraText(pp.windfalls) },
         { html: Chart.money0.format(pp.growth), cls: growthCls(pp.growth, pp.endBalance) },
@@ -949,7 +995,8 @@
     rows.push(row('total-row', [
       { html: 'Total' },
       { html: Chart.durationLabel(t.totalMonths) }, dash,
-      { html: Chart.money0.format(t.totalContributed - t.totalWindfalls) }
+      { html: paid(t.totalContributed - t.totalWindfalls,
+                   typed && typed.totals.totalContributed - typed.totals.totalWindfalls) }
     ].concat(out(t.totalWithdrawn), [
       { html: extraText(t.totalWindfalls) },
       { html: Chart.money0.format(t.totalGrowth), cls: t.depletedAt !== null ? '' : growthCls(t.totalGrowth, t.finalAmount) },
@@ -993,17 +1040,6 @@
   });
 
   el.periodList.addEventListener('input', function (ev) {
-    // Switching between the 4% rule and a fixed amount changes the field itself.
-    if (ev.target.hasAttribute('data-withdraw-unit')) {
-      var c = ev.target.closest('.period');
-      var idx = Number(c.dataset.index);
-      state.periods[idx].withdrawUnit = ev.target.value;
-      save();
-      renderPeriods();
-      renderResults();
-      focusIn(el.periodList, idx, '[data-withdraw-unit]');
-      return;
-    }
     if (ev.target.dataset.unit) {
       var card = ev.target.closest('.period');
       var period = state.periods[Number(card.dataset.index)];
@@ -1057,12 +1093,7 @@
 
     var flowBtn = ev.target.closest('[data-flow]');
     if (flowBtn) {
-      // The amount field differs between saving and withdrawing, so the card is rebuilt.
-      state.periods[index].flow = flowBtn.dataset.flow;
-      save();
-      renderPeriods();
-      renderResults();
-      focusIn(el.periodList, index, '[data-flow="' + flowBtn.dataset.flow + '"]');
+      switchFlow(index, flowBtn.dataset.flow);
       return;
     }
 
@@ -1094,10 +1125,59 @@
     save();
     renderPeriods();
     renderResults();
-    // The rebuild drops focus to <body>; put it back where the user was.
-    if (focusAt >= 0) focusIn(el.periodList, focusAt, focusSel);
+    // The rebuild drops focus to <body>; put it back where the user was. On touch,
+    // a delete lands on the card itself, so no keyboard pops up.
+    if (action === 'delete' && touch()) {
+      var next = el.periodList.children[focusAt];
+      if (next) { next.tabIndex = -1; next.focus({ preventScroll: true }); }
+    } else if (focusAt >= 0) focusIn(el.periodList, focusAt, focusSel);
     else el.addPeriod.focus();
   });
+
+  /* Changing what a season does keeps the plan where it was: a switch never
+     brings in an amount nobody typed. 4% -> fixed starts at what 4% comes to
+     today; anything -> Save starts at $0. The change is named, with Undo. */
+  function switchFlow(index, mode) {
+    var p = state.periods[index];
+    var from = flowMode(p);
+    if (from === mode) return;
+    var before = JSON.stringify(p);
+    var note = '';
+    if (mode === 'save') {
+      p.flow = 'save';
+      p.monthlyContribution = 0;
+    } else {
+      var first = Calc.project(state).perPeriod[index];
+      var monthlyToday = first ? first.firstWithdrawal : 0;
+      p.flow = 'withdraw';
+      p.withdrawUnit = mode;
+      if (mode === 'dollars') {
+        p.monthlyContribution = from === 'percent' && monthlyToday > 0
+          ? Math.round(monthlyToday / 10) * 10
+          : 0;
+        if (from === 'percent' && monthlyToday > 0) {
+          note = 'Switched to a fixed ' + Chart.money0.format(p.monthlyContribution) + '/month, about what ' +
+            (Number(p.withdrawPercent) || 0) + '% came to';
+        }
+      } else if (!(Number(p.withdrawPercent) > 0)) {
+        p.withdrawPercent = Calc.SAFE_WITHDRAWAL_PERCENT;
+      }
+    }
+    save();
+    renderPeriods();
+    renderResults();
+    focusIn(el.periodList, index, '[data-flow="' + mode + '"]');
+    offerUndo(note || (seasonName(p, index) + ': ' + (mode === 'save' ? 'saving' : mode === 'percent' ? 'withdrawing a %' : 'withdrawing a fixed amount')), function () {
+      state.periods[index] = JSON.parse(before);
+      save();
+      renderPeriods();
+      renderResults();
+    });
+  }
+
+  function touch() {
+    return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  }
 
   function focusIn(list, index, selector) {
     var li = list.children[index];
@@ -1321,6 +1401,8 @@
   });
 
   el.inflation.addEventListener('input', function () {
+    // A cleared field is mid-typing, not 0%: keep the last rate until there is a number.
+    if (this.value === '') return;
     var v = Number(this.value);
     state.inflationPercent = isFinite(v) ? Math.min(50, Math.max(0, v)) : DEFAULT_INFLATION;
     save();
@@ -1329,6 +1411,8 @@
 
   /* Keep the current plan as a baseline: its month-end balances, in nominal
      dollars, drawn as a ghost line until cleared or replaced. */
+  el.inflation.addEventListener('blur', function () { this.value = state.inflationPercent; });
+
   el.keepBaseline.addEventListener('click', function () {
     var pts = Calc.project(state).points;
     if (pts.length < 2) return;

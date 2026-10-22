@@ -141,7 +141,7 @@
     var totalWindfalls = atZero;
     var totalWithdrawn = 0;
     var monthsUsed = 0;
-    var depletedAt = null;
+    var dippedAt = null;
 
     for (var i = 0; i < periods.length; i++) {
       var p = periods[i];
@@ -169,8 +169,8 @@
         var extra = windfalls[monthsUsed] || 0;
         if (extra) { balance += extra; windfalled += extra; }
         points.push({ month: monthsUsed, balance: balance, periodIndex: i, contribution: contribution, extra: extra });
-        // The first month the balance goes below zero: the money has run out.
-        if (depletedAt === null && balance < 0) depletedAt = monthsUsed;
+        // The first month the balance goes below zero at all (it may recover).
+        if (dippedAt === null && balance < 0) dippedAt = monthsUsed;
       }
 
       totalContributed += contributed + windfalled;
@@ -194,6 +194,15 @@
       });
     }
 
+    /* The money has run out only if the plan ends short: depletedAt is where
+       that final stretch below zero begins. A dip that later recovers (say a
+       big expense paid back by later saving) is dippedAt, not a run-out. */
+    var depletedAt = null;
+    if (balance < 0) {
+      depletedAt = points.length - 1;
+      while (depletedAt > 1 && points[depletedAt - 1].balance < 0) depletedAt--;
+    }
+
     /* An extra whose FIRST occurrence is past the end never lands at all. Later
        occurrences falling off the end are expected, not an error. */
     var unapplied = [];
@@ -213,7 +222,8 @@
         totalWithdrawn: totalWithdrawn,
         totalGrowth: balance - totalContributed + totalWithdrawn,
         totalMonths: monthsUsed,
-        depletedAt: depletedAt
+        depletedAt: depletedAt,
+        dippedAt: dippedAt
       }
     };
   }
@@ -275,7 +285,8 @@
         totalWithdrawn: totalWithdrawn,
         totalGrowth: points[last].balance - totalContributed + totalWithdrawn,
         totalMonths: t.totalMonths,
-        depletedAt: t.depletedAt
+        depletedAt: t.depletedAt,
+        dippedAt: t.dippedAt
       }
     };
   }

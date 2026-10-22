@@ -430,6 +430,22 @@
     ok(r.totals.depletedAt === 9, 'expected month 9, got ' + r.totals.depletedAt);
   });
 
+  test('a dip below zero that recovers is not running out', function () {
+    var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: 500 })],
+      windfalls: [{ atMonth: 2, amount: -5000 }] });
+    ok(r.totals.dippedAt === 2, 'dipped at month 2, got ' + r.totals.dippedAt);
+    ok(r.totals.depletedAt === null, 'ends positive, so it did not run out');
+    ok(r.totals.finalAmount > 0, 'recovers');
+  });
+
+  test('depletedAt is where the final stretch below zero begins', function () {
+    var r = Calc.project({ startingAmount: 1000, periods: [
+      period({ months: 6, monthlyContribution: 500 }), period({ months: 24, monthlyContribution: -400 })
+    ], windfalls: [{ atMonth: 1, amount: -2000 }] });
+    ok(r.totals.dippedAt === 1, 'first dip at month 1, got ' + r.totals.dippedAt);
+    ok(r.totals.depletedAt > 6, 'the final run-out comes later, got ' + r.totals.depletedAt);
+  });
+
   // --- today's dollars ----------------------------------------------------
   test('zero inflation leaves the projection unchanged', function () {
     var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: 100, annualRatePercent: 6 })] });

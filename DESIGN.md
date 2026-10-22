@@ -369,9 +369,9 @@ Quiet and soft-edged. They read as part of the page until hovered.
   money switch (a segmented control: Today's $ / Future $) with a compact inflation field beside it,
   shown only for today's dollars.
 - The display figure, then the body-size Faded Pencil sub-line saying the length, the season count and
-  which money it is in. For a withdrawing plan the display slot answers in words ("Lasts all 45 yrs",
-  or "Runs out at 33y 7m" in Loss Red) at 78% of display size, and the sub-line gives the ending
-  balance.
+  which money it is in. For a withdrawing plan the display slot answers in words ("Lasts through
+  Retirement", or "Runs out 6y 3m into Retirement" in Loss Red) at 78% of display size, and the
+  sub-line gives what is left and the years of withdrawals.
 - A Loss Red, 600-weight line when the balance dips below zero without any withdrawing season
   (it says whether it recovers). With withdrawals the answer itself says "Runs out 6y 3m into
   Retirement" and the sub-line gives the plan year; the sub-line is one line of `·`-separated facts.
@@ -382,13 +382,23 @@ Quiet and soft-edged. They read as part of the page until hovered.
   baseline"). What "Keep as baseline" does lives in its tooltip.
 
 ### Save / Withdraw
-- Each season card's "Each month" field pairs a segmented Save / Withdraw control with a positive
-  amount. Direction is a choice, never a minus sign. On a card the pressed segment is a Ledger Blue
-  tint (14%) with a 45% ring, since white-on-white would not read. Withdrawing swaps the `$` affix
-  for a picker inside the field (`%` / `$ / month`, like the years/months picker), and a note
-  under it always spells the rule out ("4% of what this season starts with, in its first year, then
-  raised with inflation each year (the 4% rule). About $357/month to start, in today's dollars.").
-  At 420px and below the control takes its own full-width row above the amount.
+- Each season card's "Each month" field is one visible three-way choice, **Save / Withdraw % /
+  Withdraw $**, beside a positive amount with a plain `$` or `%` affix. Direction is a choice, never
+  a minus sign, and how to withdraw is never hidden in a unit picker. On a card the pressed segment
+  is a Ledger Blue tint (14%) with a 45% ring. The row wraps when the card is narrow.
+- Switching never brings in an amount nobody typed: % to $ starts at what the % came to (rounded to
+  $10), anything to Save starts at $0, and the switch is announced in the undo toast.
+- The note under a withdrawing amount leads with the bold monthly figure in today's money, shows the
+  inflation raise in numbers ("≈$585/mo when this season starts, $1,083 by its end"), and sizes it
+  against the 4% rule. The first card's returns hint is one line with a "What's typical?" disclosure.
+
+### Edge states
+- A season past the 100-year cap keeps its name and the reason, and hides its inputs (`.capped`).
+- A ninth season sharing an earlier hue gets a hollow timeline node (`.color-reused`).
+- On wide screens the pinned result is a compact floating card at the bottom right; on phones it is
+  the full-width bar, and the undo toast moves to the top so it never covers the field being edited.
+- In today's dollars, the paid-in figure and table cells carry the as-typed sum beneath ("$60,000
+  typed"), in caps-size Faded Pencil.
 
 ### About these numbers
 - One closed disclosure under the chart (`.why` styling) holding today's dollars, saving and

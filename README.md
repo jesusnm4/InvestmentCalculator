@@ -20,14 +20,14 @@ what it could pay out each month in retirement.
 - **Extra amounts** are lump sums on top of the monthly contributions. Use a negative amount for a
   large planned expense, and tick **Repeat** to make one recur. A new extra starts at $0, and each
   one says which season it lands in and, when it repeats, how much it adds in total.
-- **Each season saves or withdraws.** Pick **Save** or **Withdraw**. Withdrawals are in today's
-  dollars and rise with inflation each year. Choose a fixed **$ / month**, or a **%**
-  (default 4%, the 4% rule): 4% of what the season starts with in its first year, then raised with inflation
-  each year, which is the classic 4% rule, not 4% of whatever is left. The card shows what that
-  comes to per month.
+- **Each season saves or withdraws:** **Save**, **Withdraw %** or **Withdraw $**. Withdrawals are
+  in today's dollars and rise with inflation each year. **Withdraw %** (default 4%) is the classic 4%
+  rule: 4% of what the season starts with in its first year, then raised with inflation, not 4% of
+  whatever is left. The card shows what it comes to per month. Switching never brings in an amount
+  you didn't type: % to $ starts at what the % came to, and Save starts at $0.
 - **Results** (right): for a plan that only saves, the final amount and **monthly income** under the
-  4% rule. Once a season withdraws, the headline answers **Will it last?** ("Lasts all 45 yrs" or
-  "Runs out at 33y 7m") and one sentence says what would change it: how much more you could
+  4% rule. Once a season withdraws, the headline answers **Will it last?** ("Lasts through Retirement" or
+  "Runs out 6y 3m into Retirement") and one sentence says what would change it: how much more you could
   withdraw, or how much less (or how much more starting money) would make it last. Below that: total
   paid in, growth, total withdrawn, the chart (each season's stretch labeled above it, with the
   names in the legend only when they don't fit), and a breakdown table whose columns add up.
@@ -46,7 +46,11 @@ what it could pay out each month in retirement.
   baseline and the 4% rule in one place.
 - **The answer stays in view**: whenever the headline is scrolled away, a bar pinned to the bottom
   shows it; tap **See results** to jump back. Keyboard users get a **Skip to results** link first.
-  When the money runs out, the chart stops at $0 and shades the rest instead of plotting debt. The breakdown stacks into one block per season.
+  On wide screens it's a small card in the corner. When the money runs out, the chart stops at $0 and
+  shades the rest instead of plotting debt; a dip below zero that recovers is called out, not
+  treated as running out.
+- **Paid in matches your maths.** In today's dollars it also shows the sum as typed ("$70,000 as
+  typed, worth this today"); planned expenses (negative extras) are reported separately. The breakdown stacks into one block per season.
 - Everything auto-saves in your browser (`localStorage`). There are no accounts and nothing is
   sent anywhere.
 

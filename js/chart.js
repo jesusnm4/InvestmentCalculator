@@ -182,7 +182,8 @@
        at $0 and the rest of the timeline is shaded instead of charting debt that
        cannot exist. The table and the hero still report the shortfall. */
     var dep = (opts.depletedAt === null || opts.depletedAt === undefined) ? null : opts.depletedAt;
-    function val(k) { return dep !== null && k >= dep ? 0 : points[k].balance; }
+    // A recovered dip below zero is drawn at $0 too: the chart never plots debt.
+    function val(k) { return dep !== null && k >= dep ? 0 : Math.max(0, points[k].balance); }
     var baseline = opts.baseline ? opts.baseline.map(function (b) { return Math.max(0, b); }) : null;
 
     // --- y domain, snapped to whole ticks ---
@@ -446,7 +447,18 @@
 
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerdown', move);
-    target.addEventListener('pointerleave', leave);
+    /* A finger leaves the chart the moment it lifts, so on touch the readout
+       stays put until the next tap elsewhere; a mouse leaving still hides it. */
+    target.addEventListener('pointerleave', function (ev) { if (ev.pointerType !== 'touch') leave(); });
+    if (!container.__tapAway) {
+      container.__tapAway = true;
+      document.addEventListener('pointerdown', function (ev) {
+        if (ev.pointerType === 'touch' && !container.contains(ev.target)) {
+          var t = container.querySelector('.chart-tooltip');
+          if (t && !t.hidden) container.querySelector('.hover-target').dispatchEvent(new PointerEvent('pointercancel'));
+        }
+      });
+    }
     // A touch that turns into a page scroll cancels the pointer; drop the readout.
     target.addEventListener('pointercancel', leave);
   }

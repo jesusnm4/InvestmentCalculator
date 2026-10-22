@@ -54,10 +54,11 @@ stretch of the curve, and the accounting never lets a lump sum masquerade as gro
   N years or months until a point or the end). Every time field has its own years/months picker;
   the plan itself is always stored in months.
 - Outputs: for a saving plan, the final amount and monthly income under the 4% rule; once any
-  season withdraws, a "Will it last?" answer ("Lasts all 45 yrs" / "Runs out at 33y 7m") with the
-  ending balance, total withdrawn, and one sentence on what would change it (how much more could be
+  season withdraws, a "Will it last?" answer ("Lasts through Retirement" / "Runs out 6y 3m into
+  Retirement") with the ending balance, total withdrawn, and one sentence on what would change it (how much more could be
   withdrawn, or how much less / how much more starting money would make it last). Always: total
-  paid in (never negative), growth, a per-season
+  paid in (never negative; in today's dollars it also shows the as-typed sum, owner's choice;
+  planned expenses reported separately), growth, a per-season
   colored balance chart with shape-coded extra markers, and a per-season breakdown table with a
   starting-amount row.
 - Money: shown in today's dollars by default (2.5% inflation, editable), switchable to future
