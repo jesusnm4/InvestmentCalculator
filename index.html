@@ -8,9 +8,9 @@
 <link rel="preload" href="fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!-- ?v= busts browser caches: bump it whenever CSS or JS changes (see CLAUDE.md). -->
-<link rel="stylesheet" href="styles.css?v=2026-10-22.11">
+<link rel="stylesheet" href="styles.css?v=2026-10-22.13">
 <!-- Blocking on purpose: stamps the theme before first paint. -->
-<script src="js/theme.js?v=2026-10-22.11"></script>
+<script src="js/theme.js?v=2026-10-22.13"></script>
 </head>
 <body>
 
@@ -133,6 +133,8 @@
         <div class="kpi-note" id="kpi-income-note">under the 4% rule</div>
       </div>
     </div>
+    <!-- The row added up, in the page's money, so the figures reconcile on screen. -->
+    <p class="kpi-sum" id="kpi-sum" hidden></p>
 
     <figure class="chart-block">
       <figcaption class="chart-title">Projected balance</figcaption>
@@ -149,7 +151,7 @@
 
   <!-- The breakdown spans both columns, so the results column stays short enough to pin beside the plan. -->
   <section class="panel details" aria-labelledby="details-h">
-    <h2 id="details-h" class="sr-only">Breakdown by season</h2>
+    <h2 id="details-h" class="details-title">Breakdown by season</h2>
     <div class="table-wrap">
       <table class="breakdown">
         <caption class="sr-only">Breakdown by season</caption>
@@ -178,8 +180,8 @@
 <!-- Announces the result after typing settles; visible results update live. -->
 <p class="sr-only" id="live-summary" aria-live="polite"></p>
 
-<script src="js/calc.js?v=2026-10-22.11"></script>
-<script src="js/chart.js?v=2026-10-22.11"></script>
-<script src="js/app.js?v=2026-10-22.11"></script>
+<script src="js/calc.js?v=2026-10-22.13"></script>
+<script src="js/chart.js?v=2026-10-22.13"></script>
+<script src="js/app.js?v=2026-10-22.13"></script>
 </body>
 </html>

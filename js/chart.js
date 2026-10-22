@@ -109,9 +109,14 @@
            shapeMark(slot, c, c, s * 0.27, C.surface, C.muted, 1.6) + '</svg>';
   }
 
-  var money0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-  var money2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  var compact = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
+  /* Money formats share one typographic minus (−), not the hyphen Intl emits,
+     so every negative figure on the page reads the same. */
+  function withMinus(nf) {
+    return { format: function (v) { return nf.format(v).replace('-', '\u2212'); } };
+  }
+  var money0 = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }));
+  var money2 = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  var compact = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }));
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -350,6 +355,24 @@
 
     /* The month the money runs out: a loss-red rule down to the axis and a label
        at the zero line. Semantic color, not a series color. */
+    /* A planned expense that takes the balance below zero for a while: the line
+       rests on $0, but the stretch is washed in Loss Red and labelled with how
+       deep it went, so the borrowed years are not invisible. */
+    var below = opts.belowZero || [];
+    for (var bz = 0; bz < below.length; bz++) {
+      var bx0 = x(below[bz][0]), bx1 = x(below[bz][1]);
+      svg.push('<rect x="' + bx0.toFixed(2) + '" y="' + m.t + '" width="' + Math.max(1, bx1 - bx0).toFixed(2) +
+               '" height="' + plotH + '" fill="' + C.bad + '" opacity="0.07"/>');
+      svg.push('<line x1="' + bx0.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + bx1.toFixed(2) + '" y2="' + yBase.toFixed(2) +
+               '" stroke="' + C.bad + '" stroke-width="2" stroke-dasharray="2 3"/>');
+      if (bz === 0 && opts.belowZeroLabel) {
+        var lright = bx0 < m.l + plotW - 160;
+        svg.push('<text x="' + (lright ? bx0 + 6 : bx0 - 6).toFixed(2) + '" y="' + (m.t + 14) + '" text-anchor="' + (lright ? 'start' : 'end') +
+                 '" fill="' + C.bad + '" font-size="12" font-weight="600" stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
+                 esc(opts.belowZeroLabel) + '</text>');
+      }
+    }
+
     if (dep !== null && dep <= maxMonth) {
       var dx = x(dep);
       // The stretch with no money left: a quiet wash, and a flat pencil line at $0.
@@ -364,7 +387,7 @@
       svg.push('<text x="' + (right ? dx + 6 : dx - 6).toFixed(2) + '" y="' + (m.t + 14) +
                '" text-anchor="' + (right ? 'start' : 'end') + '" fill="' + C.bad + '" font-size="12" font-weight="600"' +
                ' stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
-               esc('Runs out · ' + durationLabel(dep)) + '</text>');
+               esc(opts.depletedLabel || 'Runs out \u00b7 ' + durationLabel(dep)) + '</text>');
     }
 
     // --- axes ---

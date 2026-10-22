@@ -58,6 +58,9 @@ what it could pay out each month in retirement.
   breakdown table sits below both columns.
 - **On a phone**, seasons you aren't editing collapse to one line ("10 yrs · $500/mo saved · 7%");
   tap one to open it.
+- **The summary row adds up**: a line under it shows paid in + growth − withdrawn = what's left.
+- **A big expense that dips below zero** is shown as money borrowed against the plan (how deep, for
+  how long, shaded on the chart), with the expense size that would keep it above zero.
 - **Paid in matches your maths.** In today's dollars it also shows the sum as typed ("$70,000 as
   typed, worth this today"); planned expenses (negative extras) are reported separately. The breakdown stacks into one block per season.
 - Everything auto-saves in your browser (`localStorage`). There are no accounts and nothing is

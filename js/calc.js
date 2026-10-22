@@ -249,9 +249,21 @@
         totalGrowth: balance - totalContributed + totalWithdrawn,
         totalMonths: monthsUsed,
         depletedAt: depletedAt,
-        dippedAt: dippedAt
+        dippedAt: dippedAt,
+        lowestBalance: belowZero(points).lowest,
+        monthsBelowZero: belowZero(points).months
       }
     };
+  }
+
+  /* How deep and how long the balance goes below zero (a planned expense paid
+     with money the plan did not have: in effect borrowed against it). */
+  function belowZero(points) {
+    var lowest = 0, months = 0;
+    for (var i = 1; i < points.length; i++) {
+      if (points[i].balance < 0) { months++; if (points[i].balance < lowest) lowest = points[i].balance; }
+    }
+    return { lowest: lowest, months: months };
   }
 
   /* How many of today's dollars a dollar at month m is worth, at a constant
@@ -315,7 +327,9 @@
         totalGrowth: points[last].balance - totalContributed + totalWithdrawn,
         totalMonths: t.totalMonths,
         depletedAt: t.depletedAt,
-        dippedAt: t.dippedAt
+        dippedAt: t.dippedAt,
+        lowestBalance: belowZero(points).lowest,
+        monthsBelowZero: t.monthsBelowZero
       }
     };
   }

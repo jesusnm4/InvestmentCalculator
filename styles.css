@@ -470,6 +470,9 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .kpi-value.up { color: var(--good); }
 .kpi-value.down { color: var(--bad); }
 .kpi-note { font-size: var(--text-note); color: var(--muted); margin-top: 2px; }
+.kpi-sum { margin: -8px 0 0; font-size: var(--text-note); color: var(--muted); font-variant-numeric: tabular-nums; text-wrap: pretty; }
+.kpi-sum[hidden] { display: none; }
+.panel .details-title { margin: 0 0 8px; font-family: var(--font-figure); font-size: var(--text-title); font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; }
 
 /* --- chart --- */
 .chart-block { margin: 0; }
@@ -661,6 +664,10 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 }
 .toast-undo:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .result-bar:not([hidden]) ~ .toast { bottom: 76px; }
+/* Desktop: bottom left, clear of the results column and the floating result card. */
+@media (min-width: 901px) {
+  .toast, .result-bar:not([hidden]) ~ .toast { left: 24px; bottom: 20px; transform: none; }
+}
 /* Phones: the toast moves to the top, so it never covers the field you are editing. */
 @media (max-width: 900px) {
   /* Full width and two lines at most, so it never stacks up over the card being edited. */

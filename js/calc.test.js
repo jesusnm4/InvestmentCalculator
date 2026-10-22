@@ -486,6 +486,14 @@
     ok(Calc.project(over).totals.depletedAt !== null, 'withdrawing above the limit should run out');
   });
 
+  test('a dip reports how deep and how long it stays below zero', function () {
+    var r = Calc.project({ startingAmount: 0, periods: [period({ months: 24, monthlyContribution: 1000 })],
+      windfalls: [{ atMonth: 2, amount: -10000 }] });
+    close(r.totals.lowestBalance, -8000, 1e-9, 'deepest');
+    ok(r.totals.monthsBelowZero === 8, 'below zero for 8 months, got ' + r.totals.monthsBelowZero);
+    ok(r.totals.depletedAt === null, 'recovers');
+  });
+
   // --- today's dollars ----------------------------------------------------
   test('zero inflation leaves the projection unchanged', function () {
     var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: 100, annualRatePercent: 6 })] });

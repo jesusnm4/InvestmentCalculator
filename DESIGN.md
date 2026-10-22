@@ -430,6 +430,22 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - While anything can be undone, a quiet "Undo" text action sits beside "Start from the example"; the
   undo history outlives the toast.
 
+### One way of saying when
+- Every run-out is stated relative to its season: "Runs out 6y 6m into Retirement", with "year 27 of
+  the plan" in the sub-line, the same wording on the chart label and in the growth note. An expense
+  that caused it is named after it ("…into Retirement, after New roof").
+
+### Expense dips
+- A planned expense that takes the balance below zero and later recovers is shown as borrowing,
+  not hidden: the chart washes that stretch in Loss Red (7%) with a dashed red $0 line and a
+  "$34,048 below zero" label; the warning gives depth and duration; the lever offers the expense
+  size that would keep it above zero, in the page's money.
+
+### Summary row sum
+- Under the three figures, one caps-size Faded Pencil line adds them up in the page's money
+  ("In today's dollars: $63,111 paid in + $70,634 growth − $106,965 withdrawn = $26,781 left"), so the
+  row reconciles even though Total paid in leads with the as-typed sum. All negatives use "−".
+
 ### Chart after the money runs out
 - The season lines stop at $0. The rest of the timeline gets an 8% Faded Pencil wash and a dotted
   pencil line at $0; the Loss Red rule and its label sit at the top of the plot. The tooltip there

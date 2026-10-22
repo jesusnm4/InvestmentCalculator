@@ -70,7 +70,10 @@ out). A withdrawal only takes what is there: once the balance is empty the unpai
 `shortfall` (`perPeriod[i].shortfall`, `totals.totalShortfall`) and `withdrawn` counts only money
 actually paid, so withdrawals never drive the balance below zero (a planned expense still can).
 `Calc.extraScale` and `Calc.savingMoreAdds` power the expense and "save more" levers. The levers'
-internal `lasts()` test is strict (never short, never below zero). `Calc.inTodaysDollars(projection, inflationPercent)` returns
+internal `lasts()` test is strict (never short, never below zero). `totals.lowestBalance` and
+`totals.monthsBelowZero` describe a planned-expense dip (money borrowed against the plan). A kept
+baseline stores its own `depletedAt`: withdrawals stop at $0, so its balances alone never show a
+run-out. `Calc.inTodaysDollars(projection, inflationPercent)` returns
 the same shape restated in today's dollars, discounting each flow by its month so
 `growth = end - start - contributed - windfalls` still holds; it returns the input unchanged at 0%.
 
