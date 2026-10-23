@@ -292,16 +292,16 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 /* The collapsed season row (phones only): name, then its numbers. */
 .card-summary { display: none; }
 .range-short { display: none; }
-@media (max-width: 560px) {
-  .period.collapsed > :not(.period-node):not(.card-summary) { display: none; }
-  .period.collapsed .card-summary {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-    width: 100%; min-height: 44px; padding: 2px 0; text-align: left;
-    background: none; border: none; color: var(--ink); font: inherit; cursor: pointer; border-radius: 6px;
-  }
-  .period.collapsed { padding-top: 8px; padding-bottom: 8px; }
-  .period.collapsed .period-node { top: 12px; }
+/* Every season but the one being edited collapses to its summary row, at every width. */
+.period.collapsed > :not(.period-node):not(.card-summary) { display: none; }
+.period.collapsed .card-summary {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 100%; min-height: 44px; padding: 2px 0; text-align: left;
+  background: none; border: none; color: var(--ink); font: inherit; cursor: pointer; border-radius: 6px;
 }
+.period.collapsed { padding-top: 8px; padding-bottom: 8px; }
+.period.collapsed .period-node { top: 12px; }
+@media (hover: hover) { .period.collapsed .card-summary:hover .card-summary-name { text-decoration: underline; text-decoration-color: var(--axis); text-underline-offset: 3px; } }
 .card-summary-name { font-weight: 600; }
 .card-summary-meta { font-size: var(--text-note); color: var(--muted); font-variant-numeric: tabular-nums; }
 .card-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -415,7 +415,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 /* "Will it last?" answers in words, so the display figure gives way a little. */
 .hero-value.answer { font-size: calc(var(--text-display) * 0.78); line-height: 1.1; text-wrap: balance; }
 /* What would change the outcome: one plain sentence under the answer. */
-.lever { margin: 6px 0 0; max-width: 62ch; font-size: var(--text-body); color: var(--ink-2); text-wrap: pretty; }
+/* The lever is the second thing to read after the answer: Graphite, a step up from body. */
+.lever { margin: 8px 0 0; max-width: 62ch; font-size: 16px; font-weight: 500; line-height: 1.45; color: var(--ink); text-wrap: pretty; }
 .lever[hidden] { display: none; }
 .baseline-delta[hidden], .link-btn[hidden] { display: none; }
 
@@ -470,7 +471,10 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .kpi-value.up { color: var(--good); }
 .kpi-value.down { color: var(--bad); }
 .kpi-note { font-size: var(--text-note); color: var(--muted); margin-top: 2px; }
-.kpi-sum { margin: -8px 0 0; font-size: var(--text-note); color: var(--muted); font-variant-numeric: tabular-nums; text-wrap: pretty; }
+.kpi-sum-wrap { margin: -10px 0 0; font-size: var(--text-note); }
+.kpi-sum-wrap[hidden] { display: none; }
+.money-note { font-size: var(--text-note); color: var(--muted); }
+.kpi-sum { margin: 6px 0 0; font-size: var(--text-note); color: var(--muted); font-variant-numeric: tabular-nums; text-wrap: pretty; }
 .kpi-sum[hidden] { display: none; }
 .panel .details-title { margin: 0 0 8px; font-family: var(--font-figure); font-size: var(--text-title); font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; }
 
@@ -621,6 +625,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .breakdown td::before { content: attr(data-label); color: var(--ink-2); font-weight: 400; }
   .breakdown td:first-child { display: block; padding-bottom: 4px; font-weight: 600; }
   .breakdown td:first-child::before, .breakdown .empty td::before { content: none; }
+  /* Skip the dashes: a stacked block only lists the figures it has. */
+  .breakdown td.blank { display: none; }
   .breakdown .empty td { justify-content: center; }
 }
 
@@ -666,7 +672,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .result-bar:not([hidden]) ~ .toast { bottom: 76px; }
 /* Desktop: bottom left, clear of the results column and the floating result card. */
 @media (min-width: 901px) {
-  .toast, .result-bar:not([hidden]) ~ .toast { left: 24px; bottom: 20px; transform: none; }
+  /* Over the results column, above the floating result card: never over the plan being edited. */
+  .toast, .result-bar:not([hidden]) ~ .toast { left: auto; right: 24px; bottom: 92px; transform: none; }
 }
 /* Phones: the toast moves to the top, so it never covers the field you are editing. */
 @media (max-width: 900px) {

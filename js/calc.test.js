@@ -494,6 +494,14 @@
     ok(r.totals.depletedAt === null, 'recovers');
   });
 
+  test('a pension extra refilling an empty account does not hide the run-out', function () {
+    var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 36, monthlyContribution: 500, flow: 'withdraw' })],
+      windfalls: [{ atMonth: 12, amount: 2000, repeatEvery: 12 }] });
+    ok(r.totals.depletedAt === 3, 'first unpaid withdrawal in month 3, got ' + r.totals.depletedAt);
+    ok(r.totals.totalShortfall > 0, 'withdrawals went unpaid');
+    ok(r.totals.finalAmount >= 0, 'the last pension payment leaves money at the end');
+  });
+
   // --- today's dollars ----------------------------------------------------
   test('zero inflation leaves the projection unchanged', function () {
     var r = Calc.project({ startingAmount: 1000, periods: [period({ months: 24, monthlyContribution: 100, annualRatePercent: 6 })] });

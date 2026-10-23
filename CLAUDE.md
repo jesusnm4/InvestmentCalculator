@@ -62,9 +62,9 @@ up the chain — `calc.js` must stay DOM-free so `tests.html` can load it standa
 (`points[m].month === m`), so consumers can index it directly; each point carries a `periodIndex`
 (`-1` for month 0, the starting amount). `perPeriod[i]` carries `startMonth`/`endMonth` offsets into
 `points`, plus `truncated` when the 1200-month (100-year) global cap clipped that period. Each point
-also records the month's inflows (`contribution`, `extra`). `totals.depletedAt` is the first shortfall after
-the last month the plan had money (so a later season that starts empty, e.g. a 4%-rule season on
-$0, cannot hide an earlier run-out); it is null when the plan ends with money; `totals.dippedAt` is
+also records the month's inflows (`contribution`, `extra`). `totals.depletedAt` is the first month a withdrawal
+could not be paid in full (a later refill, e.g. a pension extra, does not undo it); without any
+unpaid withdrawal it is the start of a final stretch below zero, else null; `totals.dippedAt` is
 the first month below zero at all (a dip that later recovers is reported, not treated as running
 out). A withdrawal only takes what is there: once the balance is empty the unpaid part goes to
 `shortfall` (`perPeriod[i].shortfall`, `totals.totalShortfall`) and `withdrawn` counts only money

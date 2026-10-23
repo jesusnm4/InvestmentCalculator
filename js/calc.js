@@ -214,18 +214,17 @@
     /* The money has run out only if the plan ends short: depletedAt is where
        that final stretch below zero begins. A dip that later recovers (say a
        big expense paid back by later saving) is dippedAt, not a run-out. */
-    /* Run out = the first shortfall after the plan last had money. Scanning
-       from the last month with a positive balance means a later season that
-       starts empty (say a 4% rule season: 4% of nothing is never "short")
-       cannot hide an earlier run-out. */
+    /* Run out = the first month a withdrawal could not be paid in full. That
+       stands even if money comes back later (a pension extra refilling an empty
+       account does not undo the months that went unpaid). Without any unpaid
+       withdrawal, a plan still runs out if a planned expense leaves it below
+       zero for good: the start of that final stretch. */
     function falling(pt) { return pt.balance < 0 || pt.short > 0; }
     var depletedAt = null;
-    var lastHad = -1;
-    for (var h = points.length - 1; h >= 0; h--) if (points[h].balance > 0) { lastHad = h; break; }
-    if (lastHad < points.length - 1) {
-      for (var f = Math.max(1, lastHad + 1); f < points.length; f++) {
-        if (falling(points[f])) { depletedAt = f; break; }
-      }
+    for (var f = 1; f < points.length; f++) if (points[f].short > 0) { depletedAt = f; break; }
+    if (depletedAt === null && points.length > 1 && points[points.length - 1].balance < 0) {
+      depletedAt = points.length - 1;
+      while (depletedAt > 1 && falling(points[depletedAt - 1])) depletedAt--;
     }
 
     /* An extra whose FIRST occurrence is past the end never lands at all. Later

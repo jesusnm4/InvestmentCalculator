@@ -294,7 +294,7 @@ A two-column grid. The setup column is `minmax(340px, 400px)` and the results co
 At 900px and below it collapses to a single column with 16px padding, setup first, and a result bar
 pins the final amount to the bottom of the screen whenever the headline figure is out of view (the
 layout pads 96px at the bottom to clear it). The summary row is three equal columns and stacks to
-one at 560px and below. On coarse pointers, icon buttons grow to 40px and swatches to 34px. At 420px and below, the
+one at 560px and below. On coarse pointers, icon buttons grow to 44px and swatches to 34px. At 420px and below, the
 two-column field grids inside cards stack to one column, so a unit picker never squeezes the digits. The
 breakdown table scrolls horizontally inside its wrapper rather than wrapping its numbers.
 
@@ -349,7 +349,7 @@ Quiet and soft-edged. They read as part of the page until hovered.
   transform and no transition. Focus is a 2px Ledger Blue outline offset by 1px.
 
 ### Icon buttons
-- 26px square (40px on touch), 6px radius, transparent with a hairline border, holding a drawn
+- 26px square (44px on touch), 6px radius, transparent with a hairline border, holding a drawn
   14px SVG icon (chevron up, chevron down, cross) at a 1.6 stroke in Pencil. On hover the border goes
   to Axis Grey and the icon to Graphite. The danger variant turns border and icon Loss Red on hover
   and sits 6px further from its neighbours. Disabled is 30% opacity.
@@ -375,7 +375,9 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - A Loss Red, 600-weight line when the balance dips below zero without any withdrawing season
   (it says whether it recovers). With withdrawals the answer itself says "Runs out 6y 3m into
   Retirement" and the sub-line gives the plan year; the sub-line is one line of `·`-separated facts.
-- The lever: one body-size Pencil sentence on what would change the outcome (`.lever`, max 62ch).
+- The lever: the second thing to read after the answer, one Graphite 16px/500 sentence on what
+  would change the outcome (`.lever`, max 62ch). The sub-line above it holds two facts at most; which
+  money the page is in sits beside the Today's $ / Future $ switch ("at 2.5% inflation").
 - A row of text actions: "Keep as baseline" (then "Keep this instead", undoable), the difference in
   Gain Green / Loss Red followed by "vs baseline ending at $X" in Faded Pencil, and "Clear baseline"
   (undoable). With withdrawals the difference is in time ("Lasts 1y 8m longer than the
@@ -394,8 +396,8 @@ Quiet and soft-edged. They read as part of the page until hovered.
   against the 4% rule. The first card's returns hint is one line with a "What's typical?" disclosure.
 
 ### Phone season rows
-- At 560px and below, every season but the one being edited collapses to a single summary row
-  (name, then "10 yrs · $500/mo saved · 7%" in Faded Pencil), a 44px tap target that opens it. In an
+- At every width, every season but the one being edited collapses to a single summary row (name,
+  then "10 yrs · $500/mo saved · 7% return" in Faded Pencil), a 44px target that opens it. In an
   open card the range line ("20–45 yrs", compact form) shares a row with the reorder and delete
   buttons. Icon-button hover colours apply only under `(hover: hover)`, so a red ✕ never sticks
   under a thumb after a delete.
@@ -406,10 +408,12 @@ Quiet and soft-edged. They read as part of the page until hovered.
   legend dot and a dashed chart line.
 - When withdrawals outrun the money, they stop at what was there: the hero says "Short by $X",
   the table's balance cell shows $0 with a Loss Red "short $X" line, and nothing goes negative.
-- On wide screens the pinned result is a compact floating card at the bottom right; on phones it is
-  the full-width bar, and the undo toast moves to the top, full width, clamped to two lines.
-- Paid in leads with the as-typed sum ("$70,000", "worth $63,111 today" beneath); planned expenses
-  get their own line. Table cells stay in today's dollars with "of $60,000 put in" beneath.
+- On wide screens the pinned result is a compact floating card at the bottom right, with the undo
+  toast above it over the results column (never over the plan); on phones it is the full-width bar,
+  and the toast moves to the top, full width, clamped to two lines.
+- Every figure leads in the page's money (owner's choice): Paid in shows "$63,111" with "you put in
+  $70,000" beneath; table cells read "$53,111" with "of $60,000 put in". Planned expenses get their
+  own line. Expense levers are said as typed with today's worth in brackets.
 - A season added after a withdrawing one starts as a plain saving season at $0 (not a copy).
 - The chart's season-name band is all or nothing: if any name will not fit, the band stays empty and
   the legend names them.
@@ -442,9 +446,8 @@ Quiet and soft-edged. They read as part of the page until hovered.
   size that would keep it above zero, in the page's money.
 
 ### Summary row sum
-- Under the three figures, one caps-size Faded Pencil line adds them up in the page's money
-  ("In today's dollars: $63,111 paid in + $70,634 growth − $106,965 withdrawn = $26,781 left"), so the
-  row reconciles even though Total paid in leads with the as-typed sum. All negatives use "−".
+- Under the three figures, a "How it adds up" disclosure holds the sum in the page's money
+  ("$63,111 paid in + $70,634 growth − $106,965 withdrawn = $26,781 left"). All negatives use "−".
 
 ### Chart after the money runs out
 - The season lines stop at $0. The rest of the timeline gets an 8% Faded Pencil wash and a dotted

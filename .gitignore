@@ -1,3 +1,4 @@
 .DS_Store
 .venv/
 .impeccable/hook.cache.json
+.impeccable/live/

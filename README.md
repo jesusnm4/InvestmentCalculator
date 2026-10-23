@@ -49,16 +49,18 @@ what it could pay out each month in retirement.
   On wide screens it's a small card in the corner. When the money runs out, the chart stops at $0 and
   shades the rest instead of plotting debt; a dip below zero that recovers is called out, not
   treated as running out.
-- **When the money runs out**, withdrawals stop at what was there: the page says "Short by $X",
+- **When the money runs out**, withdrawals stop at what was there (a later pension or other extra
+  refilling the account doesn't hide it): the page says "Short by $X",
   counts only what was actually withdrawn, and names an expense if one caused it ("Runs out at
   5 yrs, when Extra 1 lands", with "An expense of $22,700 or less would make it last"). Plans that
   only save get a lever too ("Saving $100 more a month would add about $56,300").
 - **Inflation** is a plan setting under the starting amount ("Prices rise each year").
 - **On a desktop**, the answer and chart stay pinned beside whichever season you're editing; the
   breakdown table sits below both columns.
-- **On a phone**, seasons you aren't editing collapse to one line ("10 yrs · $500/mo saved · 7%");
+- **Seasons you aren't editing** collapse to one line (on any screen) ("10 yrs · $500/mo saved · 7%");
   tap one to open it.
-- **The summary row adds up**: a line under it shows paid in + growth − withdrawn = what's left.
+- **The summary row adds up**: "How it adds up" under it shows paid in + growth − withdrawn = what's
+  left, all in the page's money (what you typed appears as a note).
 - **A big expense that dips below zero** is shown as money borrowed against the plan (how deep, for
   how long, shaded on the chart), with the expense size that would keep it above zero.
 - **Paid in matches your maths.** In today's dollars it also shows the sum as typed ("$70,000 as
