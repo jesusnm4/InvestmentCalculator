@@ -2,3 +2,4 @@
 .venv/
 .impeccable/hook.cache.json
 .impeccable/live/
+TASKS.md
