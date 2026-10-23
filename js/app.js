@@ -72,8 +72,8 @@
      it follows a card through reorders; not persisted — it is view state. */
   var openOptions = typeof WeakSet === 'function' ? new WeakSet() : null;
 
-  /* Phones collapse every season but the one being edited to a single summary
-     row, so the answer is not three screens away. View state, like openOptions. */
+  /* Every season but the one being edited collapses to a single summary row,
+     at every width, so the answer is not three screens away. View state, like openOptions. */
   var expanded = null;
 
   var state = load() || defaultState();
@@ -165,6 +165,12 @@
   var UNIT_KEY = { months: 'lengthUnit', atMonth: 'atUnit', repeatEvery: 'everyUnit', repeatUntil: 'untilUnit' };
 
   // An unknown unit (older saved state) shows years when that reads cleanly.
+  /* Under a year, shown in years, reads "0.08 years": structural renders move
+     such a field to months (never while typing, which would reread the number). */
+  function wholeUnit(obj, key, months) {
+    var m = Number(months) || 0;
+    if (obj[key] === 'years' && m > 0 && m < 12) obj[key] = 'months';
+  }
   function unitOf(unit, months) {
     if (unit === 'years' || unit === 'months') return unit;
     return Math.floor(Number(months) || 0) % 12 === 0 ? 'years' : 'months';
@@ -329,6 +335,7 @@
     el.periodEmpty.hidden = state.periods.length > 0;
 
     state.periods.forEach(function (p, i) {
+      wholeUnit(p, 'lengthUnit', p.months);
       var li = document.createElement('li');
       li.className = 'period';
       li.dataset.index = i;
@@ -356,11 +363,12 @@
       var open = openOptions && openOptions.has(p);
       li.innerHTML =
         '<span class="period-node" aria-hidden="true">' + n + '</span>' +
-        // Phones: a collapsed season is this one row; tap it to edit.
+        // A collapsed season is this one row; tap it to edit.
         // Named by its visible text (label-in-name), with "Edit season n:" for screen readers.
-        '<button type="button" class="card-summary" data-action="expand">' +
+        '<button type="button" class="card-summary" data-action="expand" aria-expanded="false">' +
           '<span class="sr-only">Edit season ' + n + ': </span>' +
           '<span class="card-summary-name" data-role="sum-name"></span>' +
+          '<span class="sr-only">, </span>' +
           '<span class="card-summary-meta" data-role="sum-meta"></span>' +
         '</button>' +
         '<div class="period-head">' +
@@ -370,6 +378,8 @@
           // Inside the head so phones can put it on the same row as the buttons.
           '<p class="period-range" data-role="range"></p>' +
           '<button type="button" class="icon-btn danger" data-action="delete" title="Delete season" aria-label="Delete season ' + n + '">' + ICON.close + '</button>' +
+          // Closes the card back to its one-line row (Escape does the same).
+          '<button type="button" class="link-btn done-btn" data-action="collapse" aria-expanded="true" aria-label="Done with season ' + n + '">Done</button>' +
         '</div>' +
         '<div class="period-grid">' +
           '<div class="field">' +
@@ -485,6 +495,9 @@
     el.windfallEmpty.hidden = state.windfalls.length > 0;
 
     state.windfalls.forEach(function (w, i) {
+      wholeUnit(w, 'everyUnit', w.repeatEvery);
+      wholeUnit(w, 'atUnit', w.atMonth);
+      wholeUnit(w, 'untilUnit', w.repeatUntil);
       var li = document.createElement('li');
       li.className = 'windfall';
       li.dataset.index = i;
@@ -623,6 +636,12 @@
       : '';
     var planYear = depleted ? 'year ' + (Math.floor((t.depletedAt - 1) / 12) + 1) + ' of the plan' : '';
     var outShort = depleted ? outWhen.replace(/ into .*$/, ' in') : '';
+    /* Nothing "runs out" without a withdrawal: a saving plan that a planned
+       expense leaves below zero ends in debt, said like a dip. "Runs out" is
+       kept for withdrawals that could not be paid. */
+    var endsBelow = depleted && !drawdown;
+    var belowCause = endsBelow && culprit >= 0 ? state.windfalls[culprit].name || 'Extra ' + (culprit + 1) : '';
+    if (endsBelow) depleted = false;
 
     if (drawdown) {
       el.finalLabel.textContent = 'Will it last?';
@@ -649,12 +668,12 @@
       el.finalSub.textContent = 'The plan already reaches the ' + (Calc.MAX_TOTAL_MONTHS / 12) +
         '-year limit. Shorten an earlier season. \u00b7 ' + Chart.money0.format(t.finalAmount) + ' at the end';
       el.resultBarValue.textContent = 'Gets no time';
-    } else if (depleted) {
-      // A planned expense left a saving plan short: the same sentence as a withdrawal run-out.
-      el.finalLabel.textContent = 'Will it last?';
-      el.finalAmount.textContent = runsOut;
-      el.finalSub.textContent = 'Short by ' + Chart.money0.format(t.totalShortfall + Math.max(0, -t.finalAmount)) + ' \u00b7 ' + planYear;
-      el.resultBarValue.textContent = 'Runs out \u00b7 ' + outShort;
+    } else if (endsBelow) {
+      el.finalLabel.textContent = 'Final amount';
+      el.finalAmount.textContent = 'Ends ' + Chart.money0.format(-t.finalAmount) + ' below zero' + (belowCause ? ', after ' + belowCause : '');
+      el.finalSub.textContent = 'Borrowed against the plan from ' + inSeasonText(projection, t.depletedAt) + ' \u00b7 ' +
+        Chart.durationLabel(t.totalMonths) + ', ' + seasons;
+      el.resultBarValue.textContent = Chart.money0.format(t.finalAmount);
     } else {
       el.finalLabel.textContent = short ? 'Shortfall at the end' : 'Final amount';
       el.finalAmount.textContent = Chart.money0.format(t.finalAmount);
@@ -664,15 +683,15 @@
       el.resultBarValue.textContent = Chart.money0.format(t.finalAmount);
     }
     el.finalAmount.classList.toggle('short', depleted || short);
-    el.finalAmount.classList.toggle('answer', drawdown || !!cappedDraw || depleted);
-    document.querySelector('.result-bar-label').textContent = drawdown || cappedDraw || depleted ? 'Will it last?' : 'Final amount';
+    el.finalAmount.classList.toggle('answer', drawdown || !!cappedDraw || endsBelow);
+    document.querySelector('.result-bar-label').textContent = drawdown || cappedDraw ? 'Will it last?' : 'Final amount';
 
     /* Running out without any withdrawals (a big negative extra) still needs
        saying; with withdrawals the headline already says it. */
     // A real below-zero stretch caused by a planned expense; nothing else earns this warning.
-    var dipOnly = !depleted && t.lowestBalance < 0 && t.monthsBelowZero > 0 &&
+    var dipOnly = !depleted && !endsBelow && t.lowestBalance < 0 && t.monthsBelowZero > 0 &&
       state.windfalls.some(function (w) { return Number(w.amount) < 0; });
-    // The headline already states a run-out; the warning line is for a dip that recovers.
+    // The headline already states a run-out or a below-zero ending; the warning line is for a dip that recovers.
     el.depletionWarn.hidden = !dipOnly;
     if (!el.depletionWarn.hidden) {
       var at = dipOnly ? t.dippedAt : t.depletedAt;
@@ -696,7 +715,8 @@
         });
       });
     }
-    renderLever(depleted, drawdown, culprit, today, dipCulprit);
+    // Ending below zero gets the dip's lever: the expense size that would keep it above zero.
+    renderLever(depleted, drawdown, culprit, today, endsBelow ? culprit : dipCulprit);
 
     /* Paid in counts money going in. A negative extra (a planned expense) is
        money out, so it is reported beside it rather than netted into it. In
@@ -704,17 +724,21 @@
     function expenses(proj) {
       return proj.points.reduce(function (sum, pt) { return sum + Math.min(0, Number(pt.extra) || 0); }, 0);
     }
-    var paidIn = t.totalContributed - expenses(projection);
-    var paidTyped = nominal.totals.totalContributed - expenses(nominal);
+    /* Paid in is the starting amount plus savings, the same as the table's
+       column; extras (a pension, a gift) are their own line, so they are never
+       mistaken for "you put in". */
+    var paidIn = t.totalContributed - t.totalWindfalls;
+    var paidTyped = nominal.totals.totalContributed - nominal.totals.totalWindfalls;
     var spent = -expenses(projection);
+    var gotExtras = t.totalWindfalls + spent;
     // What you typed leads: your own sum. Its worth today, and planned expenses, are notes beneath.
     // Lead in the page's money, like every other figure; what you typed is the note beneath.
     el.contributed.textContent = Chart.money0.format(paidIn);
     el.contributedNote.innerHTML = (today && Math.abs(paidTyped - paidIn) >= 1
       ? 'you put in ' + Chart.money0.format(paidTyped)
       : !t.totalMonths ? 'starting amount'
-      : 'starting amount' + (nominal.perPeriod.some(function (pp) { return pp.contributed > 0; }) ? ' + savings' : '') +
-        (t.totalWindfalls + spent > 0 ? ' + extras' : '')) +
+      : 'starting amount' + (nominal.perPeriod.some(function (pp) { return pp.contributed > 0; }) ? ' + savings' : '')) +
+      (gotExtras >= 1 ? '<br>plus ' + Chart.money0.format(gotExtras) + ' from extras' : '') +
       (spent >= 1 ? '<br>' + Chart.money0.format(spent) + ' of planned expenses taken out' : '');
     /* The row added up, in the page's money, behind a "How it adds up" toggle
        so it is there for whoever checks without crowding the answer. */
@@ -722,7 +746,8 @@
     var sum = el.kpiSum;
     if (t.totalMonths) {
       sum.textContent = eq[0] +
-        (t.totalGrowth < 0 ? ' \u2212 ' : ' + ') + eq[1].replace(' lost', ' lost') +
+        (gotExtras >= 1 ? ' + ' + Chart.money0.format(gotExtras) + ' extras' : '') +
+        (t.totalGrowth < 0 ? ' \u2212 ' : ' + ') + eq[1] +
         (t.totalWithdrawn >= 1 ? ' \u2212 ' + Chart.money0.format(t.totalWithdrawn) + ' withdrawn' : '') +
         (spent >= 1 ? ' \u2212 ' + Chart.money0.format(spent) + ' expenses' : '') +
         ' = ' + Chart.money0.format(t.finalAmount) + (t.finalAmount < 0 ? '' : ' left') + '.' +
@@ -735,12 +760,12 @@
     el.growth.textContent = Chart.money0.format(t.totalGrowth);
     // Once the money has run out, "growth" mixes gains with a shrinking debt: no green.
     el.growth.className = 'kpi-value ' + (depleted ? '' : t.totalGrowth > 0 ? 'up' : t.totalGrowth < 0 ? 'down' : '');
-    el.growthNote.textContent = t.lowestBalance < 0 && t.totalGrowth < 0
-      ? 'includes interest on the borrowed amount'
+    el.growthNote.textContent = t.lowestBalance < 0 && !depleted
+      ? 'after interest on the borrowed amount'
       : depleted
       ? 'the money ran out ' + outWhen
-      : t.totalMonths && paidIn > 0
-        ? growthNote(t.totalGrowth / paidIn)
+      : t.totalMonths && paidIn + Math.max(0, gotExtras) > 0
+        ? growthNote(t.totalGrowth / (paidIn + Math.max(0, gotExtras)))
         : '\u00a0';
     // The third figure: what a saving plan could pay out, or what a drawdown plan took out.
     if (drawdown) {
@@ -773,7 +798,10 @@
       // Past the 100-year cap a season gets no time: its inputs would only mislead.
       li.classList.toggle('capped', !pp.months && pp.truncated);
       // Collapsed, a capped season would look normal; say so in its row.
-      if (!pp.months && pp.truncated) li.querySelector('[data-role="sum-meta"]').textContent = 'Past the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit: gets no time';
+      var sumMeta = li.querySelector('[data-role="sum-meta"]');
+      if (!pp.months && pp.truncated) sumMeta.textContent = 'Past the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit: gets no time';
+      // Cut short by the cap: the row shows the length it really gets.
+      else if (pp.truncated) sumMeta.textContent = sumMeta.textContent.replace(/^[^\u00b7]+/, Chart.durationLabel(pp.months) + ' (cut by the limit) ');
       // Long form, plus a compact one ("20–45 yrs") phones use beside the buttons.
       var rangeEl = li.querySelector('[data-role="range"]');
       rangeEl.innerHTML = pp.months
@@ -805,13 +833,13 @@
                       Chart.money0.format(t.finalAmount) + (today ? ' in today’s dollars.' : '.'))
         : 'Final amount ' + Chart.money0.format(t.finalAmount) + (today ? ' in today’s dollars' : '') +
           ' after ' + Chart.durationLabel(t.totalMonths) + ', of which ' + Chart.money0.format(t.totalGrowth) + ' is growth.' +
-          (depleted ? ' The money runs out at ' + Chart.durationLabel(t.depletedAt) + '.' : '');
+          (endsBelow ? ' It ends below zero, money borrowed against the plan.' : '');
     Chart.render(el.chart, projection, {
       periods: periodMeta(), windfalls: windfallMeta(projection),
-      baseline: baseline, depletedAt: t.depletedAt,
+      baseline: baseline, depletedAt: depleted ? t.depletedAt : null,
       depletedLabel: depleted ? 'Runs out \u00b7 ' + outWhen : null,
-      belowZero: dipRanges(projection), belowZeroLabel: dipOnly
-        ? Chart.money0.format(-t.lowestBalance) + ' below zero' : null,
+      belowZero: dipRanges(projection, endsBelow), belowZeroLabel: endsBelow ? 'Below zero from here'
+        : dipOnly ? Chart.money0.format(-t.lowestBalance) + ' below zero' : null,
       label: 'Projected balance. ' + summary
     });
     lastChartWidth = el.chart.clientWidth;
@@ -978,8 +1006,9 @@
   }
 
   // The stretches where a planned expense took the balance below zero (before any run-out).
-  function dipRanges(projection) {
-    var pts = projection.points, out = [], start = null, stop = projection.totals.depletedAt;
+  // Below-zero stretches before any run-out (all of them when the plan simply ends below zero).
+  function dipRanges(projection, toEnd) {
+    var pts = projection.points, out = [], start = null, stop = toEnd ? null : projection.totals.depletedAt;
     for (var k = 1; k < pts.length; k++) {
       var under = pts[k].balance < 0 && (stop === null || k < stop);
       if (under && start === null) start = k - 1;
@@ -1316,7 +1345,8 @@
     if (!btn) return;
     var action = btn.dataset.action;
 
-    // Phones: open this season, close the one that was open.
+    if (action === 'collapse') { collapseCard(li); return; }
+    // Open this season, close the one that was open.
     if (action === 'expand') {
       expanded = state.periods[index];
       Array.prototype.forEach.call(el.periodList.children, function (c, k) {
@@ -1423,6 +1453,19 @@
   // Shorter on phones, where the toast sits over the content; the Undo link stays either way.
   var UNDO_MS = touch() ? 6000 : 10000, UNDO_DEPTH = 10;
   var undoStack = [], toastTimer = null, typedSinceOffer = false;
+  // Back to the one-line row, with focus on it so the keyboard user is not lost.
+  function collapseCard(li) {
+    expanded = null;
+    li.classList.add('collapsed');
+    var row = li.querySelector('.card-summary');
+    if (row) row.focus({ preventScroll: true });
+  }
+  el.periodList.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    var li = ev.target.closest('.period');
+    if (li && !li.classList.contains('collapsed')) { ev.preventDefault(); collapseCard(li); }
+  });
+
   function offerUndo(text, restore) {
     undoStack.push({ text: text, restore: restore });
     if (undoStack.length > UNDO_DEPTH) undoStack.shift();
@@ -1470,7 +1513,8 @@
      belongs to the field and undoes your typing as usual. (After a delete, focus
      lands in a neighbouring field, so "in a field" alone is not the test.) */
   // The next edit makes the toast's message stale: hide it (the Undo link keeps the history).
-  document.addEventListener('input', function () { typedSinceOffer = true; if (!el.toast.hidden) hideToast(); });
+  // Capture phase: runs before the field's own handler, so an edit that raises a new toast keeps it.
+  document.addEventListener('input', function () { typedSinceOffer = true; if (!el.toast.hidden) hideToast(); }, true);
   el.resultBar.addEventListener('click', function () { if (!el.toast.hidden) hideToast(); });
   document.addEventListener('keydown', function (ev) {
     if (!undoStack.length || ev.shiftKey || ev.altKey || !(ev.metaKey || ev.ctrlKey)) return;
@@ -1502,10 +1546,24 @@
     if (field === 'repeat') {
       // The checkbox is a view of repeatEvery: 0 means "does not repeat".
       var everyInput = li.querySelector('[data-field="repeatEvery"]');
+      var wasEvery = w.repeatEvery;
       w.repeatEvery = input.checked
         ? Math.max(1, timeFromInput(everyInput.value, unitOf(w.everyUnit, 12)) || 12)
         : 0;
       li.querySelector('.repeat-fields').hidden = !input.checked;
+      // Repeating multiplies the extra; say by how much, and offer the way back.
+      var times = Calc.windfallMonths(w, Calc.horizonMonths(state.periods)).length;
+      var wi = Number(li.dataset.index);
+      offerUndo(input.checked
+        ? '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d now repeats every ' + Chart.durationLabel(w.repeatEvery) + ': ' + times +
+          ' payments' + (Number(w.amount) ? ', ' + Chart.money0.format(Number(w.amount) * times) + ' in total' : '')
+        : '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d no longer repeats', function () {
+        state.windfalls[wi].repeatEvery = wasEvery;
+        save();
+        renderWindfalls();
+        renderResults();
+      });
+
     } else if (field === 'repeatEvery') {
       w.repeatEvery = Math.max(1, timeFromInput(input.value, unitOf(w.everyUnit, w.repeatEvery)));
     } else if (field === 'repeatUntil') {
@@ -1567,12 +1625,13 @@
        saving season at $0: a second retirement is rarely what someone means. */
     var copying = last && !Calc.isWithdrawing(last) && last.flow !== 'withdraw';
     state.periods.push(makePeriod(state.periods.length, last ? {
-      months: last.months,
+      // After a withdrawing season, a plain 10 years rather than another retirement's length.
+      months: copying ? last.months : 120,
       monthlyContribution: copying ? last.monthlyContribution : 0,
       annualRatePercent: last.annualRatePercent,
       compounding: last.compounding,
       flow: 'save',
-      lengthUnit: unitOf(last.lengthUnit, last.months),
+      lengthUnit: copying ? unitOf(last.lengthUnit, last.months) : 'years',
       colorSlot: nextColorSlot()
     } : { colorSlot: nextColorSlot() }));
     expanded = state.periods[state.periods.length - 1];

@@ -160,6 +160,8 @@ h1, h2, h3, .chart-title { text-wrap: balance; }
   gap: 20px;
   align-items: start;
 }
+/* Desktop: room under the breakdown, so the toast and result card never sit on it at the page bottom. */
+@media (min-width: 901px) { .layout { padding-bottom: 180px; } }
 @media (max-width: 900px) {
   /* Bottom padding clears the pinned result bar. */
   .layout { padding: 16px 16px 96px; }
@@ -283,13 +285,15 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .period-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
 .period-head input[type="text"] { flex: 1; min-width: 0; padding: 5px 8px; font-weight: 600; }
 .period-head .danger { margin-left: 6px; }
+/* Closes the open card back to its row; a word, since a chevron would read as "move up". */
+.period-head .done-btn { margin-left: 4px; font-weight: 600; }
 .period-range {
   order: 9; flex-basis: 100%;
   margin: -2px 0 0; font-size: var(--text-note); color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
-/* The collapsed season row (phones only): name, then its numbers. */
+/* The collapsed season row: name, then its numbers. */
 .card-summary { display: none; }
 .range-short { display: none; }
 /* Every season but the one being edited collapses to its summary row, at every width. */
@@ -337,7 +341,9 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .flow-row .segmented button { flex: 1; }
 .breakdown .typed.short { color: var(--bad); }
 .inflation-row .pct { max-width: 140px; }
-.flow-row .segmented button { height: auto; min-height: 30px; }
+.flow-row .segmented button { height: auto; min-height: 30px; padding: 0 6px; }
+/* A grid would stack "Withdraw" and its glyph as two rows; one inline run keeps them on one line. */
+.flow-row .segmented button { display: flex; align-items: center; justify-content: center; }
 /* On a card the track and the pressed segment are both near-white, so the
    choice is marked with a Ledger Blue tint instead. */
 .flow-row .segmented button[aria-pressed="true"] {
@@ -592,7 +598,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .period-range { order: 1; flex: 1; flex-basis: auto; margin: 0; }
   .range-long { display: none; }
   .range-short { display: inline; }
-  .period-head .icon-btn { order: 2; }
+  .period-head .icon-btn, .period-head .done-btn { order: 2; }
   /* The choices summary moves under "More options" instead of squeezing beside it. */
   .more summary { flex-wrap: wrap; }
   /* The choices summary would orphan on its own line; the card shows them when opened. */

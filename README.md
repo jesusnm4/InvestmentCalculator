@@ -33,13 +33,15 @@ what it could pay out each month in retirement.
   names in the legend only when they don't fit), and a breakdown table whose columns add up.
 - **Today's dollars.** Amounts are shown in today's money by default, at 2.5% inflation (editable).
   Switch to **Future $** to see the raw dollar amounts on the day you reach them.
-- **Running out.** If a withdrawal can't be paid, or a planned expense leaves the plan short, the
-  headline says when ("Runs out 5 yrs into Saving, after New roof"), the chart marks it, and nothing
-  about that plan shows as green growth.
+- **Running out.** If a withdrawal can't be paid, the headline says when ("Runs out 6y 3m into
+  Retirement"), the chart marks it, and nothing about that plan shows as green growth. A saving plan
+  that a planned expense leaves below zero isn't "running out": it reads "Ends $31,678 below zero,
+  after New house", shaded like a dip.
 - **Comparing.** **Keep as baseline** saves the current plan as a dashed ghost line; as you change
   things, the page shows the difference and where the baseline ended ("+$7,066 vs baseline ending at
   $114,252"). Replacing a baseline can be undone.
-- **Deleting** a season or extra, adding a season (it copies the last one), **Start from the
+- **Deleting** a season or extra, adding a season (it copies the last one; after a withdrawing season, a plain 10-year one), ticking
+  **Repeat** on an extra, **Start from the
   example**, and replacing or clearing the baseline all act immediately and offer **Undo**. Undo
   steps back through the last 10 actions; the history stays after the message fades, with an
   **Undo** link beside "Your plan", and Cmd/Ctrl+Z works too.
@@ -59,13 +61,14 @@ what it could pay out each month in retirement.
 - **On a desktop**, the answer and chart stay pinned beside whichever season you're editing; the
   breakdown table sits below both columns.
 - **Seasons you aren't editing** collapse to one line (on any screen) ("10 yrs · $500/mo saved · 7%");
-  tap one to open it.
-- **The summary row adds up**: "How it adds up" under it shows paid in + growth − withdrawn = what's
-  left, all in the page's money (what you typed appears as a note).
+  tap one to open it, and **Done** (or Escape) to close it.
+- **The summary row adds up**: "How it adds up" under it shows paid in + extras + growth − withdrawn =
+  what's left, all in the page's money (what you typed appears as a note).
 - **A big expense that dips below zero** is shown as money borrowed against the plan (how deep, for
   how long, shaded on the chart), with the expense size that would keep it above zero.
 - **Paid in matches your maths.** In today's dollars it reads "Paid in, in today's money" with the sum
-  you typed beneath ("you put in $70,000"); planned expenses (negative extras) are reported separately. The breakdown stacks into one block per season.
+  you typed beneath ("you put in $70,000"). Like the table, it counts the starting amount and savings;
+  extras (a pension, a gift) and planned expenses each get their own line. The breakdown stacks into one block per season.
 - Everything auto-saves in your browser (`localStorage`). There are no accounts and nothing is
   sent anywhere.
 

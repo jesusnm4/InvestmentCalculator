@@ -277,11 +277,13 @@ editable), with a Today's $ / Future $ switch beside the final amount. The math 
 `Calc.inTodaysDollars` restates a projection so every figure, the chart and the table move together,
 and the accounting still reconciles. Growth in today's dollars is labeled "Growth after inflation".
 
-**The No Green Shortfall Rule.** Once a withdrawal can't be paid, or a planned expense
-leaves the plan below zero at the end, the plan is short: the hero says so in one Loss Red sentence
-("Runs out 5 yrs into Saving, after New roof", "Short by $X" beneath), the chart marks it, and
-nothing about that plan's growth is tinted green. Negative growth from borrowing says "includes
-interest on the borrowed amount".
+**The No Green Shortfall Rule.** Once a withdrawal can't be paid, the money has run
+out: the hero says so in one Loss Red sentence ("Runs out 6y 3m into Retirement", "Short by $X"
+beneath), the chart marks it with the grey wash, and nothing about that plan's growth is tinted
+green. Only withdrawals run out. A saving plan that a planned expense leaves below zero ends in
+debt and is said like a dip: "Ends $31,678 below zero, after New house", with the Loss Red
+below-zero wash ("Below zero from here"). Any borrowing adds "after interest on the borrowed
+amount" under growth.
 
 **The Whole Dollars Rule.** Projections are estimates, so every figure on screen rounds to whole
 dollars. Cents imply a precision the model does not have.
@@ -400,8 +402,10 @@ Quiet and soft-edged. They read as part of the page until hovered.
 ### Phone season rows
 - At every width, every season but the one being edited collapses to a single summary row (name,
   then "10 yrs · $500/mo saved · 7% return" in Faded Pencil, a quiet Faded Pencil chevron at the
-  right), a 44px target that opens it. A season past the limit says so in Loss Red in its row.
-  "Withdraw %" / "Withdraw $" set the symbol in bold serif so the two never blur. In an
+  right), a 44px target that opens it. An open card closes with "Done" in its head (a word, since a
+  chevron would read as "move up") or Escape; focus returns to its row. A season past the limit
+  says so in Loss Red in its row; one cut short shows the length it really gets. "Withdraw %" /
+  "Withdraw $" set the symbol in bold serif, on one line, so the two never blur. In an
   open card the range line ("20–45 yrs", compact form) shares a row with the reorder and delete
   buttons. Icon-button hover colours apply only under `(hover: hover)`, so a red ✕ never sticks
   under a thumb after a delete.
@@ -420,9 +424,13 @@ Quiet and soft-edged. They read as part of the page until hovered.
   form ("Runs out · 8y 3m in") and drops its label at 420px and below so it stays one line; the toast
   moves to the top, full width, clamped to two lines.
 - Every figure leads in the page's money (owner's choice): "Paid in, in today's money" shows
-  "$63,111" with "you put in $70,000" beneath; table cells read "$53,111" with "of $60,000 put in". Planned expenses get their
-  own line. Expense levers are said as typed with today's worth in brackets.
-- A season added after a withdrawing one starts as a plain saving season at $0 (not a copy).
+  "$63,111" with "you put in $70,000" beneath; table cells read "$53,111" with "of $60,000 put in".
+  Paid in is the starting amount plus savings, the same as the table's column; extras get their own
+  line ("plus $67,463 from extras"), as do planned expenses. Expense levers are said as typed with
+  today's worth in brackets.
+- A season added after a withdrawing one starts as a plain 10-year saving season at $0 (not a copy).
+- Ticking Repeat says what it multiplies to ("now repeats every 1 yr: 30 payments, $600,000 in
+  total") and offers Undo. A time field under a year shown in years switches to months on render.
 - The chart's season-name band is all or nothing: if any name will not fit, the band stays empty and
   the legend names them.
 
@@ -455,7 +463,8 @@ Quiet and soft-edged. They read as part of the page until hovered.
 
 ### Summary row sum
 - Under the three figures, a "How it adds up" disclosure holds the sum in the page's money
-  ("$63,111 paid in + $70,634 growth − $106,965 withdrawn = $26,781 left"). All negatives use "−".
+  ("$94,602 paid in + $67,463 extras + $72,096 growth − $232,186 withdrawn = $1,975 left. Then
+  $517,814 of withdrawals it couldn't pay."). All negatives use "−".
 
 ### Chart after the money runs out
 - The season lines stop at $0. The rest of the timeline gets an 8% Faded Pencil wash and a dotted

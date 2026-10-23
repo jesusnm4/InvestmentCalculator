@@ -358,6 +358,8 @@
     /* A planned expense that takes the balance below zero for a while: the line
        rests on $0, but the stretch is washed in Loss Red and labelled with how
        deep it went, so the borrowed years are not invisible. */
+    // Wash labels are drawn last, so no grid or season line runs through them.
+    var labels = [];
     var below = opts.belowZero || [];
     for (var bz = 0; bz < below.length; bz++) {
       var bx0 = x(below[bz][0]), bx1 = x(below[bz][1]);
@@ -367,7 +369,7 @@
                '" stroke="' + C.bad + '" stroke-width="2" stroke-dasharray="2 3"/>');
       if (bz === 0 && opts.belowZeroLabel) {
         var lright = bx0 < m.l + plotW - 160;
-        svg.push('<text x="' + (lright ? bx0 + 6 : bx0 - 6).toFixed(2) + '" y="' + (m.t + 14) + '" text-anchor="' + (lright ? 'start' : 'end') +
+        labels.push('<text x="' + (lright ? bx0 + 6 : bx0 - 6).toFixed(2) + '" y="' + (m.t + 14) + '" text-anchor="' + (lright ? 'start' : 'end') +
                  '" fill="' + C.bad + '" font-size="12" font-weight="600" stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
                  esc(opts.belowZeroLabel) + '</text>');
       }
@@ -384,7 +386,7 @@
                '" stroke="' + C.bad + '" stroke-width="1.5" stroke-dasharray="4 3"/>');
       // Label at the top of the plot, where the tooltip (which follows the curve near $0) will not cover it.
       var right = dx < m.l + plotW - 120;
-      svg.push('<text x="' + (right ? dx + 6 : dx - 6).toFixed(2) + '" y="' + (m.t + 14) +
+      labels.push('<text x="' + (right ? dx + 6 : dx - 6).toFixed(2) + '" y="' + (m.t + 14) +
                '" text-anchor="' + (right ? 'start' : 'end') + '" fill="' + C.bad + '" font-size="12" font-weight="600"' +
                ' stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
                esc(opts.depletedLabel || 'Runs out \u00b7 ' + durationLabel(dep)) + '</text>');
@@ -407,6 +409,7 @@
     svg.push('<circle class="hover-dot" r="5" fill="' + C.surface + '" stroke="#000" stroke-width="2" opacity="0"/>');
     svg.push('<rect class="hover-target" x="' + m.l + '" y="' + m.t + '" width="' + plotW +
              '" height="' + plotH + '" fill="transparent"/>');
+    svg.push(labels.join(''));
     svg.push('</svg>');
 
     container.innerHTML = svg.join('') + '<div class="chart-tooltip" hidden></div>';
