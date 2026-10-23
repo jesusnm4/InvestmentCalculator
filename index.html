@@ -8,9 +8,9 @@
 <link rel="preload" href="fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!-- ?v= busts browser caches: bump it whenever CSS or JS changes (see CLAUDE.md). -->
-<link rel="stylesheet" href="styles.css?v=2026-10-22.14">
+<link rel="stylesheet" href="styles.css?v=2026-10-22.17">
 <!-- Blocking on purpose: stamps the theme before first paint. -->
-<script src="js/theme.js?v=2026-10-22.14"></script>
+<script src="js/theme.js?v=2026-10-22.17"></script>
 </head>
 <body>
 
@@ -119,7 +119,7 @@
 
     <div class="kpis">
       <div class="kpi">
-        <div class="kpi-label">Total paid in</div>
+        <div class="kpi-label" id="kpi-paid-label">Total paid in</div>
         <div class="kpi-value" id="kpi-contributed">$0</div>
         <div class="kpi-note" id="kpi-contributed-note">starting amount + contributions</div>
       </div>
@@ -184,8 +184,8 @@
 <!-- Announces the result after typing settles; visible results update live. -->
 <p class="sr-only" id="live-summary" aria-live="polite"></p>
 
-<script src="js/calc.js?v=2026-10-22.14"></script>
-<script src="js/chart.js?v=2026-10-22.14"></script>
-<script src="js/app.js?v=2026-10-22.14"></script>
+<script src="js/calc.js?v=2026-10-22.17"></script>
+<script src="js/chart.js?v=2026-10-22.17"></script>
+<script src="js/app.js?v=2026-10-22.17"></script>
 </body>
 </html>

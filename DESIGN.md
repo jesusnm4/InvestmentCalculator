@@ -277,9 +277,11 @@ editable), with a Today's $ / Future $ switch beside the final amount. The math 
 `Calc.inTodaysDollars` restates a projection so every figure, the chart and the table move together,
 and the accounting still reconciles. Growth in today's dollars is labeled "Growth after inflation".
 
-**The No Green Shortfall Rule.** Once the balance goes below zero, the plan is short: the final
-amount turns Loss Red under "Shortfall at the end", a Loss Red warning names the month the money
-runs out, the chart marks it, and nothing about that plan's growth is tinted green.
+**The No Green Shortfall Rule.** Once a withdrawal can't be paid, or a planned expense
+leaves the plan below zero at the end, the plan is short: the hero says so in one Loss Red sentence
+("Runs out 5 yrs into Saving, after New roof", "Short by $X" beneath), the chart marks it, and
+nothing about that plan's growth is tinted green. Negative growth from borrowing says "includes
+interest on the borrowed amount".
 
 **The Whole Dollars Rule.** Projections are estimates, so every figure on screen rounds to whole
 dollars. Cents imply a precision the model does not have.
@@ -397,7 +399,9 @@ Quiet and soft-edged. They read as part of the page until hovered.
 
 ### Phone season rows
 - At every width, every season but the one being edited collapses to a single summary row (name,
-  then "10 yrs · $500/mo saved · 7% return" in Faded Pencil), a 44px target that opens it. In an
+  then "10 yrs · $500/mo saved · 7% return" in Faded Pencil, a quiet Faded Pencil chevron at the
+  right), a 44px target that opens it. A season past the limit says so in Loss Red in its row.
+  "Withdraw %" / "Withdraw $" set the symbol in bold serif so the two never blur. In an
   open card the range line ("20–45 yrs", compact form) shares a row with the reorder and delete
   buttons. Icon-button hover colours apply only under `(hover: hover)`, so a red ✕ never sticks
   under a thumb after a delete.
@@ -405,14 +409,18 @@ Quiet and soft-edged. They read as part of the page until hovered.
 ### Edge states
 - A season past the 100-year cap keeps its name and the reason, and hides its inputs (`.capped`).
 - A ninth season sharing an earlier hue gets a hollow timeline node (`.color-reused`), a hollow
-  legend dot and a dashed chart line.
+  legend dot and table dot, and a dashed chart line.
+- A withdrawing season cut by the cap: "Lasts through Retire (cut to 25 yrs by the 100-year limit)".
+- Monthly or quarterly extras show at most 12 markers (other repeats 24); the key counts them all.
 - When withdrawals outrun the money, they stop at what was there: the hero says "Short by $X",
   the table's balance cell shows $0 with a Loss Red "short $X" line, and nothing goes negative.
 - On wide screens the pinned result is a compact floating card at the bottom right, with the undo
-  toast above it over the results column (never over the plan); on phones it is the full-width bar,
-  and the toast moves to the top, full width, clamped to two lines.
-- Every figure leads in the page's money (owner's choice): Paid in shows "$63,111" with "you put in
-  $70,000" beneath; table cells read "$53,111" with "of $60,000 put in". Planned expenses get their
+  toast above it, inset to the results panel's inner edge (never over the plan). The toast hides on
+  the next edit or a tap on the bar, since its message would be stale. On phones the bar uses a short
+  form ("Runs out · 8y 3m in") and drops its label at 420px and below so it stays one line; the toast
+  moves to the top, full width, clamped to two lines.
+- Every figure leads in the page's money (owner's choice): "Paid in, in today's money" shows
+  "$63,111" with "you put in $70,000" beneath; table cells read "$53,111" with "of $60,000 put in". Planned expenses get their
   own line. Expense levers are said as typed with today's worth in brackets.
 - A season added after a withdrawing one starts as a plain saving season at $0 (not a copy).
 - The chart's season-name band is all or nothing: if any name will not fit, the band stays empty and

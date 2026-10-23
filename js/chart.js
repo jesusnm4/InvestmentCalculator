@@ -451,7 +451,8 @@
       tip.innerHTML =
         '<div class="tip-head">' + esc(month ? durationLabel(month) : 'Start') + '</div>' +
         '<div class="tip-value">' + esc(money0.format(ranOut ? 0 : pt.balance)) + '</div>' +
-        (ranOut ? '<div class="tip-short">Ran out' + (pt.balance < 0 ? ' \u00b7 short by ' + esc(money0.format(-pt.balance)) : '') + '</div>' : '') +
+        (ranOut ? '<div class="tip-short">Ran out' + (pt.short > 0 ? ' \u00b7 ' + esc(money0.format(pt.short)) + ' unpaid this month'
+          : pt.balance < 0 ? ' \u00b7 short by ' + esc(money0.format(-pt.balance)) : '') + '</div>' : '') +
         (period
           ? '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>' + esc(period.name || ('Season ' + (pt.periodIndex + 1))) + '</div>'
           : '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>Starting amount</div>') +

@@ -295,14 +295,22 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 /* Every season but the one being edited collapses to its summary row, at every width. */
 .period.collapsed > :not(.period-node):not(.card-summary) { display: none; }
 .period.collapsed .card-summary {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-  width: 100%; min-height: 44px; padding: 2px 0; text-align: left;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; position: relative;
+  width: 100%; min-height: 44px; padding: 2px 28px 2px 0; text-align: left;
   background: none; border: none; color: var(--ink); font: inherit; cursor: pointer; border-radius: 6px;
 }
 .period.collapsed { padding-top: 8px; padding-bottom: 8px; }
 .period.collapsed .period-node { top: 12px; }
 @media (hover: hover) { .period.collapsed .card-summary:hover .card-summary-name { text-decoration: underline; text-decoration-color: var(--axis); text-underline-offset: 3px; } }
-.card-summary-name { font-weight: 600; }
+.card-summary-name { font-weight: 600; overflow-wrap: anywhere; }
+/* A quiet chevron: the row opens. Neutral ink, drawn in CSS. */
+.period.collapsed .card-summary::after {
+  content: ""; position: absolute; right: 6px; top: 50%; width: 7px; height: 7px; margin-top: -5px;
+  border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg);
+}
+.period.capped .card-summary-meta { color: var(--bad); }
+/* "Withdraw %" and "Withdraw $" differ by one glyph: give the glyph weight so they don't blur. */
+.flow-unit { font-weight: 700; font-family: var(--font-figure); margin-left: 1px; }
 .card-summary-meta { font-size: var(--text-note); color: var(--muted); font-variant-numeric: tabular-nums; }
 .card-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .icon-btn {
@@ -449,7 +457,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .field-note strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .panel .hero-label { margin: 0; font-family: var(--font-ui); line-height: 1.4; }
 .hero-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
-.hero-value { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; margin-top: 2px; }
+.hero-value { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; margin-top: 2px;
+              overflow-wrap: anywhere; }
 .hero-sub { font-size: var(--text-body); color: var(--muted); }
 
  /* A ruled row, not three more cards inside the panel: hairlines above and below,
@@ -603,6 +612,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .breakdown tfoot td, .breakdown .total-row td { font-weight: 600; border-bottom: none; }
 .breakdown .swatch-dot { display: inline-block; width: 10px; height: 10px;
                           border-radius: 3px; margin-right: 8px; vertical-align: baseline; }
+.breakdown .swatch-dot.hollow { background: transparent !important; box-shadow: inset 0 0 0 2px currentColor; }
 .breakdown .pos { color: var(--good); }
 .breakdown .neg { color: var(--bad); }
 .breakdown .start-row td:first-child { color: var(--ink-2); }
@@ -648,7 +658,12 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   }
 }
 .result-bar-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
-.result-bar-value { font-size: var(--text-figure); font-weight: 600; }
+.result-bar-value { font-size: var(--text-figure); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Small phones: the label goes, so the answer and "See results" stay on one line. */
+@media (max-width: 420px) {
+  .result-bar-label { display: none; }
+  .result-bar-go { white-space: nowrap; }
+}
 .result-bar-go { margin-left: auto; font-size: var(--text-body); font-weight: 600; color: var(--accent); }
 /* Light theme: the raw accent is 4.3:1 on paper, so the link text steps one shade deeper. */
 :root:not([data-theme="dark"]) .result-bar-go { color: color-mix(in srgb, var(--accent) 88%, #000); }
@@ -673,7 +688,10 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 /* Desktop: bottom left, clear of the results column and the floating result card. */
 @media (min-width: 901px) {
   /* Over the results column, above the floating result card: never over the plan being edited. */
-  .toast, .result-bar:not([hidden]) ~ .toast { left: auto; right: 24px; bottom: 92px; transform: none; }
+  /* Inset to the results panel's inner edge, so it never overhangs the panel. */
+  .toast, .result-bar:not([hidden]) ~ .toast {
+    left: auto; right: calc(max(0px, (100vw - 1400px) / 2) + 42px); bottom: 92px; transform: none;
+  }
 }
 /* Phones: the toast moves to the top, so it never covers the field you are editing. */
 @media (max-width: 900px) {

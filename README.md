@@ -33,8 +33,9 @@ what it could pay out each month in retirement.
   names in the legend only when they don't fit), and a breakdown table whose columns add up.
 - **Today's dollars.** Amounts are shown in today's money by default, at 2.5% inflation (editable).
   Switch to **Future $** to see the raw dollar amounts on the day you reach them.
-- **Running out.** If the balance goes below zero, the page says when, the chart marks it, and
-  nothing about that plan shows as green growth.
+- **Running out.** If a withdrawal can't be paid, or a planned expense leaves the plan short, the
+  headline says when ("Runs out 5 yrs into Saving, after New roof"), the chart marks it, and nothing
+  about that plan shows as green growth.
 - **Comparing.** **Keep as baseline** saves the current plan as a dashed ghost line; as you change
   things, the page shows the difference and where the baseline ended ("+$7,066 vs baseline ending at
   $114,252"). Replacing a baseline can be undone.
@@ -63,8 +64,8 @@ what it could pay out each month in retirement.
   left, all in the page's money (what you typed appears as a note).
 - **A big expense that dips below zero** is shown as money borrowed against the plan (how deep, for
   how long, shaded on the chart), with the expense size that would keep it above zero.
-- **Paid in matches your maths.** In today's dollars it also shows the sum as typed ("$70,000 as
-  typed, worth this today"); planned expenses (negative extras) are reported separately. The breakdown stacks into one block per season.
+- **Paid in matches your maths.** In today's dollars it reads "Paid in, in today's money" with the sum
+  you typed beneath ("you put in $70,000"); planned expenses (negative extras) are reported separately. The breakdown stacks into one block per season.
 - Everything auto-saves in your browser (`localStorage`). There are no accounts and nothing is
   sent anywhere.
 
@@ -172,8 +173,8 @@ the first month is `percent × season start balance / 12`, rising with inflation
 **Today's dollars** divide each amount by inflation up to the month it happens:
 `today = amount / (1 + inflation)^(month/12)`. Every flow is discounted by its own month, so the
 breakdown still adds up, and "growth after inflation" is the plan's real growth (it can be negative
-even when the dollar balance rises). The month the balance first goes below zero is reported as the
-month the money runs out.
+even when the dollar balance rises). The first month a withdrawal can't be paid in full is reported as
+the month the money runs out (without one, the start of a final stretch below zero).
 
 The **4% rule** behind the monthly income figure takes 4% of the final balance in the first year,
 split across 12 months. It is a retirement rule of thumb (Bengen, 1994; the Trinity study, 1998),
