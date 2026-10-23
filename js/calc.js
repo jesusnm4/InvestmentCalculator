@@ -107,17 +107,24 @@
 
   /* Fold the extras into a month -> amount map, summing anything landing in the
      same month. Built once so the monthly loop below stays O(1). */
-  function windfallsByMonth(list, horizon) {
+  function windfallsByMonth(list, horizon, inflationPercent) {
     var map = {};
     var arr = list || [];
     for (var i = 0; i < arr.length; i++) {
-      var amount = num(arr[i].amount);
       var months = windfallMonths(arr[i], horizon);
       for (var j = 0; j < months.length; j++) {
-        map[months[j]] = (map[months[j]] || 0) + amount;
+        map[months[j]] = (map[months[j]] || 0) + extraAt(arr[i], months[j], inflationPercent);
       }
     }
     return map;
+  }
+
+  /* What an extra pays in the dollars of month m. Typed in today's dollars, it
+     rises with inflation like a withdrawal (a pension keeps its value); `fixed`
+     keeps the typed figure as is (a known bill, or a plan saved before this). */
+  function extraAt(w, month, inflationPercent) {
+    var amount = num(w.amount);
+    return w.fixed ? amount : amount * deflator(month, inflationPercent);
   }
 
   /* project(state) -> { points, perPeriod, totals }
@@ -126,7 +133,7 @@
     var starting = num(state && state.startingAmount);
     var periods = (state && state.periods) || [];
     var windfallList = (state && state.windfalls) || [];
-    var windfalls = windfallsByMonth(windfallList, horizonMonths(periods));
+    var windfalls = windfallsByMonth(windfallList, horizonMonths(periods), state && state.inflationPercent);
 
     /* A one-off at month 0 is money you already have: it behaves exactly like a
        bigger starting amount, and grows from the first month on. */
@@ -455,6 +462,7 @@
     effectiveAnnualYield: effectiveAnnualYield,
     safeWithdrawal: safeWithdrawal,
     windfallMonths: windfallMonths,
+    extraAt: extraAt,
     horizonMonths: horizonMonths,
     MAX_TOTAL_MONTHS: MAX_TOTAL_MONTHS,
     SAFE_WITHDRAWAL_PERCENT: SAFE_WITHDRAWAL_PERCENT,

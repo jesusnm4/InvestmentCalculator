@@ -187,8 +187,9 @@
        at $0 and the rest of the timeline is shaded instead of charting debt that
        cannot exist. The table and the hero still report the shortfall. */
     var dep = (opts.depletedAt === null || opts.depletedAt === undefined) ? null : opts.depletedAt;
-    // A recovered dip below zero is drawn at $0 too: the chart never plots debt.
-    function val(k) { return dep !== null && k >= dep ? 0 : Math.max(0, points[k].balance); }
+    /* Withdrawals never go below zero (they stop at what is there), so a negative
+       balance is a planned expense's debt: plotted, so the chart shows how deep it goes. */
+    function val(k) { return dep !== null && k >= dep ? 0 : points[k].balance; }
     var baseline = opts.baseline ? opts.baseline.map(function (b) { return Math.max(0, b); }) : null;
 
     // --- y domain, snapped to whole ticks ---
@@ -261,8 +262,15 @@
       if (pp.months <= 0) continue;
       // Seasons drawn only up to the month the money runs out.
       var segEnd = dep !== null ? Math.min(pp.endMonth, dep) : pp.endMonth;
-      if (segEnd <= pp.startMonth) continue;
       var color = colorFor((periods[pp.index] || {}).colorSlot);
+      // A season wholly after the run-out still shows where it sits: a faint line at $0.
+      if (segEnd <= pp.startMonth) {
+        if (dep !== null && pp.startMonth >= dep) {
+          svg.push('<line x1="' + x(pp.startMonth).toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + x(pp.endMonth).toFixed(2) +
+                   '" y2="' + yBase.toFixed(2) + '" stroke="' + color + '" stroke-width="2.5" opacity="0.55"/>');
+        }
+        continue;
+      }
       var d = [], a = [];
       for (var k = pp.startMonth; k <= segEnd; k++) {
         var px = x(k).toFixed(2), py = y(val(k)).toFixed(2);

@@ -114,7 +114,9 @@
       // Starts at $0: adding an extra must not change the answer until you say how much.
       name: 'Extra ' + (at + 1), atMonth: 12, amount: 0,
       repeatEvery: 0, repeatUntil: null, shapeSlot: nextShapeSlot(),
-      atUnit: 'years', everyUnit: 'years', untilUnit: 'years'
+      atUnit: 'years', everyUnit: 'years', untilUnit: 'years',
+      // In today's dollars, rising with prices like a withdrawal; tick "Fixed amount" to keep it as typed.
+      fixed: false
     };
   }
 
@@ -256,6 +258,8 @@
         w.atUnit = unitOf(w.atUnit, w.atMonth);
         w.everyUnit = unitOf(w.everyUnit, w.repeatEvery || 12);
         w.untilUnit = unitOf(w.untilUnit, w.repeatUntil || 0);
+        // Absent before extras rose with inflation: those were fixed amounts, and keep meaning that.
+        w.fixed = w.fixed === undefined ? true : w.fixed === true;
       });
       parsed.isExample = parsed.isExample === true;
       parsed.baselineSeen = parsed.baselineSeen === true;
@@ -303,7 +307,7 @@
       var step = months.length > maxMarks ? Math.ceil(months.length / maxMarks) : 1;
       months.forEach(function (mth, k) {
         if (k % step && k !== months.length - 1) return;
-        out.push({ name: w.name || ('Extra ' + (i + 1)), atMonth: mth, amount: viewMoney(amount, mth), shapeSlot: w.shapeSlot });
+        out.push({ name: w.name || ('Extra ' + (i + 1)), atMonth: mth, amount: viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth), shapeSlot: w.shapeSlot });
       });
     });
     return out;
@@ -317,6 +321,12 @@
   }
 
   function seasonName(p, i) { return p.name || ('Season ' + (i + 1)); }
+  // In a display headline or chart label a long name is cut, so the answer stays one or two lines.
+  function shortName(name) {
+    if (name.length <= 24) return name;
+    var cut = name.slice(0, 23), space = cut.lastIndexOf(' ');
+    return (space > 12 ? cut.slice(0, space) : cut).replace(/[\s,.;:]+$/, '') + '\u2026';
+  }
 
   // Money of the current view: today's dollars divide by inflation up to month m.
   function viewMoney(amount, month) {
@@ -522,9 +532,14 @@
             timeField('atMonth', w.atMonth, unitOf(w.atUnit, w.atMonth), 'At') +
           '</div>' +
         '</div>' +
-        '<label class="repeat-toggle">' +
-          '<input type="checkbox" data-field="repeat"' + (repeats ? ' checked' : '') + '> Repeat' +
-        '</label>' +
+        '<div class="extra-toggles">' +
+          '<label class="repeat-toggle">' +
+            '<input type="checkbox" data-field="repeat"' + (repeats ? ' checked' : '') + '> Repeat' +
+          '</label>' +
+          '<label class="repeat-toggle">' +
+            '<input type="checkbox" data-field="fixed"' + (w.fixed ? ' checked' : '') + '> Fixed amount (doesn\u2019t rise with prices)' +
+          '</label>' +
+        '</div>' +
         '<div class="repeat-fields"' + (repeats ? '' : ' hidden') + '>' +
           '<div class="field">' +
             '<span class="field-label">Every</span>' +
@@ -559,17 +574,16 @@
       var lands = at
         ? 'Lands at ' + Chart.durationLabel(at) + (within ? ', during ' + within : '')
         : 'Lands at the start';
+      var amount = Number(w.amount) || 0;
+      var rising = !w.fixed && amount && Number(state.inflationPercent) > 0;
       if (every && months.length > 1) {
-        var amount = Number(w.amount) || 0;
+        // The total in the page's money, the same sum the results use.
+        var total = months.reduce(function (sum, mth) { return sum + viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth); }, 0);
         lands += ', then every ' + Chart.durationLabel(every) + ' \u2014 ' + months.length + ' payments' +
-                 (amount ? ', ' + Chart.money0.format(amount * months.length) + ' in total' +
-                   (state.view.money === 'today' && Number(state.inflationPercent) > 0
-                     ? ' (worth ' + Chart.money0.format(months.reduce(function (sum, mth) {
-                         return sum + amount / Calc.deflator(mth, state.inflationPercent);
-                       }, 0)) + ' today)'
-                     : '')
-                 : '');
+                 (amount ? ', ' + Chart.money0.format(total) + ' in total' +
+                   (state.view.money === 'today' && Number(state.inflationPercent) > 0 ? ' in today\u2019s money' : '') : '');
       }
+      if (rising) lands += '. Rises with prices';
       li.querySelector('[data-role="at-note"]').textContent = lands;
 
       var warn = li.querySelector('[data-role="warn"]');
@@ -607,6 +621,7 @@
     // Withdrawing seasons that actually get time (one past the 100-year cap gets none).
     var drawing = nominal.perPeriod.filter(function (pp, i) { return pp.months > 0 && Calc.isWithdrawing(state.periods[i]); });
     var drawdown = t.totalMonths > 0 && drawing.length > 0;
+    var drawMonthsAll = drawing.reduce(function (sum, pp) { return sum + pp.months; }, 0);
     // A withdrawing season pushed past the 100-year cap: say so rather than quietly switching questions.
     var cappedDraw = !drawdown && nominal.perPeriod.filter(function (pp, i) {
       return !pp.months && pp.truncated && Calc.isWithdrawing(state.periods[i]);
@@ -635,7 +650,9 @@
       ? 'Runs out ' + outWhen + (culprit >= 0 ? ', after ' + (state.windfalls[culprit].name || 'Extra ' + (culprit + 1)) : '')
       : '';
     var planYear = depleted ? 'year ' + (Math.floor((t.depletedAt - 1) / 12) + 1) + ' of the plan' : '';
-    var outShort = depleted ? outWhen.replace(/ into .*$/, ' in') : '';
+    // The bar's short form names the season, not a dangling "in": "Runs out in Retirement".
+    var outSpot = depleted ? seasonAt(projection, t.depletedAt) : null;
+    var outSeason = outSpot ? shortName(outSpot.name) : depleted ? 'year ' + (Math.floor((t.depletedAt - 1) / 12) + 1) : '';
     /* Nothing "runs out" without a withdrawal: a saving plan that a planned
        expense leaves below zero ends in debt, said like a dip. "Runs out" is
        kept for withdrawals that could not be paid. */
@@ -649,7 +666,7 @@
       var lastDraw = drawing[drawing.length - 1];
       var drawMonths = drawing.reduce(function (sum, pp) { return sum + pp.months; }, 0);
       var shortBy = t.totalShortfall + Math.max(0, -t.finalAmount);
-      var through = 'Lasts through ' + seasonName(state.periods[lastDraw.index], lastDraw.index);
+      var through = 'Lasts through ' + shortName(seasonName(state.periods[lastDraw.index], lastDraw.index));
       // A withdrawing season the 100-year cap cut short does not get to say "lasts through" plainly.
       var trimmed = drawing.filter(function (pp) { return pp.truncated; })[0];
       el.finalAmount.textContent = depleted ? runsOut
@@ -661,7 +678,7 @@
         : Chart.money0.format(t.finalAmount) + ' left at the end') +
         (!depleted ? ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals' : '');
       // The bar gets the short form, so it stays on one line on a phone.
-      el.resultBarValue.textContent = depleted ? 'Runs out \u00b7 ' + outShort : 'Lasts \u00b7 ' + Chart.money0.format(t.finalAmount) + ' left';
+      el.resultBarValue.textContent = depleted ? 'Runs out in ' + outSeason : 'Lasts \u00b7 ' + Chart.money0.format(t.finalAmount) + ' left';
     } else if (cappedDraw) {
       el.finalLabel.textContent = 'Will it last?';
       el.finalAmount.textContent = seasonName(state.periods[cappedDraw.index], cappedDraw.index) + ' gets no time';
@@ -763,7 +780,7 @@
     el.growthNote.textContent = t.lowestBalance < 0 && !depleted
       ? 'after interest on the borrowed amount'
       : depleted
-      ? 'the money ran out ' + outWhen
+      ? 'while there was money to grow'
       : t.totalMonths && paidIn + Math.max(0, gotExtras) > 0
         ? growthNote(t.totalGrowth / (paidIn + Math.max(0, gotExtras)))
         : '\u00a0';
@@ -776,8 +793,12 @@
       var monthly = outs.length === 1 ? nominal.perPeriod[outs[0]] && nominal.perPeriod[outs[0]].firstWithdrawal : 0;
       // In the money the page is in: today's (constant), or future dollars at the start, rising.
       var startOf = outs.length === 1 ? nominal.perPeriod[outs[0]] : null;
-      el.incomeNote.textContent = depleted && t.totalShortfall >= 1
-        ? 'then ' + Chart.money0.format(t.totalShortfall) + ' more it couldn\u2019t pay'
+      // The shortfall is said once, in the sub-line; here, how much of the withdrawing time it paid for.
+      var paidMonths = depleted ? drawing.reduce(function (sum, pp) {
+        return sum + Math.max(0, Math.min(pp.endMonth, t.depletedAt) - pp.startMonth);
+      }, 0) : 0;
+      el.incomeNote.textContent = depleted
+        ? (paidMonths ? 'paid for the first ' + Chart.durationLabel(paidMonths) + ' of ' + Chart.durationLabel(drawMonthsAll) : 'paid for none of the withdrawals')
         : !(monthly > 0) ? 'taken out over the withdrawing seasons'
         : today ? Chart.money0.format(monthly) + '/month in today\u2019s dollars'
         : Chart.money0.format(monthly * Calc.deflator(startOf.startMonth + 1, state.inflationPercent)) +
@@ -843,6 +864,7 @@
       label: 'Projected balance. ' + summary
     });
     lastChartWidth = el.chart.clientWidth;
+    fitPin();
     // After the chart: the legend repeats season names only when the chart could not fit them.
     renderLegend(projection, baseline, !!(el.chart.__chart && el.chart.__chart.allLabels));
     announce(summary + (el.leverNote.hidden ? '' : ' ' + el.leverNote.textContent) +
@@ -924,7 +946,8 @@
         if (gain >= 1) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
       }
     }
-    if (tagToday && text && /\$[\d,]+\/month/.test(text)) text = text.replace(/\.$/, ' (in today\u2019s dollars).');
+    // The tag sits right after the $/month figure it qualifies, not at the end of the sentence.
+    if (tagToday && text) text = text.replace(/(\$[\d,]+\/month)(?![\s\S]*\$[\d,]+\/month)/, '$1 (in today\u2019s dollars)');
     el.leverNote.hidden = !text;
     el.leverNote.textContent = text;
   }
@@ -987,11 +1010,14 @@
     return ' (e.g. ' + Chart.money0.format(amt) + ' \u2192 ' + Chart.money0.format(Math.floor(amt * scale / 10) * 10) + '/month)';
   }
 
-  /* An expense scaled by k, said the way it was typed (the dollars of the year
-     it lands), with its worth today in brackets, like the withdrawal levers. */
+  /* An expense scaled by k, said the way it was typed. In today's dollars that
+     is one number; a fixed amount (the dollars of the year it lands) also gets
+     its worth today in brackets. */
   function expenseAmount(index, k) {
     var w = state.windfalls[index];
     var v = Math.floor(Math.abs(Number(w.amount)) * k / 100) * 100;
+    if (!w.fixed) return Chart.money0.format(v) + ' or less' +
+      (state.view.money === 'future' && Number(state.inflationPercent) > 0 ? ' (in today\u2019s dollars)' : '');
     var at = Math.max(0, Math.floor(Number(w.atMonth) || 0));
     var todayV = v / Calc.deflator(at, state.inflationPercent);
     // "$44,600 or less as typed (≈$21,200 today)": the bound stays next to the figure it qualifies.
@@ -1002,7 +1028,7 @@
   // "6y 6m into Retirement" for an absolute month, or "at 26y 6m" outside any season.
   function inSeasonText(projection, m) {
     var where = seasonAt(projection, m);
-    return where ? Chart.durationLabel(m - where.pp.startMonth) + ' into ' + where.name : 'at ' + Chart.durationLabel(m);
+    return where ? Chart.durationLabel(m - where.pp.startMonth) + ' into ' + shortName(where.name) : 'at ' + Chart.durationLabel(m);
   }
 
   // The stretches where a planned expense took the balance below zero (before any run-out).
@@ -1070,7 +1096,8 @@
       var same = gap === 0 && Math.round(projection.totals.finalAmount - then) === 0;
       el.baselineDelta.innerHTML = same ? 'Kept. The dashed line is your kept plan; change anything to compare.'
         : gap === 0 ? 'Lasts as long as the baseline'
-        : '<span class="' + (gap > 0 ? 'up' : 'down') + '">Lasts ' + Chart.durationLabel(Math.abs(gap)) +
+        // Longer, but still running out, is not a win to colour green.
+        : '<span class="' + (gap > 0 ? (nowOut === null ? 'up' : '') : 'down') + '">Lasts ' + Chart.durationLabel(Math.abs(gap)) +
           (gap > 0 ? ' longer' : ' shorter') + '</span> than the baseline';
       return;
     }
@@ -1453,6 +1480,18 @@
   // Shorter on phones, where the toast sits over the content; the Undo link stays either way.
   var UNDO_MS = touch() ? 6000 : 10000, UNDO_DEPTH = 10;
   var undoStack = [], toastTimer = null, typedSinceOffer = false;
+  /* The results column is pinned only while it fits the window: an opened
+     "About these numbers" would otherwise run off the bottom, unreachable. */
+  function fitPin() {
+    // Looked up here: the first render runs before this part of the file.
+    var resultsPanel = document.getElementById('results');
+    resultsPanel.classList.remove('unpinned');
+    if (resultsPanel.offsetHeight > window.innerHeight - 32) resultsPanel.classList.add('unpinned');
+  }
+  // `toggle` does not bubble, so listen in the capture phase for every disclosure in the column.
+  document.getElementById('results').addEventListener('toggle', fitPin, true);
+  window.addEventListener('resize', fitPin);
+
   // Back to the one-line row, with focus on it so the keyboard user is not lost.
   function collapseCard(li) {
     expanded = null;
@@ -1564,6 +1603,8 @@
         renderResults();
       });
 
+    } else if (field === 'fixed') {
+      w.fixed = input.checked;
     } else if (field === 'repeatEvery') {
       w.repeatEvery = Math.max(1, timeFromInput(input.value, unitOf(w.everyUnit, w.repeatEvery)));
     } else if (field === 'repeatUntil') {

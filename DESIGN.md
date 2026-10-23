@@ -426,8 +426,17 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - Every figure leads in the page's money (owner's choice): "Paid in, in today's money" shows
   "$63,111" with "you put in $70,000" beneath; table cells read "$53,111" with "of $60,000 put in".
   Paid in is the starting amount plus savings, the same as the table's column; extras get their own
-  line ("plus $67,463 from extras"), as do planned expenses. Expense levers are said as typed with
+  line ("plus $67,463 from extras"), as do planned expenses. Extras are typed in today's dollars and rise
+  with prices, like withdrawals, so an expense lever is one number; only a "Fixed amount" extra gets
   today's worth in brackets.
+- On phones (560px and below) the answer follows its label directly; the Today's $ / Future $
+  switch moves below the lever, and the three figures become compact rows (label left, figure
+  right, note beneath). The bar's run-out form names the season ("Runs out in Retirement").
+  Season names longer than 24 characters are cut at a word with "…" in the headline, bar and
+  chart label. The Withdrawn note after a run-out says how much time it paid for ("paid for the
+  first 7 yrs of 25"); the shortfall is said once, in the sub-line.
+- The results column is pinned only while it fits the window; an open "About these numbers" that
+  makes it taller unpins it so its end stays reachable.
 - A season added after a withdrawing one starts as a plain 10-year saving season at $0 (not a copy).
 - Ticking Repeat says what it multiplies to ("now repeats every 1 yr: 30 payments, $600,000 in
   total") and offers Undo. A time field under a year shown in years switches to months on render.
@@ -469,7 +478,10 @@ Quiet and soft-edged. They read as part of the page until hovered.
 ### Chart after the money runs out
 - The season lines stop at $0. The rest of the timeline gets an 8% Faded Pencil wash and a dotted
   pencil line at $0; the Loss Red rule and its label sit at the top of the plot. The tooltip there
-  says "Ran out · short by $X". The chart never plots negative balances.
+  says "Ran out · short by $X". Withdrawals never go below zero, so the only negative balance is
+  a planned expense's debt: the chart plots it (the axis extends below $0) inside the Loss Red wash,
+  so its depth is visible. A season wholly after a run-out is a faint line in its hue at $0. A
+  baseline "Lasts … longer" stays uncoloured while the plan still runs out.
 
 ### Baseline ghost line
 - A kept earlier version of the plan, drawn on the chart as a 1.5px dashed Faded Pencil line under

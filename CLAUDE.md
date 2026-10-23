@@ -81,7 +81,9 @@ the same shape restated in today's dollars, discounting each flow by its month s
 
 **Extras** (`state.windfalls` — the UI says "extras", the code still says windfalls) are lump sums
 anchored to *absolute* months, independent of the period list, summed when several share a month and
-applied at month end like a contribution. An extra may repeat: `repeatEvery` months from `atMonth`
+applied at month end like a contribution. An extra's `amount` is in today's dollars and rises with
+`state.inflationPercent` (`Calc.extraAt(w, month, inflation)` gives its dollars in month m) unless
+`w.fixed`; `load()` marks extras saved before this as fixed so they keep their meaning. An extra may repeat: `repeatEvery` months from `atMonth`
 until `repeatUntil`, or to the end of the timeline when that is null. `Calc.windfallMonths(w, horizon)`
 is the single source of truth for which months an extra lands on — the projection math and the chart
 markers both read it, so they can never disagree. The

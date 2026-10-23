@@ -17,8 +17,10 @@ what it could pay out each month in retirement.
   **More options**. Until you change something, a note says you're looking at the example plan.
 - **Time fields** (a period's length, an extra's timing) each have a **years / months** picker.
   Switching converts the number shown; fractions work (2.5 years is 30 months).
-- **Extra amounts** are lump sums on top of the monthly contributions. Use a negative amount for a
-  large planned expense, and tick **Repeat** to make one recur. A new extra starts at $0, and each
+- **Extra amounts** are lump sums on top of the monthly contributions, in today's dollars, so they
+  rise with prices like withdrawals (a $12,000 pension keeps its value). Tick **Fixed amount** for
+  one that doesn't rise (plans saved before this keep their extras fixed). Use a negative amount for
+  a large planned expense, and tick **Repeat** to make one recur. A new extra starts at $0, and each
   one says which season it lands in and, when it repeats, how much it adds in total.
 - **Each season saves or withdraws:** **Save**, **Withdraw %** or **Withdraw $**. Withdrawals are
   in today's dollars and rise with inflation each year. **Withdraw %** (default 4%) is the classic 4%
@@ -50,8 +52,8 @@ what it could pay out each month in retirement.
 - **The answer stays in view**: whenever the headline is scrolled away, a bar pinned to the bottom
   shows it; tap **See results** to jump back. Keyboard users get a **Skip to results** link first.
   On wide screens it's a small card in the corner. When the money runs out, the chart stops at $0 and
-  shades the rest instead of plotting debt; a dip below zero that recovers is called out, not
-  treated as running out.
+  shades the rest; a planned expense that borrows below zero is drawn below the axis, so you can see
+  how deep it goes, and a dip that recovers is called out, not treated as running out.
 - **When the money runs out**, withdrawals stop at what was there (a later pension or other extra
   refilling the account doesn't hide it): the page says "Short by $X",
   counts only what was actually withdrawn, and names an expense if one caused it ("Runs out at

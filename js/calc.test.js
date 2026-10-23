@@ -630,5 +630,14 @@
     close(r.perPeriod[1].windfalls, 200, 0, 'second period (months 18, 24)');
   });
 
+  test('an extra rises with inflation unless it is fixed', function () {
+    function plan(w) { return { startingAmount: 0, inflationPercent: 10, periods: [period({ months: 24 })], windfalls: [w] }; }
+    var rising = Calc.project(plan({ atMonth: 24, amount: 1000 }));
+    close(rising.totals.finalAmount, 1210, 1e-6, 'today\u2019s $1,000 is $1,210 two years on at 10%');
+    var fixed = Calc.project(plan({ atMonth: 24, amount: 1000, fixed: true }));
+    close(fixed.totals.finalAmount, 1000, 1e-9, 'a fixed amount lands as typed');
+    close(Calc.inTodaysDollars(rising, 10).totals.totalWindfalls, 1000, 1e-6, 'and is worth what was typed in today\u2019s dollars');
+  });
+
   global.CalcTests = { results: results };
 })(window);

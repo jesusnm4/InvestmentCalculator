@@ -131,6 +131,8 @@ body {
    columns, so the pinned column fits on one screen. Short windows scroll normally. */
 @media (min-width: 901px) and (min-height: 760px) {
   .results { position: sticky; top: 16px; }
+  /* Taller than the window (an open disclosure): pinning would hide its end, so it scrolls. */
+  .results.unpinned { position: static; }
 }
 /* A quiet text action: underlined in the ruled-line tone, firming on hover. */
 .link-btn {
@@ -410,6 +412,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 
 /* --- results --- */
 .results { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
 .hero { display: grid; gap: 2px; }
 .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
 .money-mode { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -418,9 +421,20 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .inflation .pct { width: 72px; }
 .inflation input { padding: 4px 22px 4px 8px; }
 .hero-value.short { color: var(--bad); }
-.hero-warn { margin: 6px 0 0; font-size: var(--text-body); font-weight: 600; color: var(--bad); text-wrap: pretty; }
+.hero-warn { margin: 6px 0 0; max-width: 62ch; font-size: var(--text-body); font-weight: 600; color: var(--bad); text-wrap: pretty; }
 .hero-warn[hidden] { display: none; }
 .baseline-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
+/* Phones: the answer comes straight after its label; the money switch follows the lever. The
+   summary figures become compact rows (label and value on one line), not a screen of stacked cells. */
+@media (max-width: 560px) {
+  .hero { display: flex; flex-direction: column; }
+  .hero-top { display: contents; }
+  .hero > .money-mode, .hero-top > .money-mode { order: 1; margin-top: 10px; }
+  .baseline-row { order: 2; }
+  .kpi { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: baseline; }
+  .kpi-label { grid-column: 1; grid-row: 1; }
+  .kpi-value { grid-column: 2; grid-row: 1; margin-top: 0; text-align: right; }
+  .kpi-note { grid-column: 1 / -1; }
 .baseline-delta { font-size: var(--text-note); font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .baseline-delta { font-weight: 400; color: var(--muted); }
 .baseline-delta .up { font-weight: 600; color: var(--good); }
@@ -588,6 +602,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 /* An explicit display would otherwise beat the [hidden] attribute. */
 .repeat-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 8px; }
 .repeat-fields[hidden] { display: none; }
+.extra-toggles { display: flex; flex-wrap: wrap; gap: 4px 18px; }
 /* Phones: a unit picker leaves too little room for digits in a half-width field. */
 @media (max-width: 420px) {
   .period-grid, .windfall-grid, .repeat-fields { grid-template-columns: minmax(0, 1fr); }
@@ -722,6 +737,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .inflation input { min-height: 44px; }
   /* Small text actions get a full-height tap area without looking bigger. */
   .link-btn, .toast-undo { min-height: 44px; }
+  .done-btn { min-width: 44px; }
   .link-btn { display: inline-flex; align-items: center; }
   /* 16px inputs stop iOS from zooming the page when a field takes focus. */
   input[type="number"], input[type="text"], select, .unit-select select { font-size: 16px; }
