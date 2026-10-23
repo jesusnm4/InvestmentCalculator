@@ -412,7 +412,6 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 
 /* --- results --- */
 .results { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
-}
 .hero { display: grid; gap: 2px; }
 .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
 .money-mode { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -435,6 +434,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .kpi-label { grid-column: 1; grid-row: 1; }
   .kpi-value { grid-column: 2; grid-row: 1; margin-top: 0; text-align: right; }
   .kpi-note { grid-column: 1 / -1; }
+}
 .baseline-delta { font-size: var(--text-note); font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .baseline-delta { font-weight: 400; color: var(--muted); }
 .baseline-delta .up { font-weight: 600; color: var(--good); }

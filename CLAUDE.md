@@ -44,6 +44,16 @@ headless — useful for checking math changes without switching to a browser:
 `tests.html` remains the source of truth; this is only a shortcut, and it cannot load `chart.js` or
 `app.js` (both need a DOM).
 
+A misplaced brace in `styles.css` silently scopes the rest of the file into one media query (desktop
+then looks unstyled while phones look fine). After moving CSS blocks, check the balance:
+
+```sh
+python3 -c "import re;s=re.sub(r'/\*.*?\*/','',open('styles.css').read(),flags=re.S);d=m=0
+for c in s:
+  d+=(c=='{')-(c=='}');m=min(m,d)
+print('ok' if d==0 and m==0 else 'UNBALANCED')"
+```
+
 ## Architecture
 
 Strict one-way layering, enforced by convention rather than tooling:
