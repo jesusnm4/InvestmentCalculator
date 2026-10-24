@@ -452,8 +452,9 @@ Quiet and soft-edged. They read as part of the page until hovered.
   season's entry is the plan-start clock under that season's name; "From the plan start" appears only
   when there are no seasons. Anchored, it keeps its place in that season when lengths or order change; offset 0 is
   the season's first month, and the note says it in the season's terms ("Lands in the first month
-  of Retirement (20y 1m into the plan)"). Switching the anchor re-expresses the same month rather
-  than moving it. If the season is deleted, the extra keeps its last month, from the plan start. It repeats until the end of the season it lands in (not the whole plan;
+  of Retirement (20y 1m into the plan)"). Until counts from the same season start ("every 1 yr until 10 yrs into
+  Retirement"; a default repeat runs "until the end of" its season). Switching the anchor
+  re-expresses the same months rather than moving them. If the season is deleted, the extra keeps its last month, from the plan start. It repeats until the end of the season it lands in (not the whole plan;
   the last season runs to the end); the extras key says "each". A time field under a year shown in years switches to months on render.
 - The chart's season-name band is all or nothing: if any name will not fit, the band stays empty and
   the legend names them.

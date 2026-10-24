@@ -95,7 +95,8 @@ applied at month end like a contribution. An extra's `amount` is in today's doll
 `state.inflationPercent` (`Calc.extraAt(w, month, inflation)` gives its dollars in month m) unless
 `w.fixed`; `load()` marks extras saved before this as fixed so they keep their meaning. Periods carry a stable
 `id`; an extra with `anchor` (a period id) and `anchorOffset` lands at that season's start + 1 +
-offset, and `untilSeason` makes a repeat stop at its season's end. `syncAnchors()` in app.js
+offset; `untilOffset` counts Until from the same season start (null: to the end), and
+`untilSeason` makes a repeat stop at its season's end. `syncAnchors()` in app.js
 re-derives `atMonth` / `repeatUntil` from those before every render and save, so calc.js only ever
 sees absolute months. An extra may repeat: `repeatEvery` months from `atMonth`
 until `repeatUntil`, or to the end of the timeline when that is null. `Calc.windfallMonths(w, horizon)`

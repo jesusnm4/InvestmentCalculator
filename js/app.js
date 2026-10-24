@@ -118,7 +118,8 @@
       // In today's dollars, rising with prices like a withdrawal; "Stays the same" keeps it as typed.
       fixed: false,
       // Measured from the plan start (null) or from the start of a season (its id), plus an offset.
-      anchor: null, anchorOffset: 0, untilSeason: false
+      // Until is measured from the same season start as At (untilOffset; null: to the end).
+      anchor: null, anchorOffset: 0, untilOffset: null, untilSeason: false
     };
   }
 
@@ -216,7 +217,8 @@
     item[UNIT_KEY[field]] = unit;
     var input = li.querySelector('[data-field="' + field + '"]');
     // An anchored extra's "At" shows its offset into the season.
-    input.value = timeDisplay(field === 'atMonth' && item.anchor ? item.anchorOffset : item[field], unit);
+    input.value = timeDisplay(field === 'atMonth' && item.anchor ? item.anchorOffset
+      : field === 'repeatUntil' ? untilShown(item) : item[field], unit);
     input.step = unit === 'years' ? 'any' : '1';
     input.inputMode = unit === 'years' ? 'decimal' : 'numeric';
   }
@@ -275,6 +277,9 @@
         w.anchor = typeof w.anchor === 'string' && w.anchor ? w.anchor : null;
         w.anchorOffset = Math.max(0, Math.floor(Number(w.anchorOffset) || 0));
         w.untilSeason = w.untilSeason === true;
+        // Left undefined when absent: syncAnchors derives it from the stored absolute month.
+        if (w.untilOffset !== null) w.untilOffset = isFinite(Number(w.untilOffset)) && w.untilOffset !== undefined && w.untilOffset !== ''
+          ? Math.max(0, Math.floor(Number(w.untilOffset))) : undefined;
       });
       parsed.isExample = parsed.isExample === true;
       parsed.baselineSeen = parsed.baselineSeen === true;
@@ -584,7 +589,7 @@
           '</div>' +
           '<div class="field">' +
             '<span class="field-label">Until <span class="field-aside">(blank: to the end)</span></span>' +
-            timeField('repeatUntil', w.repeatUntil, unitOf(w.untilUnit, w.repeatUntil || 0), 'Until') +
+            timeField('repeatUntil', untilShown(w), unitOf(w.untilUnit, untilShown(w) || 0), 'Until', ' data-from="' + escapeAttr(w.anchor || '') + '"') +
           '</div>' +
         '</div>' +
         '<p class="months-note" data-role="at-note"></p>' +
@@ -618,8 +623,10 @@
       }
       // Following its season's end: show the month it now stops at.
       var untilInput = li.querySelector('[data-field="repeatUntil"]');
-      if (w.untilSeason && untilInput && document.activeElement !== untilInput) {
-        untilInput.value = w.repeatUntil === null ? '' : timeDisplay(w.repeatUntil, unitOf(w.untilUnit, w.repeatUntil));
+      if (untilInput && document.activeElement !== untilInput && (w.untilSeason || untilInput.dataset.from !== (w.anchor || ''))) {
+        untilInput.dataset.from = w.anchor || '';
+        var u = untilShown(w);
+        untilInput.value = u === null ? '' : timeDisplay(u, unitOf(w.untilUnit, u));
       }
 
       var months = Calc.windfallMonths(w, horizon).filter(function (mth) { return mth <= horizon; });
@@ -639,7 +646,11 @@
       if (every && months.length > 1) {
         // The total in the page's money, the same sum the results use.
         var total = months.reduce(function (sum, mth) { return sum + viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth); }, 0);
-        lands += ', then every ' + Chart.durationLabel(every) + ' \u2014 ' + months.length + ' payments' +
+        // Until, said in the same season's terms as At.
+        var untilWords = w.repeatUntil === null ? '' : w.untilSeason && anchorIdx >= 0
+          ? ' until the end of ' + shortName(seasonName(state.periods[anchorIdx], anchorIdx))
+          : anchorIdx >= 0 ? ' until ' + Chart.durationLabel(untilShown(w)) + ' into ' + shortName(seasonName(state.periods[anchorIdx], anchorIdx)) : '';
+        lands += ', then every ' + Chart.durationLabel(every) + untilWords + ' \u2014 ' + months.length + ' payments' +
                  (amount ? ', ' + Chart.money0.format(total) + ' in total' +
                    (state.view.money === 'today' && Number(state.inflationPercent) > 0 ? ' in today\u2019s money' : '') : '');
       }
@@ -681,6 +692,15 @@
       return { id: p.id, start: start, end: at };
     });
   }
+  // Where an extra's At and Until are counted from: its season's start, or the plan start.
+  function anchorStart(w) {
+    var span = w.anchor ? seasonStarts().filter(function (sp) { return sp.id === w.anchor; })[0] : null;
+    return span ? span.start : 0;
+  }
+  // The Until field's number: months after that start, or '' for "to the end".
+  function untilShown(w) {
+    return w.repeatUntil === null || w.repeatUntil === undefined ? null : Math.max(0, w.repeatUntil - anchorStart(w));
+  }
   function syncAnchors() {
     var spans = seasonStarts();
     state.windfalls.forEach(function (w) {
@@ -689,7 +709,12 @@
         // Its season was deleted, or became the first (whose start is the plan start):
         // keep the month it last had, measured from the plan start.
         if (!span || span === spans[0]) { w.anchor = null; }
-        else w.atMonth = span.start + 1 + w.anchorOffset;
+        else {
+          w.atMonth = span.start + 1 + w.anchorOffset;
+          // Until counts from the same season start ("until 10 yrs" = 10 yrs into it).
+          if (w.untilOffset === undefined) w.untilOffset = w.repeatUntil === null ? null : Math.max(0, w.repeatUntil - span.start);
+          if (!w.untilSeason) w.repeatUntil = w.untilOffset === null ? null : span.start + w.untilOffset;
+        }
       }
       if (w.untilSeason && Number(w.repeatEvery) > 0) {
         var home = spans.filter(function (sp, k) {
@@ -1753,7 +1778,10 @@
       w.repeatEvery = Math.max(1, timeFromInput(input.value, unitOf(w.everyUnit, w.repeatEvery)));
     } else if (field === 'repeatUntil') {
       // Empty means "to the end of the projection" — not month zero.
-      w.repeatUntil = input.value === '' ? null : timeFromInput(input.value, unitOf(w.untilUnit, w.repeatUntil));
+      var untilTyped = input.value === '' ? null : timeFromInput(input.value, unitOf(w.untilUnit, untilShown(w)));
+      // Anchored, it is months into the season; otherwise months from the plan start.
+      if (w.anchor) w.untilOffset = untilTyped;
+      w.repeatUntil = untilTyped === null ? null : anchorStart(w) + untilTyped;
       // Typed by hand: no longer follows its season's end.
       w.untilSeason = false;
     } else if (field === 'name') {
@@ -1768,7 +1796,15 @@
       var spans = seasonStarts();
       var span = spans.filter(function (sp) { return sp.id === input.value; })[0];
       w.anchor = span ? span.id : null;
-      if (span) w.anchorOffset = Math.max(0, w.atMonth - span.start - 1);
+      if (span) {
+        w.anchorOffset = Math.max(0, w.atMonth - span.start - 1);
+        w.untilOffset = w.repeatUntil === null ? null : Math.max(0, w.repeatUntil - span.start);
+      }
+      var untilField = li.querySelector('[data-field="repeatUntil"]');
+      var shownUntil = untilShown(w);
+      if (shownUntil !== null) w.untilUnit = unitOf(null, shownUntil);
+      untilField.value = shownUntil === null ? '' : timeDisplay(shownUntil, w.untilUnit);
+      untilField.closest('.unit-field').querySelector('select').value = w.untilUnit;
       var atField = li.querySelector('[data-field="atMonth"]');
       atField.dataset.from = w.anchor || '';
       var shown = w.anchor ? w.anchorOffset : w.atMonth;
