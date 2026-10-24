@@ -519,8 +519,9 @@
 
   // "the plan start" or "the start of <season>", for the At field's anchor.
   function anchorOptions(w) {
-    // The first season starts with the plan, so it is not listed twice.
-    return '<option value=""' + (w.anchor ? '' : ' selected') + '>From the plan start</option>' +
+    // The first season starts with the plan: its entry is the plan-start clock, named for the season.
+    var first = state.periods.length ? 'From the start of ' + escapeHtml(shortName(seasonName(state.periods[0], 0))) : 'From the plan start';
+    return '<option value=""' + (w.anchor ? '' : ' selected') + '>' + first + '</option>' +
       state.periods.slice(1).map(function (p, k) {
         return '<option value="' + escapeAttr(p.id) + '"' + (w.anchor === p.id ? ' selected' : '') + '>From the start of ' +
           escapeHtml(shortName(seasonName(p, k + 1))) + '</option>';
