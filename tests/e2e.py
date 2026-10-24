@@ -355,6 +355,94 @@ def chart_by_keyboard(env):
     s.close()
 
 
+# ---------------------------------------------------------------- tightening (critique #16)
+
+@check
+def flagged_return_is_visible_and_sane(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 360, amt=500, rate=80)]))
+    meta = pg.text_content('.period:nth-child(1) [data-role="sum-meta"]')
+    expect('typo' in meta, 'a flagged return is invisible while its season is collapsed: %r' % meta)
+    note = s.text('#kpi-growth-note') or ''
+    expect(re.search(r'\d{5,}%', note) is None, 'growth shown as a huge percent: %r' % note)
+    lever = s.text('#lever-note') or ''
+    expect('Saving $100 more' not in lever, 'save-more pitch on a plan with a flagged return: %r' % lever)
+    s.close()
+
+
+@check
+def screen_reader_names(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)]))
+    chart = pg.evaluate("[document.getElementById('chart').getAttribute('role'), document.getElementById('chart').getAttribute('aria-label')]")
+    expect(chart[0] == 'group' and chart[1], 'focusable chart has no role/name: %s' % chart)
+    pg.fill('#starting-amount', '10001')  # the page speaks after an edit, not on load
+    pg.wait_for_timeout(1100)
+    spoken, shown = pg.text_content('#live-summary'), s.text('#final-amount')
+    expect(shown in spoken, 'announcement %r does not use the visible answer %r' % (spoken, shown))
+    groups = pg.evaluate("[...document.querySelectorAll('.kpi')].map(k => k.getAttribute('role') + ':' + !!k.getAttribute('aria-labelledby'))")
+    expect(all(g == 'group:true' for g in groups), 'figures are not labelled groups: %s' % groups)
+    s.close()
+
+
+@check
+def toast_clear_of_the_chart_key(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900}, permissions=['clipboard-read', 'clipboard-write'])
+    pg = s.open()
+    pg.click('#add-windfall')
+    pg.fill('.windfall [data-field="amount"]', '5000')
+    pg.evaluate('window.scrollTo(0, 0)')
+    pg.click('#share-link')  # the longest toast ("Link copied. Whoever opens it…")
+    pg.wait_for_timeout(200)
+    hit = pg.evaluate("""(() => { const t = document.getElementById('toast').getBoundingClientRect(), k = document.getElementById('extras-legend').getBoundingClientRect();
+        return !document.getElementById('toast').hidden && t.left < k.right && t.right > k.left && t.top < k.bottom && t.bottom > k.top; })()""")
+    expect(not hit, 'the toast covers the chart key')
+    s.close()
+
+
+@check
+def dark_placeholder_and_broken_link_feedback(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900}, color_scheme='dark')
+    pg = s.open()
+    pg.click('#add-windfall')
+    color = pg.evaluate("getComputedStyle(document.querySelector('.windfall [data-field=amount]'), '::placeholder').color")
+    expect(color != 'rgb(117, 117, 117)', 'placeholder uses the browser grey (4:1 on dark): %s' % color)
+    pg.goto(s.base + '/#plan=%%%not-base64')
+    pg.wait_for_selector('#final-amount')
+    pg.wait_for_timeout(200)
+    expect('link' in (s.text('#toast-text') or '').lower(), 'a broken link gives no feedback')
+    s.close()
+
+
+@check
+def small_wording_and_states(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    pg.click('.period:nth-child(2) .card-summary')
+    pg.click('.period:nth-child(2) [data-action="delete"]')
+    pg.click('#toast-undo')
+    expect('is back' in s.text('#toast-text'), 'undoing a delete reads backwards: %r' % s.text('#toast-text'))
+    s.close()
+    s = Session(env['webkit'], env['base'], **env['iphone'])
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)]))
+    expect('short' in (pg.get_attribute('#result-bar', 'class') or ''), 'phone bar is not marked as a run-out')
+    pg.click('.period:nth-child(2) .card-summary')
+    gap = pg.evaluate("""(() => { const a = document.querySelector('.period:nth-child(2) [data-role=flow-note]').getBoundingClientRect(),
+        b = document.querySelector('.period:nth-child(2) details.more').getBoundingClientRect(); return b.top - a.bottom; })()""")
+    expect(gap < 30, 'empty gap before More options on touch: %dpx' % gap)
+    s.close()
+
+
+@check
+def repeating_extras_have_no_stems(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 240, amt=500, rate=7), season('Retirement', 300, flow='withdraw', slot=2)],
+                     [dict(extra('Pension', 252, 12000, 12), repeatUntil=360)]))  # 10 payments: under the dot-only limit
+    stems = pg.evaluate("document.querySelectorAll('.chart-svg line[stroke-dasharray=\"3 3\"]').length")
+    expect(stems == 0, 'a yearly pension draws %d drop lines' % stems)
+    s.close()
+
+
 # ---------------------------------------------------------------- run
 
 def main():

@@ -8,9 +8,9 @@
 <link rel="preload" href="fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!-- ?v= busts browser caches: bump it whenever CSS or JS changes (see CLAUDE.md). -->
-<link rel="stylesheet" href="styles.css?v=2026-10-24.19">
+<link rel="stylesheet" href="styles.css?v=2026-10-24.20">
 <!-- Blocking on purpose: stamps the theme before first paint. -->
-<script src="js/theme.js?v=2026-10-24.19"></script>
+<script src="js/theme.js?v=2026-10-24.20"></script>
 </head>
 <body>
 
@@ -125,17 +125,18 @@
     </div>
 
     <div class="kpis">
-      <div class="kpi">
+      <!-- Each figure is a labelled group, so a screen reader hears "Total growth, $70,634" rather than one run of text. -->
+      <div class="kpi" role="group" aria-labelledby="kpi-paid-label">
         <div class="kpi-label" id="kpi-paid-label">Total paid in</div>
         <div class="kpi-value" id="kpi-contributed">$0</div>
         <div class="kpi-note" id="kpi-contributed-note">starting amount + contributions</div>
       </div>
-      <div class="kpi">
+      <div class="kpi" role="group" aria-labelledby="kpi-growth-label">
         <div class="kpi-label" id="kpi-growth-label">Total growth</div>
         <div class="kpi-value" id="kpi-growth">$0</div>
         <div class="kpi-note" id="kpi-growth-note">&nbsp;</div>
       </div>
-      <div class="kpi">
+      <div class="kpi" role="group" aria-labelledby="kpi-third-label">
         <div class="kpi-label" id="kpi-third-label">Monthly income</div>
         <div class="kpi-value" id="kpi-income">$0</div>
         <div class="kpi-note" id="kpi-income-note">under the 4% rule</div>
@@ -150,7 +151,7 @@
     <figure class="chart-block">
       <figcaption class="chart-title">Projected balance</figcaption>
       <!-- Focusable: arrow keys walk the readout a year at a time (Shift: a month), Home/End jump to the ends. -->
-      <div id="chart" class="chart" tabindex="0" aria-describedby="chart-keys"></div>
+      <div id="chart" class="chart" tabindex="0" role="group" aria-roledescription="chart" aria-label="Projected balance" aria-describedby="chart-keys"></div>
       <p class="sr-only" id="chart-keys">Use the left and right arrow keys to read the balance year by year.</p>
       <div id="legend" class="legend"></div>
       <div id="extras-legend" class="extras-legend" hidden></div>
@@ -194,8 +195,8 @@
 <!-- Announces the result after typing settles; visible results update live. -->
 <p class="sr-only" id="live-summary" aria-live="polite"></p>
 
-<script src="js/calc.js?v=2026-10-24.19"></script>
-<script src="js/chart.js?v=2026-10-24.19"></script>
-<script src="js/app.js?v=2026-10-24.19"></script>
+<script src="js/calc.js?v=2026-10-24.20"></script>
+<script src="js/chart.js?v=2026-10-24.20"></script>
+<script src="js/app.js?v=2026-10-24.20"></script>
 </body>
 </html>

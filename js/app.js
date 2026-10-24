@@ -99,13 +99,18 @@
                                 periods: state.periods, windfalls: state.windfalls });
     return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
+  var badLink = false;
   function readSharedPlan() {
     if (location.hash.indexOf(PLAN_HASH) !== 0) return null;
     var code = location.hash.slice(PLAN_HASH.length).replace(/-/g, '+').replace(/_/g, '/');
+    var plan = null;
     try {
       while (code.length % 4) code += '=';
-      return sanitize(JSON.parse(decodeURIComponent(escape(atob(code)))));
-    } catch (e) { return null; }
+      plan = sanitize(JSON.parse(decodeURIComponent(escape(atob(code)))));
+    } catch (e) { plan = null; }
+    // A link that can't be read changes nothing, but says so (and leaves the address bar clean).
+    if (!plan) { badLink = true; clearPlanHash(); }
+    return plan;
   }
   var ownPlan = null, sharedMode = false;
   var shared = readSharedPlan();
@@ -417,7 +422,8 @@
         if (k % step && k !== months.length - 1) return;
         // Past a run-out the money only passes through; markers along $0 in the wash are noise (the key counts them).
         if (ranOutAt !== null && ranOutAt !== undefined && mth > ranOutAt) return;
-        out.push({ name: w.name || ('Extra ' + (i + 1)), atMonth: mth, amount: viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth), shapeSlot: w.shapeSlot });
+        out.push({ name: w.name || ('Extra ' + (i + 1)), atMonth: mth, amount: viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth),
+                   shapeSlot: w.shapeSlot, repeat: months.length > 1 });
       });
     });
     return out;
@@ -593,11 +599,17 @@
   }
 
   // Non-structural bits that change as you type.
+  // A return outside what markets have ever done over long stretches (a likely typo).
+  function rateFlagged(p) {
+    var r = Number(p.annualRatePercent) || 0;
+    return r < -50 || r > 30;
+  }
+
   function refreshCardNotes(li, p) {
     // A typo like -150% is accepted (downturns are real), but said out loud.
     var rate = Number(p.annualRatePercent) || 0, rateNote = li.querySelector('[data-role="rate-note"]');
     if (rateNote) {
-      rateNote.hidden = rate >= -50 && rate <= 30;
+      rateNote.hidden = !rateFlagged(p);
       rateNote.textContent = rate < -50 ? 'A loss of more than half every year: is that a typo?'
         : 'Far above what markets have returned over long stretches: is that a typo?';
     }
@@ -620,8 +632,12 @@
       : mode === 'percent' ? (Number(p.withdrawPercent) || 0) + '% withdrawn'
       : Chart.money0.format(Math.abs(Number(p.monthlyContribution) || 0)) + '/mo withdrawn';
     li.querySelector('[data-role="sum-name"]').textContent = p.name || 'Untitled season';
+    var rateOdd = rateFlagged(p);
     li.querySelector('[data-role="sum-meta"]').textContent =
-      (months ? Chart.durationLabel(months) : 'no length') + ' \u00b7 ' + each + ' \u00b7 ' + (Number(p.annualRatePercent) || 0) + '% return';
+      (months ? Chart.durationLabel(months) : 'no length') + ' \u00b7 ' + each + ' \u00b7 ' + (Number(p.annualRatePercent) || 0) + '% return' +
+      // Collapsed, the card's "is that a typo?" note is hidden: the row says it instead.
+      (rateOdd ? ' \u00b7 is that a typo?' : '');
+    li.classList.toggle('rate-odd', rateOdd);
   }
 
   // How many times an extra lands within the plan, and their sum in the page's money: one source for the note and the toast.
@@ -938,6 +954,8 @@
       el.resultBarValue.textContent = Chart.money0.format(t.finalAmount);
     }
     el.finalAmount.classList.toggle('short', depleted || short);
+    // The pinned bar says a run-out in the same Loss Red as the headline.
+    el.resultBar.classList.toggle('short', depleted || short);
     el.finalAmount.classList.toggle('answer', drawdown || !!cappedDraw || endsBelow);
     document.querySelector('.result-bar-label').textContent = drawdown || cappedDraw ? 'Will it last?' : 'Final amount';
 
@@ -1096,9 +1114,10 @@
     renderAbout();
     renderExtrasLegend(projection);
     renderTable(projection, drawdown, today ? nominal : null);
+    // Spoken with the same words as the headline, so what is heard matches what is shown.
     var summary = !t.totalMonths ? 'No seasons yet.'
       : drawdown
-        ? (depleted ? 'The money runs out at ' + Chart.durationLabel(t.depletedAt) + '.'
+        ? (depleted ? el.finalAmount.textContent + '.'
                     : 'The money lasts all ' + Chart.durationLabel(t.totalMonths) + ', ending with ' +
                       Chart.money0.format(t.finalAmount) + (today ? ' in today’s dollars.' : '.'))
         : 'Final amount ' + Chart.money0.format(t.finalAmount) + (today ? ' in today’s dollars' : '') +
@@ -1215,7 +1234,9 @@
         }
         var gain = bumped.totals.finalAmount - base.totals.finalAmount;
         // A plan losing money gets no "save more" pitch: the return is the thing to look at.
-        if (gain >= 1 && base.totals.totalGrowth >= 0) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
+        // Nor when a return looks like a typo, or the plan is already at the 100-year limit.
+        var odd = state.periods.some(rateFlagged), capped = base.perPeriod.some(function (pp) { return pp.truncated; });
+        if (gain >= 1 && base.totals.totalGrowth >= 0 && !odd && !capped) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
       }
     }
     // The tag sits right after the $/month figure it qualifies, not at the end of the sentence.
@@ -1328,6 +1349,8 @@
   // "+151% on top of what you paid in" reads at a glance; "151% of" did not.
   function growthNote(ratio) {
     var pct = Math.round(ratio * 100);
+    // Past 1,000% a percent stops meaning anything: say how many times over.
+    if (pct >= 1000) return Math.round(ratio + 1).toLocaleString('en-US') + '\u00d7 what you paid in';
     return pct >= 0 ? '+' + pct + '% on top of what you paid in' : Math.abs(pct) + '% less than you paid in';
   }
 
@@ -1684,7 +1707,7 @@
         renderPeriods();
         renderResults();
         focusIn(el.periodList, index, '[data-field="name"]');
-      });
+      }, null, '\u201c' + seasonName(removed, index) + '\u201d is back');
     } else if (action === 'up' && index > 0) {
       state.periods.splice(index - 1, 0, state.periods.splice(index, 1)[0]);
       focusAt = index - 1; focusSel = focusAt === 0 ? '[data-action="down"]' : '[data-action="up"]';
@@ -1859,7 +1882,28 @@
     el.toast.hidden = false;
     startToastTimer(5000);
   }
+  /* Desktop: the toast floats over the results column. If that would cover the
+     chart's keys or the breakdown title, it lifts to sit just above them (over the
+     plot, which is a picture, not text). Re-checked as the page scrolls. */
+  function placeToast() {
+    el.toast.style.bottom = '';
+    if (el.toast.hidden || window.innerWidth <= 900) return;
+    var keys = ['extras-legend', 'legend', 'details-h'].map(function (id) { return document.getElementById(id); });
+    for (var pass = 0; pass < 3; pass++) {
+      var t = el.toast.getBoundingClientRect(), hit = null;
+      keys.forEach(function (k) {
+        if (!k || !k.offsetParent || hit) return;
+        var r = k.getBoundingClientRect();
+        if (r.height && t.left < r.right && t.right > r.left && t.top < r.bottom && t.bottom > r.top) hit = r;
+      });
+      if (!hit) return;
+      el.toast.style.bottom = Math.round(window.innerHeight - hit.top + 8) + 'px';
+    }
+  }
+  window.addEventListener('scroll', function () { if (!el.toast.hidden) placeToast(); }, { passive: true });
+
   function startToastTimer(ms) {
+    placeToast();
     clearTimeout(toastTimer);
     toastTimer = setTimeout(hideToast, ms);
   }
@@ -2219,6 +2263,7 @@
   repaintForTheme();
   announceReady = true;
   syncSharedNote();
+  if (badLink) showNotice('That link didn\u2019t contain a plan this page can read, so nothing changed.');
   el.sharedBack.addEventListener('click', function () {
     if (sharedMode) {
       // Nothing was saved while looking: your plan is still in storage, and in memory.

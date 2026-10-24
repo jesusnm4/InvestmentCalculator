@@ -456,6 +456,16 @@ Quiet and soft-edged. They read as part of the page until hovered.
   plan" until you choose.
 - The chart is a Tab stop (2px Ledger Blue focus ring, 4px offset): ← / → step the readout a year,
   Shift a month, Home / End jump, Esc hides it; the readout is a polite live region.
+- A return below -50% or above 30% also shows in the collapsed row ("· is that a typo?", Loss Red),
+  and turns off the save-more lever. Growth past 1,000% reads "38× what you paid in".
+- Placeholders use Faded Pencil (`input::placeholder`), never the browser's grey. The pinned result
+  bar's run-out reads in Loss Red, like the headline. A repeating extra's markers get no drop lines
+  (a row of them reads as a picket fence); one-offs keep theirs.
+- On desktop the toast lifts above the chart keys or the breakdown title when it would cover them
+  (`placeToast`, re-checked on scroll), sitting over the plot instead.
+- Screen readers: the chart is a named group (`aria-roledescription="chart"`), each summary figure a
+  labelled group, and the spoken result reuses the headline's words. A link that can't be read says
+  so and changes nothing. Undoing a delete says "'Letting it grow' is back".
 - An open season card has Done at its head and, at its foot, "Delete season" (Loss Red text link)
   on the left and Done on the right, so Delete is never the next Tab stop or a thumb-slip from Done.
   After a delete, focus lands on the next season's row (or "+ Add a season").

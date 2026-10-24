@@ -306,7 +306,8 @@
       var wm = Math.max(0, Math.min(maxMonth, Math.floor(Number(wf[wi].atMonth) || 0)));
       if (!points[wm]) continue;
       var wx = x(wm), wy = y(val(wm));
-      if (stems) {
+      // A repeat's occurrences get no stems: a row of drop lines reads as a picket fence.
+      if (stems && !wf[wi].repeat) {
         svg.push('<line x1="' + wx.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + wx.toFixed(2) +
                  '" y2="' + wy.toFixed(2) + '" stroke="' + C.muted + '" stroke-width="1" stroke-dasharray="3 3"/>');
       }

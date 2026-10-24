@@ -316,7 +316,9 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   content: ""; position: absolute; right: 6px; top: 50%; width: 7px; height: 7px; margin-top: -5px;
   border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg);
 }
-.period.capped .card-summary-meta { color: var(--bad); }
+.period.capped .card-summary-meta, .period.rate-odd .card-summary-meta { color: var(--bad); }
+/* Placeholders in Faded Pencil, not the browser's grey (4:1 on the dark field). */
+input::placeholder { color: var(--muted); opacity: 1; }
 /* "Withdraw %" and "Withdraw $" differ by one glyph: give the glyph weight so they don't blur. */
 .flow-unit { font-weight: 700; font-family: var(--font-figure); margin-left: 1px; }
 .card-summary-meta { font-size: var(--text-note); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -703,6 +705,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 }
 .result-bar-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .result-bar-value { font-size: var(--text-figure); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.result-bar.short .result-bar-value { color: var(--bad); }
 /* Small phones: the label goes, so the answer and "See results" stay on one line. */
 @media (max-width: 420px) {
   .result-bar-label { display: none; }
@@ -768,6 +771,8 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   /* 16px inputs stop iOS from zooming the page when a field takes focus. */
   input[type="number"], input[type="text"], select, .unit-select select { font-size: 16px; }
   .more summary, .why summary { padding: 12px 0; min-height: 44px; align-items: center; }
+  /* The summary's own 44px row is the spacing on touch; no extra margin above it. */
+  .more { margin-top: 0; }
   /* Own line on touch, so a 44px target does not spread the hint's line spacing. */
   .hint-more summary { display: block; min-height: 44px; line-height: 44px; }
 }
