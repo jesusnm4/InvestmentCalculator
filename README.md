@@ -18,7 +18,7 @@ what it could pay out each month in retirement.
 - **Time fields** (a period's length, an extra's timing) each have a **years / months** picker.
   Switching converts the number shown; fractions work (2.5 years is 30 months).
 - **Extra amounts** are lump sums on top of the monthly contributions, in today's dollars, so they
-  rise with prices like withdrawals (a $12,000 pension keeps its value). Tick **Fixed amount** for
+  rise with prices like withdrawals (a $12,000 pension keeps its value). Choose **Stays the same** for
   one that doesn't rise (plans saved before this keep their extras fixed). Use a negative amount for
   a large planned expense, and tick **Repeat** to make one recur. A new extra starts at $0, and each
   one says which season it lands in and, when it repeats, how much it adds in total.
@@ -47,7 +47,7 @@ what it could pay out each month in retirement.
   example**, and replacing or clearing the baseline all act immediately and offer **Undo**. Undo
   steps back through the last 10 actions; the history stays after the message fades, with an
   **Undo** link beside "Your plan", and Cmd/Ctrl+Z works too.
-- **About these numbers** (under the chart) explains today's dollars, saving and withdrawing, the
+- **About these numbers** (under the breakdown) explains today's dollars, saving and withdrawing, the
   baseline and the 4% rule in one place.
 - **The answer stays in view**: whenever the headline is scrolled away, a bar pinned to the bottom
   shows it; tap **See results** to jump back. Keyboard users get a **Skip to results** link first.
@@ -55,7 +55,7 @@ what it could pay out each month in retirement.
   shades the rest; a planned expense that borrows below zero is drawn below the axis, so you can see
   how deep it goes, and a dip that recovers is called out, not treated as running out.
 - **When the money runs out**, withdrawals stop at what was there (a later pension or other extra
-  refilling the account doesn't hide it): the page says "Short by $X",
+  refilling the account doesn't hide it): the page says how much a month went unpaid and for how long,
   counts only what was actually withdrawn, and names an expense if one caused it ("Runs out at
   5 yrs, when Extra 1 lands", with "An expense of $22,700 or less would make it last"). Plans that
   only save get a lever too ("Saving $100 more a month would add about $56,300").

@@ -278,8 +278,8 @@ editable), with a Today's $ / Future $ switch beside the final amount. The math 
 and the accounting still reconciles. Growth in today's dollars is labeled "Growth after inflation".
 
 **The No Green Shortfall Rule.** Once a withdrawal can't be paid, the money has run
-out: the hero says so in one Loss Red sentence ("Runs out 6y 3m into Retirement", "Short by $X"
-beneath), the chart marks it with the grey wash, and nothing about that plan's growth is tinted
+out: the hero says so in one Loss Red sentence ("Runs out 6y 3m into Retirement", then "About
+$1,750 a month unpaid for 16y 10m" beneath: per month, not one unpicturable lifetime lump), the chart marks it with the grey wash, and nothing about that plan's growth is tinted
 green. Only withdrawals run out. A saving plan that a planned expense leaves below zero ends in
 debt and is said like a dip: "Ends $31,678 below zero, after New house", with the Loss Red
 below-zero wash ("Below zero from here"). Any borrowing adds "after interest on the borrowed
@@ -416,8 +416,8 @@ Quiet and soft-edged. They read as part of the page until hovered.
   legend dot and table dot, and a dashed chart line.
 - A withdrawing season cut by the cap: "Lasts through Retire (cut to 25 yrs by the 100-year limit)".
 - Monthly or quarterly extras show at most 12 markers (other repeats 24); the key counts them all.
-- When withdrawals outrun the money, they stop at what was there: the hero says "Short by $X",
-  the table's balance cell shows $0 with a Loss Red "short $X" line, and nothing goes negative.
+- When withdrawals outrun the money, they stop at what was there: the hero says how much a month went unpaid and for how
+  long (the lifetime total stays in "How it adds up"), the table's balance cell shows $0 with a Loss Red "short $X" line, and nothing goes negative.
 - On wide screens the pinned result is a compact floating card at the bottom right, with the undo
   toast above it, inset to the results panel's inner edge (never over the plan). The toast hides on
   the next edit or a tap on the bar, since its message would be stale. On phones the bar uses a short
@@ -427,19 +427,28 @@ Quiet and soft-edged. They read as part of the page until hovered.
   "$63,111" with "you put in $70,000" beneath; table cells read "$53,111" with "of $60,000 put in".
   Paid in is the starting amount plus savings, the same as the table's column; extras get their own
   line ("plus $67,463 from extras"), as do planned expenses. Extras are typed in today's dollars and rise
-  with prices, like withdrawals, so an expense lever is one number; only a "Fixed amount" extra gets
-  today's worth in brackets.
+  with prices, like withdrawals, so an expense lever is one number; only an extra set to "Stays the same"
+  gets today's worth in brackets. Each extra offers the choice as two radios ("Rises with prices" /
+  "Stays the same"), not an opt-out checkbox. A plan that ends in debt shows no green growth, and its
+  third figure becomes "Owed at the end".
 - On phones (560px and below) the answer follows its label directly; the Today's $ / Future $
   switch moves below the lever, and the three figures become compact rows (label left, figure
   right, note beneath). The bar's run-out form names the season ("Runs out in Retirement").
   Season names longer than 24 characters are cut at a word with "…" in the headline, bar and
-  chart label. The Withdrawn note after a run-out says how much time it paid for ("paid for the
-  first 7 yrs of 25"); the shortfall is said once, in the sub-line.
-- The results column is pinned only while it fits the window; an open "About these numbers" that
-  makes it taller unpins it so its end stays reachable.
+  chart label. The Withdrawn note after a run-out says how much time it fully paid for ("fully paid
+  for the first 7 yrs of 25"); with several withdrawing seasons the note names the first one's monthly
+  amount ("$748/month in Early"); the shortfall is said once, in the sub-line.
+- The results column is pinned only while it fits the window. "About these numbers" lives in the
+  breakdown panel, not the pinned column, and on desktop the chart gives up height (320px down to
+  220px) so the column fits a laptop window; only past that does it unpin and scroll.
+- An open season card has Done at its head and again at its foot. The result bar shows only while
+  no part of the results is in view. The undo toast's "(3 to undo)" count is hidden from screen
+  readers; undoing a Save/Withdraw switch keeps that card open. A season the 100-year cap shortened
+  gets no "you could withdraw more" lever. Extra markers past a run-out are not drawn.
 - A season added after a withdrawing one starts as a plain 10-year saving season at $0 (not a copy).
 - Ticking Repeat says what it multiplies to ("now repeats every 1 yr: 30 payments, $600,000 in
-  total") and offers Undo. A time field under a year shown in years switches to months on render.
+  total") and offers Undo. It repeats until the end of the season it lands in (not the whole plan;
+  the last season runs to the end); the extras key says "each". A time field under a year shown in years switches to months on render.
 - The chart's season-name band is all or nothing: if any name will not fit, the band stays empty and
   the legend names them.
 

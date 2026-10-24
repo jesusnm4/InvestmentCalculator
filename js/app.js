@@ -291,7 +291,7 @@
 
   /* One marker per occurrence — a repeat contributes several. Skips extras that
      never land and zero amounts, which would mark the chart for nothing. */
-  function windfallMeta(projection) {
+  function windfallMeta(projection, ranOutAt) {
     var horizon = projection.totals.totalMonths;
     var out = [];
     state.windfalls.forEach(function (w, i) {
@@ -307,6 +307,8 @@
       var step = months.length > maxMarks ? Math.ceil(months.length / maxMarks) : 1;
       months.forEach(function (mth, k) {
         if (k % step && k !== months.length - 1) return;
+        // Past a run-out the money only passes through; markers along $0 in the wash are noise (the key counts them).
+        if (ranOutAt !== null && ranOutAt !== undefined && mth > ranOutAt) return;
         out.push({ name: w.name || ('Extra ' + (i + 1)), atMonth: mth, amount: viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth), shapeSlot: w.shapeSlot });
       });
     });
@@ -437,7 +439,9 @@
             '</div>' +
           '</div>' +
         '</details>' +
-        '<p class="warn-note" data-role="warn" hidden></p>';
+        '<p class="warn-note" data-role="warn" hidden></p>' +
+        // A tall open card gets a second way out at its foot, so a thumb need not travel back up.
+        '<button type="button" class="link-btn done-btn done-foot" data-action="collapse" aria-label="Done with season ' + n + '">Done</button>';
 
       var more = li.querySelector('[data-role="more"]');
       more.addEventListener('toggle', function () {
@@ -536,9 +540,11 @@
           '<label class="repeat-toggle">' +
             '<input type="checkbox" data-field="repeat"' + (repeats ? ' checked' : '') + '> Repeat' +
           '</label>' +
-          '<label class="repeat-toggle">' +
-            '<input type="checkbox" data-field="fixed"' + (w.fixed ? ' checked' : '') + '> Fixed amount (doesn\u2019t rise with prices)' +
-          '</label>' +
+        '</div>' +
+        // A choice, not an opt-out: does the amount keep pace with prices or stay as typed?
+        '<div class="extra-choice" role="radiogroup" aria-label="Amount, extra ' + (i + 1) + '">' +
+          '<label class="repeat-toggle"><input type="radio" name="fixed-' + i + '" data-field="fixed" value="no"' + (w.fixed ? '' : ' checked') + '> Rises with prices</label>' +
+          '<label class="repeat-toggle"><input type="radio" name="fixed-' + i + '" data-field="fixed" value="yes"' + (w.fixed ? ' checked' : '') + '> Stays the same</label>' +
         '</div>' +
         '<div class="repeat-fields"' + (repeats ? '' : ' hidden') + '>' +
           '<div class="field">' +
@@ -666,6 +672,12 @@
       var lastDraw = drawing[drawing.length - 1];
       var drawMonths = drawing.reduce(function (sum, pp) { return sum + pp.months; }, 0);
       var shortBy = t.totalShortfall + Math.max(0, -t.finalAmount);
+      /* A lifetime shortfall is a number nobody can picture; per month, over how long, is.
+         The total stays in "How it adds up" and the table. */
+      var shortMonths = projection.points.filter(function (pt) { return pt.short > 0; }).length;
+      var shortText = shortMonths && t.totalShortfall >= 1
+        ? 'About ' + Chart.money0.format(Math.round(t.totalShortfall / shortMonths / 10) * 10) + ' a month unpaid for ' + Chart.durationLabel(shortMonths)
+        : 'Short by ' + Chart.money0.format(shortBy);
       var through = 'Lasts through ' + shortName(seasonName(state.periods[lastDraw.index], lastDraw.index));
       // A withdrawing season the 100-year cap cut short does not get to say "lasts through" plainly.
       var trimmed = drawing.filter(function (pp) { return pp.truncated; })[0];
@@ -674,7 +686,7 @@
         : through;
       // One line: where it ends, then the frame (withdrawal years).
       el.finalSub.textContent = (depleted
-        ? 'Short by ' + Chart.money0.format(shortBy) + ' \u00b7 ' + planYear
+        ? shortText + ' \u00b7 ' + planYear
         : Chart.money0.format(t.finalAmount) + ' left at the end') +
         (!depleted ? ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals' : '');
       // The bar gets the short form, so it stays on one line on a phone.
@@ -734,6 +746,8 @@
     }
     // Ending below zero gets the dip's lever: the expense size that would keep it above zero.
     renderLever(depleted, drawdown, culprit, today, endsBelow ? culprit : dipCulprit);
+    // A season the 100-year cap cut short only "lasts" because it ends early: no "you could withdraw more".
+    if (drawdown && !depleted && trimmed) el.leverNote.hidden = true;
 
     /* Paid in counts money going in. A negative extra (a planned expense) is
        money out, so it is reported beside it rather than netted into it. In
@@ -776,7 +790,8 @@
     el.growthLabel.textContent = today ? 'Growth after inflation' : 'Total growth';
     el.growth.textContent = Chart.money0.format(t.totalGrowth);
     // Once the money has run out, "growth" mixes gains with a shrinking debt: no green.
-    el.growth.className = 'kpi-value ' + (depleted ? '' : t.totalGrowth > 0 ? 'up' : t.totalGrowth < 0 ? 'down' : '');
+    // Ending in debt is no more a win than running out: no green either way.
+    el.growth.className = 'kpi-value ' + (depleted || endsBelow ? '' : t.totalGrowth > 0 ? 'up' : t.totalGrowth < 0 ? 'down' : '');
     el.growthNote.textContent = t.lowestBalance < 0 && !depleted
       ? 'after interest on the borrowed amount'
       : depleted
@@ -790,19 +805,27 @@
       el.income.textContent = Chart.money0.format(t.totalWithdrawn);
       // With one withdrawing season, say what it is per month (today's dollars, constant).
       var outs = state.periods.map(function (p, i) { return Calc.isWithdrawing(p) ? i : -1; }).filter(function (i) { return i >= 0; });
-      var monthly = outs.length === 1 ? nominal.perPeriod[outs[0]] && nominal.perPeriod[outs[0]].firstWithdrawal : 0;
+      // Several withdrawing seasons: the first one's monthly amount, named, so there is always a per-month figure.
+      var firstOut = outs.filter(function (i) { return nominal.perPeriod[i] && nominal.perPeriod[i].firstWithdrawal > 0; })[0];
+      var monthly = firstOut !== undefined ? nominal.perPeriod[firstOut].firstWithdrawal : 0;
+      var inFirst = outs.length > 1 && firstOut !== undefined ? ' in ' + shortName(seasonName(state.periods[firstOut], firstOut)) : '';
       // In the money the page is in: today's (constant), or future dollars at the start, rising.
-      var startOf = outs.length === 1 ? nominal.perPeriod[outs[0]] : null;
+      var startOf = firstOut !== undefined ? nominal.perPeriod[firstOut] : null;
       // The shortfall is said once, in the sub-line; here, how much of the withdrawing time it paid for.
       var paidMonths = depleted ? drawing.reduce(function (sum, pp) {
         return sum + Math.max(0, Math.min(pp.endMonth, t.depletedAt) - pp.startMonth);
       }, 0) : 0;
       el.incomeNote.textContent = depleted
-        ? (paidMonths ? 'paid for the first ' + Chart.durationLabel(paidMonths) + ' of ' + Chart.durationLabel(drawMonthsAll) : 'paid for none of the withdrawals')
+        ? (paidMonths ? 'fully paid for the first ' + Chart.durationLabel(paidMonths) + ' of ' + Chart.durationLabel(drawMonthsAll) : 'none of it fully paid')
         : !(monthly > 0) ? 'taken out over the withdrawing seasons'
-        : today ? Chart.money0.format(monthly) + '/month in today\u2019s dollars'
+        : today ? Chart.money0.format(monthly) + '/month' + inFirst + ' in today\u2019s dollars'
         : Chart.money0.format(monthly * Calc.deflator(startOf.startMonth + 1, state.inflationPercent)) +
-          (Number(state.inflationPercent) > 0 ? '/month to start, rising with inflation' : '/month');
+          (Number(state.inflationPercent) > 0 ? '/month' + inFirst + ' to start, rising with inflation' : '/month' + inFirst);
+    } else if (endsBelow) {
+      // Ending in debt there is no income to show: say what is owed instead of a dead $0.
+      el.thirdLabel.textContent = 'Owed at the end';
+      el.income.textContent = Chart.money0.format(-t.finalAmount);
+      el.incomeNote.textContent = 'borrowed against the plan';
     } else {
       var income = t.totalMonths && t.finalAmount > 0 ? Calc.safeWithdrawal(t.finalAmount).perMonth : 0;
       el.thirdLabel.textContent = 'Monthly income';
@@ -856,12 +879,13 @@
           ' after ' + Chart.durationLabel(t.totalMonths) + ', of which ' + Chart.money0.format(t.totalGrowth) + ' is growth.' +
           (endsBelow ? ' It ends below zero, money borrowed against the plan.' : '');
     Chart.render(el.chart, projection, {
-      periods: periodMeta(), windfalls: windfallMeta(projection),
+      periods: periodMeta(), windfalls: windfallMeta(projection, depleted ? t.depletedAt : null),
       baseline: baseline, depletedAt: depleted ? t.depletedAt : null,
       depletedLabel: depleted ? 'Runs out \u00b7 ' + outWhen : null,
       belowZero: dipRanges(projection, endsBelow), belowZeroLabel: endsBelow ? 'Below zero from here'
         : dipOnly ? Chart.money0.format(-t.lowestBalance) + ' below zero' : null,
-      label: 'Projected balance. ' + summary
+      label: 'Projected balance. ' + summary,
+      height: chartHeight
     });
     lastChartWidth = el.chart.clientWidth;
     fitPin();
@@ -1182,7 +1206,7 @@
         at: months[0],
         html: '<span class="extra-item">' + Chart.shapeGlyph(w.shapeSlot) +
           escapeHtml(w.name || ('Extra ' + (i + 1))) +
-          '<span class="extra-meta">' + Chart.money0.format(amount) + ' &middot; ' + when + '</span>' +
+          '<span class="extra-meta">' + Chart.money0.format(amount) + (every && months.length > 1 ? ' each' : '') + ' &middot; ' + when + '</span>' +
           '</span>'
       };
     }).filter(Boolean)
@@ -1455,9 +1479,12 @@
     focusIn(el.periodList, index, '[data-flow="' + mode + '"]');
     offerUndo(note || (seasonName(p, index) + ': ' + (mode === 'save' ? 'saving' : mode === 'percent' ? 'withdrawing a %' : 'withdrawing a fixed amount')), function () {
       state.periods[index] = JSON.parse(before);
+      // The restored season is a new object: keep it the open card, so undo does not lose your place.
+      expanded = state.periods[index];
       save();
       renderPeriods();
       renderResults();
+      focusIn(el.periodList, index, '[data-flow]');
     });
   }
 
@@ -1482,11 +1509,28 @@
   var undoStack = [], toastTimer = null, typedSinceOffer = false;
   /* The results column is pinned only while it fits the window: an opened
      "About these numbers" would otherwise run off the bottom, unreachable. */
+  /* On a desktop the chart gives up height (down to 220px) so the column still
+     fits a laptop window and stays pinned; only past that does it scroll. */
+  var chartHeight = 320, fitting = false;
   function fitPin() {
     // Looked up here: the first render runs before this part of the file.
     var resultsPanel = document.getElementById('results');
     resultsPanel.classList.remove('unpinned');
-    if (resultsPanel.offsetHeight > window.innerHeight - 32) resultsPanel.classList.add('unpinned');
+    var room = window.innerHeight - 32;
+    if (!fitting && window.innerWidth > 900) {
+      var rest = resultsPanel.offsetHeight - chartHeight;
+      var want = Math.max(220, Math.min(320, Math.floor(room - rest)));
+      if (want !== chartHeight) {
+        chartHeight = want;
+        fitting = true;
+        renderResults();
+        fitting = false;
+        return;
+      }
+    } else if (!fitting && chartHeight !== 320) {
+      chartHeight = 320; fitting = true; renderResults(); fitting = false; return;
+    }
+    if (resultsPanel.offsetHeight > room) resultsPanel.classList.add('unpinned');
   }
   // `toggle` does not bubble, so listen in the capture phase for every disclosure in the column.
   document.getElementById('results').addEventListener('toggle', fitPin, true);
@@ -1515,7 +1559,14 @@
     var top = undoStack[undoStack.length - 1];
     syncUndoLink();
     if (!top) { hideToast(); return; }
-    el.toastText.textContent = top.text + (undoStack.length > 1 ? ' (' + undoStack.length + ' to undo)' : '');
+    // The count is for the eye; a screen reader hears just what happened.
+    el.toastText.textContent = top.text;
+    if (undoStack.length > 1) {
+      var count = document.createElement('span');
+      count.setAttribute('aria-hidden', 'true');
+      count.textContent = ' (' + undoStack.length + ' to undo)';
+      el.toastText.appendChild(count);
+    }
     el.toastUndo.hidden = false;
     el.toast.hidden = false;
     startToastTimer(UNDO_MS);
@@ -1585,7 +1636,17 @@
     if (field === 'repeat') {
       // The checkbox is a view of repeatEvery: 0 means "does not repeat".
       var everyInput = li.querySelector('[data-field="repeatEvery"]');
-      var wasEvery = w.repeatEvery;
+      var wasEvery = w.repeatEvery, wasUntil = w.repeatUntil;
+      // Repeating to the end of the whole plan is rarely meant: stop with the season it lands in.
+      if (input.checked && (w.repeatUntil === null || w.repeatUntil === undefined)) {
+        var home = Calc.project(state).perPeriod.filter(function (pp) { return w.atMonth > pp.startMonth && w.atMonth <= pp.endMonth; })[0];
+        if (home && home.index < state.periods.length - 1) {
+          w.repeatUntil = home.endMonth;
+          w.untilUnit = unitOf(null, home.endMonth);
+          var untilInput = li.querySelector('[data-field="repeatUntil"]');
+          if (untilInput) { untilInput.value = timeDisplay(home.endMonth, w.untilUnit); var us = untilInput.closest('.unit-field').querySelector('select'); if (us) us.value = w.untilUnit; }
+        }
+      }
       w.repeatEvery = input.checked
         ? Math.max(1, timeFromInput(everyInput.value, unitOf(w.everyUnit, 12)) || 12)
         : 0;
@@ -1598,13 +1659,14 @@
           ' payments' + (Number(w.amount) ? ', ' + Chart.money0.format(Number(w.amount) * times) + ' in total' : '')
         : '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d no longer repeats', function () {
         state.windfalls[wi].repeatEvery = wasEvery;
+        state.windfalls[wi].repeatUntil = wasUntil;
         save();
         renderWindfalls();
         renderResults();
       });
 
     } else if (field === 'fixed') {
-      w.fixed = input.checked;
+      w.fixed = input.value === 'yes';
     } else if (field === 'repeatEvery') {
       w.repeatEvery = Math.max(1, timeFromInput(input.value, unitOf(w.everyUnit, w.repeatEvery)));
     } else if (field === 'repeatUntil') {
@@ -1788,12 +1850,13 @@
   });
 
   /* Narrow screens stack the plan above the results; a bar keeps the final
-     amount in reach whenever the headline figure is scrolled out of view.
+     amount in reach whenever no part of the results is in view (no "See
+     results" while you are already looking at them).
      CSS decides whether the bar can show at all; this only says when. */
   if (typeof IntersectionObserver === 'function') {
     new IntersectionObserver(function (entries) {
       el.resultBar.hidden = entries[0].isIntersecting;
-    }).observe(el.hero);
+    }).observe(document.getElementById('results'));
   }
 
   // Re-render the chart on resize (width only — height is fixed, and reacting to
