@@ -419,7 +419,8 @@ Quiet and soft-edged. They read as part of the page until hovered.
   each one's own figure ("up to 10.8% in Early and 8.6% in Late"), never a percent of a percent.
 - Undo toasts say what the undo did when "Undone: <text>" would read backwards ("'Gift' lands once
   again"); a Save switch says "Retirement now saves $0 a month". Money is "today's dollars" everywhere.
-- After the foot Done or a Delete on touch, the row that keeps focus is scrolled into view. On first
+- After the foot Done or a Delete on touch, the row that keeps focus is scrolled instantly to the
+  middle of the screen (a smooth scroll is cancelled by the re-render; the top toast would cover it). On first
   load the desktop chart is sized so the whole results column fits above the fold (down to 220px).
 - Monthly or quarterly extras show at most 12 markers (other repeats 24); the key counts them all.
 - When withdrawals outrun the money, they stop at what was there: the hero says how much a month went unpaid and for how
@@ -447,6 +448,12 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - The results column is pinned only while it fits the window. "About these numbers" lives in the
   breakdown panel, not the pinned column, and on desktop the chart gives up height (320px down to
   220px) so the column fits a laptop window; only past that does it unpin and scroll.
+- "Copy link" is a quiet text action beside "Undo" and "Start from the example" in the plan's head;
+  it confirms in the toast ("Link copied… nothing is uploaded"), or, where the clipboard is off
+  limits, puts the link in the address bar and says so. Opening a link says "Opened a shared plan"
+  with Undo ("Back to your own plan").
+- The chart is a Tab stop (2px Ledger Blue focus ring, 4px offset): ← / → step the readout a year,
+  Shift a month, Home / End jump, Esc hides it; the readout is a polite live region.
 - An open season card has Done at its head and, at its foot, "Delete season" (Loss Red text link)
   on the left and Done on the right, so Delete is never the next Tab stop or a thumb-slip from Done.
   After a delete, focus lands on the next season's row (or "+ Add a season").

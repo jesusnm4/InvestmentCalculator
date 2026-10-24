@@ -513,6 +513,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .chart-block { margin: 0; }
 .chart-title { font-family: var(--font-figure); font-size: var(--text-title); font-weight: 600; margin-bottom: 8px; }
 .chart { position: relative; width: 100%; min-height: 320px; }
+.chart:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
 .chart-svg { display: block; max-width: 100%; height: auto; touch-action: pan-y; }
 .chart-empty {
   display: grid; place-items: center; height: 320px;

@@ -56,6 +56,7 @@
     kpiSumWrap:     document.getElementById('kpi-sum-wrap'),
     paidLabel:      document.getElementById('kpi-paid-label'),
     moneyNote:      document.getElementById('money-note'),
+    shareLink:      document.getElementById('share-link'),
     undoLink:       document.getElementById('undo-link')
   };
 
@@ -77,6 +78,37 @@
   var expanded = null;
 
   var state = load() || defaultState();
+
+  /* A shared link carries a whole plan in its #hash (nothing is uploaded: the
+     hash never reaches a server). Opening one replaces what is on screen, with
+     Undo to get your own plan back; the hash is then cleared so a reload does
+     not open it again. */
+  var PLAN_HASH = '#plan=';
+  function encodePlan() {
+    var json = JSON.stringify({ startingAmount: state.startingAmount, inflationPercent: state.inflationPercent,
+                                periods: state.periods, windfalls: state.windfalls });
+    return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function readSharedPlan() {
+    if (location.hash.indexOf(PLAN_HASH) !== 0) return null;
+    var code = location.hash.slice(PLAN_HASH.length).replace(/-/g, '+').replace(/_/g, '/');
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// in some browsers */ }
+    try {
+      while (code.length % 4) code += '=';
+      return sanitize(JSON.parse(decodeURIComponent(escape(atob(code)))));
+    } catch (e) { return null; }
+  }
+  var ownPlan = null;
+  var shared = readSharedPlan();
+  if (shared) {
+    ownPlan = state;
+    // The plan comes from the link; how you view it (money, baseline) stays yours, minus a baseline from another plan.
+    shared.view = state.view;
+    shared.baseline = null;
+    shared.baselineSeen = state.baselineSeen;
+    shared.isExample = false;
+    state = shared;
+  }
 
   // ---------------------------------------------------------------- state
 
@@ -238,10 +270,24 @@
     var raw;
     try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
     if (!raw) return null;
+    var parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { return null; }
+    return sanitize(parsed);
+  }
+
+  /* Re-validates a plan from storage or from a shared link: anything not
+     understood falls back or is dropped, so a hand-edited link can't break the page. */
+  function sanitize(parsed) {
     try {
-      var parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.periods)) return null;
+      // A link is typed by no one but could be edited by anyone: keep it to plan-sized plans.
+      parsed.periods = parsed.periods.filter(function (p) { return p && typeof p === 'object'; }).slice(0, 40);
+      parsed.startingAmount = Math.max(0, Number(parsed.startingAmount) || 0);
       parsed.periods.forEach(function (p) {
+        p.name = String(p.name === undefined || p.name === null ? '' : p.name).slice(0, 80);
+        p.months = Math.max(0, Math.floor(Number(p.months) || 0));
+        p.monthlyContribution = Number(p.monthlyContribution) || 0;
+        p.annualRatePercent = isFinite(Number(p.annualRatePercent)) ? Number(p.annualRatePercent) : 0;
         // Absent before extras could be anchored to a season.
         if (typeof p.id !== 'string' || !p.id) p.id = newPeriodId();
         // Absent before lengths could be typed in years.
@@ -259,7 +305,9 @@
       });
       // Absent in state saved before one-offs existed — default rather than reject.
       if (!Array.isArray(parsed.windfalls)) parsed.windfalls = [];
+      parsed.windfalls = parsed.windfalls.filter(function (w) { return w && typeof w === 'object'; }).slice(0, 40);
       parsed.windfalls.forEach(function (w) {
+        w.name = String(w.name === undefined || w.name === null ? '' : w.name).slice(0, 80);
         w.atMonth = Math.max(0, Math.floor(Number(w.atMonth) || 0));
         w.amount = Number(w.amount) || 0;
         // Absent before extras could repeat; 0 means "does not repeat".
@@ -1324,6 +1372,8 @@
       'can take the balance below zero for a while: that is money borrowed against the plan, and it costs interest.</p>' +
       '<p><strong>Baseline.</strong> Keep as baseline saves the plan as it is now and draws it as a dashed line, ' +
       'so you can see what each change does.</p>' +
+      '<p><strong>Sharing.</strong> Copy link puts the whole plan inside the link itself, so nothing is uploaded ' +
+      'or stored anywhere but your browser. Opening a shared link replaces the plan on screen, with Undo to get yours back.</p>' +
       '<p><strong>Monthly income and the ' + pct + '% rule.</strong> For a plan that only saves, monthly income is ' + pct +
       '% of the final amount in the first year, split across 12 months. It is a retirement rule of thumb ' +
       '(Bengen, 1994; the Trinity study, 1998): withdraw ' + pct + '% in the first year, then adjust that dollar ' +
@@ -1612,7 +1662,8 @@
     if (action === 'delete' && touch()) {
       var next = el.periodList.children[focusAt];
       // Focus without the browser's jump, then bring the row into view: you stay where you were.
-      if (next) { next.tabIndex = -1; next.focus({ preventScroll: true }); next.scrollIntoView({ block: 'nearest' }); }
+      // Instant (a smooth scroll is cancelled by the re-render) and centred, clear of the top toast.
+      if (next) { next.tabIndex = -1; next.focus({ preventScroll: true }); next.scrollIntoView({ block: 'center', behavior: 'instant' }); }
     } else if (focusAt >= 0) focusIn(el.periodList, focusAt, focusSel);
     else el.addPeriod.focus();
   });
@@ -1720,7 +1771,8 @@
     var row = li.querySelector('.card-summary');
     if (row) row.focus({ preventScroll: true });
     // A tall card just shrank to one row: bring that row back under the eye (and thumb).
-    li.scrollIntoView({ block: 'nearest' });
+    // Centred on touch, clear of the undo toast at the top of a phone screen.
+    li.scrollIntoView({ block: touch() ? 'center' : 'nearest', behavior: 'instant' });
   }
   el.periodList.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
@@ -1809,6 +1861,20 @@
     el.toast.hidden = true;
   }
   el.toastUndo.addEventListener('click', runUndo);
+
+  // Copy a link that opens this plan; where the clipboard is off limits, the address bar holds it instead.
+  el.shareLink.addEventListener('click', function () {
+    var url = location.href.split('#')[0] + PLAN_HASH + encodePlan();
+    function inAddressBar() {
+      try { history.replaceState(null, '', url); } catch (e) { /* ignore */ }
+      showNotice('The address bar now holds a link to this plan: copy it from there to share.');
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(function () {
+        showNotice('Link copied. Whoever opens it gets their own copy of this plan; nothing is uploaded.');
+      }, inAddressBar);
+    } else inAddressBar();
+  });
   el.undoLink.addEventListener('click', runUndo);
 
   el.windfallList.addEventListener('input', function (ev) {
@@ -2111,4 +2177,18 @@
   el.reset.hidden = !!state.isExample;
   repaintForTheme();
   announceReady = true;
+  if (ownPlan) {
+    save();
+    offerUndo('Opened a shared plan', function () {
+      state = ownPlan;
+      save(true);
+      el.startingAmount.value = formatMoneyInput(state.startingAmount);
+      syncViewControls();
+      renderPeriods();
+      renderWindfalls();
+      renderResults();
+    }, null, 'Back to your own plan');
+  }
+  // A link pasted into this same tab only changes the hash: open it like a fresh visit.
+  window.addEventListener('hashchange', function () { if (location.hash.indexOf(PLAN_HASH) === 0) location.reload(); });
 })();

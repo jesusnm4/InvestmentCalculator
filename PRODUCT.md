@@ -71,7 +71,8 @@ stretch of the curve, and the accounting never lets a lump sum masquerade as gro
   visitors see the "will it last?" question answered. Running out is anchored to the season ("Runs
   out 6y 3m into Retirement"); the owner chose not to ask for an age.
 - Comparing scenarios: "Keep as baseline" stores the current plan; a ghost line and a difference
-  show how later edits compare. One baseline at a time; shareable links are still undecided.
+  show how later edits compare. One baseline at a time. Shareable links (decided 2026-10-24): "Copy link" puts the whole
+  plan in the URL hash, so nothing is uploaded; opening one replaces the plan on screen, with Undo.
 - Math: monthly simulation, contribution at month end; negative rates allowed; 1200-month (100-year)
   cap; effective annual yield shown per period. Details in README.md and CLAUDE.md.
 - **Currency is USD only** with en-US formatting; no localization is planned.
@@ -82,8 +83,7 @@ stretch of the curve, and the accounting never lets a lump sum masquerade as gro
 - Return hint (owner-approved wording): "The S&P 500 has averaged about 10% a year before inflation
   since the 1920s (about 7% after); a mix with bonds usually earns less. Past returns don't
   guarantee future ones." The 2.5% default inflation rate is likewise an assumption, not advice.
-- Undecided: hosting target, whether to add a disclaimer, page metadata/sharing previews, and
-  shareable scenario links.
+- Undecided: hosting target, whether to add a disclaimer, and page metadata/sharing previews.
 
 ## Brand Commitments
 

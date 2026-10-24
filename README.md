@@ -74,6 +74,11 @@ what it could pay out each month in retirement.
 - **Paid in matches your maths.** In today's dollars it reads "Paid in, in today's money" with the sum
   you typed beneath ("you put in $70,000"). Like the table, it counts the starting amount and savings;
   extras (a pension, a gift) and planned expenses each get their own line. The breakdown stacks into one block per season.
+- **Copy link** (beside "Your plan") puts the whole plan inside a link to send to someone. The plan
+  lives in the part of the URL after `#`, which browsers never send to a server, so nothing is
+  uploaded. Opening a shared link replaces the plan on screen and offers Undo to get yours back.
+- **The chart works from the keyboard:** Tab to it, then ← / → step a year (Shift: a month),
+  Home / End jump to the ends, Esc hides the readout. Screen readers hear each step.
 - Everything auto-saves in your browser (`localStorage`). There are no accounts and nothing is
   sent anywhere.
 

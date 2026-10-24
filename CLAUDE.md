@@ -153,6 +153,10 @@ changes while the preference is `system`, via `Theme.onSystemChange`). `chart.js
 - Inputs are wired by **delegated listeners** on `#period-list` reading `data-field` / `data-action`
   attributes, with the period identified by `li.dataset.index`. Cards are built as HTML strings, so
   any user-supplied value must go through `escapeHtml` / `escapeAttr`.
+- **Shared links.** `encodePlan()` puts `{startingAmount, inflationPercent, periods, windfalls}` as
+  base64url JSON in `#plan=`; at startup `readSharedPlan()` decodes it through the same `sanitize()`
+  that `load()` uses (so any new persisted field must be validated there too), clears the hash, and
+  offers Undo back to the visitor's own plan. Keep link payloads free of view state and baselines.
 - Every mutation calls `save()` (writes `investment-projection-v1` to `localStorage`). All
   `localStorage` access is wrapped in try/catch for private-mode browsers — keep that.
 - `load()` re-validates persisted data (unknown `compounding` falls back to `monthly`, `colorSlot` is

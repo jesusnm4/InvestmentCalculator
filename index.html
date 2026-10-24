@@ -8,9 +8,9 @@
 <link rel="preload" href="fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!-- ?v= busts browser caches: bump it whenever CSS or JS changes (see CLAUDE.md). -->
-<link rel="stylesheet" href="styles.css?v=2026-10-24.14">
+<link rel="stylesheet" href="styles.css?v=2026-10-24.17">
 <!-- Blocking on purpose: stamps the theme before first paint. -->
-<script src="js/theme.js?v=2026-10-24.14"></script>
+<script src="js/theme.js?v=2026-10-24.17"></script>
 </head>
 <body>
 
@@ -46,6 +46,7 @@
       <h2 id="setup-h">Your plan</h2>
       <span class="panel-actions">
         <button id="undo-link" class="link-btn" type="button" hidden>Undo</button>
+        <button id="share-link" class="link-btn" type="button" title="Copy a link that opens this plan (nothing is uploaded)">Copy link</button>
         <button id="reset-btn" class="link-btn" type="button">Start from the example</button>
       </span>
     </div>
@@ -142,7 +143,9 @@
 
     <figure class="chart-block">
       <figcaption class="chart-title">Projected balance</figcaption>
-      <div id="chart" class="chart"></div>
+      <!-- Focusable: arrow keys walk the readout a year at a time (Shift: a month), Home/End jump to the ends. -->
+      <div id="chart" class="chart" tabindex="0" aria-describedby="chart-keys"></div>
+      <p class="sr-only" id="chart-keys">Use the left and right arrow keys to read the balance year by year.</p>
       <div id="legend" class="legend"></div>
       <div id="extras-legend" class="extras-legend" hidden></div>
     </figure>
@@ -185,8 +188,8 @@
 <!-- Announces the result after typing settles; visible results update live. -->
 <p class="sr-only" id="live-summary" aria-live="polite"></p>
 
-<script src="js/calc.js?v=2026-10-24.14"></script>
-<script src="js/chart.js?v=2026-10-24.14"></script>
-<script src="js/app.js?v=2026-10-24.14"></script>
+<script src="js/calc.js?v=2026-10-24.17"></script>
+<script src="js/chart.js?v=2026-10-24.17"></script>
+<script src="js/app.js?v=2026-10-24.17"></script>
 </body>
 </html>

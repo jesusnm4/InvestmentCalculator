@@ -429,7 +429,8 @@
     svg.push(labels.join(''));
     svg.push('</svg>');
 
-    container.innerHTML = svg.join('') + '<div class="chart-tooltip" hidden></div>';
+    // The readout is a polite live region, so stepping through it by keyboard is heard.
+    container.innerHTML = svg.join('') + '<div class="chart-tooltip" aria-live="polite" hidden></div>';
     var wfByMonth = {};
     for (var wj = 0; wj < wf.length; wj++) {
       var wjm = Math.max(0, Math.floor(Number(wf[wj].atMonth) || 0));
@@ -455,7 +456,12 @@
       var scale = rect.width ? ctx.width / rect.width : 1;
       var px = (ev.clientX - rect.left) * scale;
       var frac = (px - ctx.m.l) / ctx.plotW;
-      var month = Math.round(Math.min(1, Math.max(0, frac)) * ctx.maxMonth);
+      showAt(Math.round(Math.min(1, Math.max(0, frac)) * ctx.maxMonth));
+    }
+
+    // The readout for one month: shared by the pointer and the arrow keys.
+    function showAt(month) {
+      container.__month = month;
       var pt = ctx.points[month];
       if (!pt) return;
 
@@ -514,6 +520,27 @@
     }
     // A touch that turns into a page scroll cancels the pointer; drop the readout.
     target.addEventListener('pointercancel', leave);
+    container.__showAt = showAt;
+    container.__leave = leave;
+    // Keyboard: wired once per container (the svg inside is rebuilt on every render).
+    if (!container.__keys) {
+      container.__keys = true;
+      container.addEventListener('keydown', function (ev) {
+        var c = container.__chart;
+        if (!c || !container.__showAt) return;
+        var at = typeof container.__month === 'number' ? container.__month : -1;
+        var step = ev.shiftKey ? 1 : 12, next = null;
+        if (ev.key === 'ArrowRight') next = at < 0 ? 0 : at + step;
+        else if (ev.key === 'ArrowLeft') next = at < 0 ? c.maxMonth : at - step;
+        else if (ev.key === 'Home') next = 0;
+        else if (ev.key === 'End') next = c.maxMonth;
+        else if (ev.key === 'Escape') { container.__month = null; container.__leave(); return; }
+        if (next === null) return;
+        ev.preventDefault();
+        container.__showAt(Math.max(0, Math.min(c.maxMonth, next)));
+      });
+      container.addEventListener('blur', function () { container.__month = null; if (container.__leave) container.__leave(); });
+    }
   }
 
   global.Chart = {
