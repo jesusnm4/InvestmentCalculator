@@ -447,7 +447,12 @@ Quiet and soft-edged. They read as part of the page until hovered.
   gets no "you could withdraw more" lever. Extra markers past a run-out are not drawn.
 - A season added after a withdrawing one starts as a plain 10-year saving season at $0 (not a copy).
 - Ticking Repeat says what it multiplies to ("now repeats every 1 yr: 30 payments, $600,000 in
-  total") and offers Undo. It repeats until the end of the season it lands in (not the whole plan;
+  total") and offers Undo.
+- An extra's "At" is measured "From the plan start" or "From the start of <season>" (a select beside
+  the offset). Anchored, it keeps its place in that season when lengths or order change; offset 0 is
+  the season's first month, and the note says it in the season's terms ("Lands in the first month
+  of Retirement (20y 1m into the plan)"). Switching the anchor re-expresses the same month rather
+  than moving it. If the season is deleted, the extra keeps its last month, from the plan start. It repeats until the end of the season it lands in (not the whole plan;
   the last season runs to the end); the extras key says "each". A time field under a year shown in years switches to months on render.
 - The chart's season-name band is all or nothing: if any name will not fit, the band stays empty and
   the legend names them.

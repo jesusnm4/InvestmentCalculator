@@ -20,7 +20,9 @@ what it could pay out each month in retirement.
 - **Extra amounts** are lump sums on top of the monthly contributions, in today's dollars, so they
   rise with prices like withdrawals (a $12,000 pension keeps its value). Choose **Stays the same** for
   one that doesn't rise (plans saved before this keep their extras fixed). Use a negative amount for
-  a large planned expense, and tick **Repeat** to make one recur. A new extra starts at $0, and each
+  a large planned expense, and tick **Repeat** to make one recur (by default until the end of the
+  season it lands in). **At** can be measured from the plan start or from the start of a season
+  ("From the start of Retirement"), so a pension stays put when an earlier season changes length. A new extra starts at $0, and each
   one says which season it lands in and, when it repeats, how much it adds in total.
 - **Each season saves or withdraws:** **Save**, **Withdraw %** or **Withdraw $**. Withdrawals are
   in today's dollars and rise with inflation each year. **Withdraw %** (default 4%) is the classic 4%

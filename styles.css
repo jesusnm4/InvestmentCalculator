@@ -596,6 +596,10 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 /* One field per row: two side by side left the "At" digits hidden under its unit picker. */
 .windfall-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .windfall-grid .field { margin: 0; }
+.windfall-grid .wide { grid-column: 1 / -1; }
+/* "From the start of Retirement" beside its offset; stacked when the card is narrow. */
+.anchor-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
+@media (max-width: 420px) { .anchor-row { grid-template-columns: minmax(0, 1fr); } }
 .repeat-toggle {
   display: flex; align-items: center; gap: 7px;
   margin-top: 10px; font-size: var(--text-note); color: var(--ink-2); cursor: pointer;
@@ -605,7 +609,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .repeat-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 8px; }
 .repeat-fields[hidden] { display: none; }
 .extra-toggles, .extra-choice { display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.extra-choice { margin-top: 4px; }
+.extra-choice { margin-top: 0; }
 /* The second Done, at the foot of an open card. */
 .done-foot { display: block; margin: 12px 0 0 auto; }
 .period.collapsed .done-foot { display: none; }
@@ -746,6 +750,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .done-btn, #undo-link { min-width: 44px; }
   /* A checkbox or radio row is the whole label: a full-height tap target. */
   .repeat-toggle { display: inline-flex; align-items: center; min-height: 44px; }
+  .anchor-row select { min-height: 44px; }
   .link-btn { display: inline-flex; align-items: center; }
   /* 16px inputs stop iOS from zooming the page when a field takes focus. */
   input[type="number"], input[type="text"], select, .unit-select select { font-size: 16px; }
