@@ -412,6 +412,8 @@
              '" stroke="' + C.axis + '" stroke-width="1"/>');
 
     var xt = xTicks(maxMonth);
+    // The end tick beside a close round one ("40y45y" on a phone): keep the end, drop the round one.
+    if (xt.length > 1 && xt[xt.length - 1].end && x(xt[xt.length - 1].m) - x(xt[xt.length - 2].m) < 32) xt.splice(xt.length - 2, 1);
     for (var t = 0; t < xt.length; t++) {
       svg.push('<text x="' + x(xt[t].m).toFixed(2) + '" y="' + (m.t + plotH + 18) +
                '" text-anchor="' + (xt[t].end ? 'end' : 'middle') + '" fill="' + C.muted + '" font-size="12" ' +

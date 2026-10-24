@@ -753,7 +753,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   input[type="number"], input[type="text"], .unit-field input { min-height: 44px; }
   .period-head input[type="text"] { min-height: 44px; }
   .swatches { gap: 8px; }
-  .swatch { width: 34px; height: 34px; }
+  .swatch { width: 44px; height: 44px; }
   .segmented button { height: 44px; }
   .flow-row .segmented button { min-height: 44px; }
   .inflation input { min-height: 44px; }

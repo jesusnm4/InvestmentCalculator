@@ -298,7 +298,7 @@ A two-column grid. The setup column is `minmax(340px, 400px)` and the results co
 At 900px and below it collapses to a single column with 16px padding, setup first, and a result bar
 pins the final amount to the bottom of the screen whenever the headline figure is out of view (the
 layout pads 96px at the bottom to clear it). The summary row is three equal columns and stacks to
-one at 560px and below. On coarse pointers, icon buttons grow to 44px and swatches to 34px. At 420px and below, the
+one at 560px and below. On coarse pointers, icon buttons and swatches grow to 44px. At 420px and below, the
 two-column field grids inside cards stack to one column, so a unit picker never squeezes the digits. The
 breakdown table scrolls horizontally inside its wrapper rather than wrapping its numbers.
 
@@ -316,7 +316,7 @@ entirely in dark mode, where tone alone separates the layers.
 ### Shadow Vocabulary
 - **Panel lift** (`box-shadow: 0 1px 2px rgba(11,11,11,0.06), 0 8px 24px rgba(11,11,11,0.05)`): the
   setup and results panels and the chart tooltip. Light theme only.
-- **Pressed ring** (`box-shadow: 0 0 0 1px var(--ring)`): the selected segment of the theme toggle,
+- **Pressed ring** (`box-shadow: 0 0 0 1px var(--muted)`, plus weight 600; ~5:1 against the track): the selected segment of the theme toggle,
   and inset on swatches. Ring is 10% graphite (light) or 10% white (dark).
 
 ### Named Rules
@@ -414,7 +414,13 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - A season past the 100-year cap keeps its name and the reason, and hides its inputs (`.capped`).
 - A ninth season sharing an earlier hue gets a hollow timeline node (`.color-reused`), a hollow
   legend dot and table dot, and a dashed chart line.
-- A withdrawing season cut by the cap: "Lasts through Retire (cut to 25 yrs by the 100-year limit)".
+- A withdrawing season cut by the cap: the headline stays "Lasts through Retire"; the sub-line says
+  "Retire cut to 10 yrs by the 100-year limit". With two or three withdrawing seasons the lever names
+  each one's own figure ("up to 10.8% in Early and 8.6% in Late"), never a percent of a percent.
+- Undo toasts say what the undo did when "Undone: <text>" would read backwards ("'Gift' lands once
+  again"); a Save switch says "Retirement now saves $0 a month". Money is "today's dollars" everywhere.
+- After the foot Done or a Delete on touch, the row that keeps focus is scrolled into view. On first
+  load the desktop chart is sized so the whole results column fits above the fold (down to 220px).
 - Monthly or quarterly extras show at most 12 markers (other repeats 24); the key counts them all.
 - When withdrawals outrun the money, they stop at what was there: the hero says how much a month went unpaid and for how
   long (the lifetime total stays in "How it adds up"), the table's balance cell shows $0 with a Loss Red "short $X" line, and nothing goes negative.
@@ -462,9 +468,11 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - A season added after a withdrawing one starts as a plain 10-year saving season at $0 (not a copy).
 - Ticking Repeat says what it multiplies to ("now repeats every 1 yr: 30 payments, $600,000 in
   total") and offers Undo.
-- An extra's "At" is measured "From the start of <season>" (a select beside the offset). The first
-  season's entry is the plan-start clock under that season's name; "From the plan start" appears only
-  when there are no seasons. Anchored, it keeps its place in that season when lengths or order change; offset 0 is
+- An extra's "At" is labelled "At, counted from the start of" and its select lists plain season names
+  (never cut mid-word), beside the offset. The first season's entry is the plan-start clock under
+  that season's name. Rises with prices / Stays the same comes before Repeat (it belongs to the
+  amount, not to the fields Repeat reveals). Every field note is tied to its input with
+  `aria-describedby` (flow note, rate note, an extra's note). Anchored, it keeps its place in that season when lengths or order change; offset 0 is
   the season's first month, and the note says it in the season's terms ("Lands in the first month
   of Retirement (20y 1m into the plan)"). Until counts from the same season start ("every 1 yr until 10 yrs into
   Retirement"; a default repeat runs "until the end of" its season). Switching the anchor
