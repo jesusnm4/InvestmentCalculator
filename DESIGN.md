@@ -441,7 +441,21 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - The results column is pinned only while it fits the window. "About these numbers" lives in the
   breakdown panel, not the pinned column, and on desktop the chart gives up height (320px down to
   220px) so the column fits a laptop window; only past that does it unpin and scroll.
-- An open season card has Done at its head and again at its foot. The result bar shows only while
+- An open season card has Done at its head and, at its foot, "Delete season" (Loss Red text link)
+  on the left and Done on the right, so Delete is never the next Tab stop or a thumb-slip from Done.
+  After a delete, focus lands on the next season's row (or "+ Add a season").
+- After an undo the toast says "Undone: …" with no button; older entries stay on the Undo link and
+  Cmd/Ctrl+Z. An entry is dropped once its season is edited by hand, so undoing it can't discard
+  that edit. The Repeat toast and the extra's note share one count and total (`extraTally`).
+- Selected segments are marked by a Faded Pencil ring and weight 600 in both themes (the fill alone
+  is ~1.05:1); the in-card Save / Withdraw choice gets a 1.5px Ledger Blue ring.
+- Native selects in a card (anchor, compounding) are drawn like the unit picker (`.select-wrap`:
+  appearance none, the same chevron, 44px on touch).
+- A return below -50% or above 30% gets a Loss Red "is that a typo?" note; a plan with negative
+  growth gets no "save more" lever, and a starting-amount lever past $100M is left out. Lasting
+  with under 5% to spare says "It only just lasts". "Keep this instead" hides until something
+  changes. A season past the cap is one "Past the 100-year limit" row in the table. The x-axis gets
+  an end tick ("45y") when the last round tick falls short. The result bar shows only while
   no part of the results is in view. The undo toast's "(3 to undo)" count is hidden from screen
   readers; undoing a Save/Withdraw switch keeps that card open. A season the 100-year cap shortened
   gets no "you could withdraw more" lever. Extra markers past a run-out are not drawn.

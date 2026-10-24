@@ -148,6 +148,11 @@
         if (years / candidates[i] <= 8) { stepY = candidates[i]; break; }
       }
       for (y = 0; y * 12 <= maxMonth; y += stepY) ticks.push({ m: y * 12, label: y + 'y' });
+      // The end gets its own tick when the last round one falls well short of it (45 yrs, not just 40y).
+      var lastTick = ticks[ticks.length - 1].m;
+      if (maxMonth - lastTick >= stepY * 12 * 0.4) {
+        ticks.push({ m: maxMonth, label: Math.floor(maxMonth / 12) + 'y' + (maxMonth % 12 ? ' ' + (maxMonth % 12) + 'm' : ''), end: true });
+      }
     }
     return ticks;
   }
@@ -368,6 +373,8 @@
        deep it went, so the borrowed years are not invisible. */
     // Wash labels are drawn last, so no grid or season line runs through them.
     var labels = [];
+    // On a narrow chart the label drops clear of the top gridline and its tick.
+    var labelY = plotW < 520 ? 26 : 14;
     var below = opts.belowZero || [];
     for (var bz = 0; bz < below.length; bz++) {
       var bx0 = x(below[bz][0]), bx1 = x(below[bz][1]);
@@ -377,7 +384,7 @@
                '" stroke="' + C.bad + '" stroke-width="2" stroke-dasharray="2 3"/>');
       if (bz === 0 && opts.belowZeroLabel) {
         var lright = bx0 < m.l + plotW - 160;
-        labels.push('<text x="' + (lright ? bx0 + 6 : bx0 - 6).toFixed(2) + '" y="' + (m.t + 14) + '" text-anchor="' + (lright ? 'start' : 'end') +
+        labels.push('<text x="' + (lright ? bx0 + 6 : bx0 - 6).toFixed(2) + '" y="' + (m.t + labelY) + '" text-anchor="' + (lright ? 'start' : 'end') +
                  '" fill="' + C.bad + '" font-size="12" font-weight="600" stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
                  esc(opts.belowZeroLabel) + '</text>');
       }
@@ -394,7 +401,7 @@
                '" stroke="' + C.bad + '" stroke-width="1.5" stroke-dasharray="4 3"/>');
       // Label at the top of the plot, where the tooltip (which follows the curve near $0) will not cover it.
       var right = dx < m.l + plotW - 120;
-      labels.push('<text x="' + (right ? dx + 6 : dx - 6).toFixed(2) + '" y="' + (m.t + 14) +
+      labels.push('<text x="' + (right ? dx + 6 : dx - 6).toFixed(2) + '" y="' + (m.t + labelY) +
                '" text-anchor="' + (right ? 'start' : 'end') + '" fill="' + C.bad + '" font-size="12" font-weight="600"' +
                ' stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
                esc(opts.depletedLabel || 'Runs out \u00b7 ' + durationLabel(dep)) + '</text>');
@@ -407,7 +414,7 @@
     var xt = xTicks(maxMonth);
     for (var t = 0; t < xt.length; t++) {
       svg.push('<text x="' + x(xt[t].m).toFixed(2) + '" y="' + (m.t + plotH + 18) +
-               '" text-anchor="middle" fill="' + C.muted + '" font-size="12" ' +
+               '" text-anchor="' + (xt[t].end ? 'end' : 'middle') + '" fill="' + C.muted + '" font-size="12" ' +
                'style="font-variant-numeric:tabular-nums">' + esc(xt[t].label) + '</text>');
     }
 

@@ -248,10 +248,10 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 }
 @media (hover: hover) { .segmented button:hover { color: var(--ink); } }
 .segmented button[aria-pressed="true"] {
-  background: var(--field); color: var(--ink); box-shadow: 0 0 0 1px var(--ring);
+  /* Field and track sit close in both themes, so the chosen segment is marked by a
+     Faded Pencil ring (3:1+ against the track) and weight, not by its fill. */
+  background: var(--field); color: var(--ink); box-shadow: 0 0 0 1px var(--muted); font-weight: 600;
 }
-/* Dark: field and page sit close, so the chosen segment also gets a firmer ring and weight. */
-:root[data-theme="dark"] .segmented button[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--muted); font-weight: 600; }
 
 .hint, .empty-note { color: var(--muted); font-size: var(--text-note); margin: 4px 0 0; text-wrap: pretty; }
 .empty-note { padding: 18px; text-align: center; border: 1px dashed var(--line);
@@ -352,7 +352,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
    choice is marked with a Ledger Blue tint instead. */
 .flow-row .segmented button[aria-pressed="true"] {
   background: color-mix(in srgb, var(--accent) 14%, var(--field));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 1.5px var(--accent);
   color: var(--ink);
 }
 .flow-row .unit-field { flex: 1; min-width: 0; }
@@ -611,8 +611,20 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .extra-toggles, .extra-choice { display: flex; flex-wrap: wrap; gap: 4px 18px; }
 .extra-choice { margin-top: 0; }
 /* The second Done, at the foot of an open card. */
-.done-foot { display: block; margin: 12px 0 0 auto; }
-.period.collapsed .done-foot { display: none; }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; }
+.danger-link { color: var(--bad); text-decoration-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.period.collapsed .card-foot { display: none; }
+.rate-note { display: block; margin-top: 4px; color: var(--bad); }
+.rate-note[hidden] { display: none; }
+/* A native select drawn like the unit picker: same chevron, and it takes the field's height on touch. */
+.select-wrap { position: relative; display: block; }
+.select-wrap select { width: 100%; height: 100%; -webkit-appearance: none; appearance: none; padding-right: 30px; }
+.select-wrap::after {
+  content: ""; position: absolute; right: 12px; top: 50%; width: 5px; height: 5px;
+  margin-top: -4px; pointer-events: none; color: var(--muted);
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg);
+}
+.capped-row td { color: var(--muted); }
 /* Phones: a unit picker leaves too little room for digits in a half-width field. */
 @media (max-width: 420px) {
   .period-grid, .windfall-grid, .repeat-fields { grid-template-columns: minmax(0, 1fr); }
@@ -750,7 +762,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .done-btn, #undo-link { min-width: 44px; }
   /* A checkbox or radio row is the whole label: a full-height tap target. */
   .repeat-toggle { display: inline-flex; align-items: center; min-height: 44px; }
-  .anchor-row select { min-height: 44px; }
+  .anchor-row select, .select-wrap select { min-height: 44px; }
   .link-btn { display: inline-flex; align-items: center; }
   /* 16px inputs stop iOS from zooming the page when a field takes focus. */
   input[type="number"], input[type="text"], select, .unit-select select { font-size: 16px; }

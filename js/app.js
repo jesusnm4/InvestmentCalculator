@@ -409,7 +409,6 @@
           '<button type="button" class="icon-btn" data-action="down" title="Move down" aria-label="Move season ' + n + ' down"' + (i === state.periods.length - 1 ? ' disabled' : '') + '>' + ICON.down + '</button>' +
           // Inside the head so phones can put it on the same row as the buttons.
           '<p class="period-range" data-role="range"></p>' +
-          '<button type="button" class="icon-btn danger" data-action="delete" title="Delete season" aria-label="Delete season ' + n + '">' + ICON.close + '</button>' +
           // Closes the card back to its one-line row (Escape does the same).
           '<button type="button" class="link-btn done-btn" data-action="collapse" aria-expanded="true" aria-label="Done with season ' + n + '">Done</button>' +
         '</div>' +
@@ -424,6 +423,7 @@
             '<span class="pct"><span class="affix">%</span>' +
               '<input type="number" step="0.1" data-field="annualRatePercent" aria-label="Expected yearly return, season ' + n + '" value="' + escapeAttr(p.annualRatePercent) + '">' +
             '</span>' +
+            '<span class="field-note rate-note" data-role="rate-note" hidden></span>' +
             // Said once, on the first card, where the question first comes up.
           '</label>' +
           '<div class="field wide">' +
@@ -450,7 +450,7 @@
           '<div class="more-body">' +
             '<label class="field">' +
               '<span class="field-label">Compounding</span>' +
-              '<select data-field="compounding">' + compOptions + '</select>' +
+              '<span class="select-wrap"><select data-field="compounding">' + compOptions + '</select></span>' +
             '</label>' +
             '<p class="apy-note" data-role="apy"></p>' +
             '<div class="field">' +
@@ -460,8 +460,12 @@
           '</div>' +
         '</details>' +
         '<p class="warn-note" data-role="warn" hidden></p>' +
-        // A tall open card gets a second way out at its foot, so a thumb need not travel back up.
-        '<button type="button" class="link-btn done-btn done-foot" data-action="collapse" aria-label="Done with season ' + n + '">Done</button>';
+        /* The foot: Delete well away from Done (never the next Tab stop or a thumb-slip
+           from it), and a second Done so a thumb need not travel back up a tall card. */
+        '<div class="card-foot">' +
+          '<button type="button" class="link-btn danger-link" data-action="delete" aria-label="Delete season ' + n + '">Delete season</button>' +
+          '<button type="button" class="link-btn done-btn done-foot" data-action="collapse" aria-label="Done with season ' + n + '">Done</button>' +
+        '</div>';
 
       var more = li.querySelector('[data-role="more"]');
       more.addEventListener('toggle', function () {
@@ -499,6 +503,13 @@
 
   // Non-structural bits that change as you type.
   function refreshCardNotes(li, p) {
+    // A typo like -150% is accepted (downturns are real), but said out loud.
+    var rate = Number(p.annualRatePercent) || 0, rateNote = li.querySelector('[data-role="rate-note"]');
+    if (rateNote) {
+      rateNote.hidden = rate >= -50 && rate <= 30;
+      rateNote.textContent = rate < -50 ? 'A loss of more than half every year: is that a typo?'
+        : 'Far above what markets have returned over long stretches: is that a typo?';
+    }
     var months = Math.max(0, Math.floor(Number(p.months) || 0));
     // The note gives the other unit, so the conversion is always visible.
     li.querySelector('[data-role="months-note"]').textContent = !months ? ''
@@ -520,6 +531,15 @@
     li.querySelector('[data-role="sum-name"]').textContent = p.name || 'Untitled season';
     li.querySelector('[data-role="sum-meta"]').textContent =
       (months ? Chart.durationLabel(months) : 'no length') + ' \u00b7 ' + each + ' \u00b7 ' + (Number(p.annualRatePercent) || 0) + '% return';
+  }
+
+  // How many times an extra lands within the plan, and their sum in the page's money: one source for the note and the toast.
+  function extraTally(w, horizon) {
+    var months = Calc.windfallMonths(w, horizon).filter(function (mth) { return mth <= horizon; });
+    return {
+      count: months.length,
+      total: months.reduce(function (sum, mth) { return sum + viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth); }, 0)
+    };
   }
 
   // "the plan start" or "the start of <season>", for the At field's anchor.
@@ -566,7 +586,7 @@
             '<span class="field-label">At</span>' +
             // Measured from the plan start or from a season's start, so "when I retire" stays put.
             '<div class="anchor-row">' +
-              '<select data-field="anchor" aria-label="At, measured from, extra ' + (i + 1) + '">' + anchorOptions(w) + '</select>' +
+              '<span class="select-wrap"><select data-field="anchor" aria-label="At, measured from, extra ' + (i + 1) + '">' + anchorOptions(w) + '</select></span>' +
               timeField('atMonth', w.anchor ? w.anchorOffset : w.atMonth, unitOf(w.atUnit, w.anchor ? w.anchorOffset : w.atMonth), 'At, extra ' + (i + 1),
                 ' data-from="' + escapeAttr(w.anchor || '') + '"') +
             '</div>' +
@@ -578,7 +598,7 @@
           '</label>' +
         '</div>' +
         // A choice, not an opt-out: does the amount keep pace with prices or stay as typed?
-        '<div class="extra-choice" role="radiogroup" aria-label="Amount, extra ' + (i + 1) + '">' +
+        '<div class="extra-choice" role="radiogroup" aria-label="Amount over time, extra ' + (i + 1) + '">' +
           '<label class="repeat-toggle"><input type="radio" name="fixed-' + i + '" data-field="fixed" value="no"' + (w.fixed ? '' : ' checked') + '> Rises with prices</label>' +
           '<label class="repeat-toggle"><input type="radio" name="fixed-' + i + '" data-field="fixed" value="yes"' + (w.fixed ? ' checked' : '') + '> Stays the same</label>' +
         '</div>' +
@@ -645,7 +665,7 @@
       var rising = !w.fixed && amount && Number(state.inflationPercent) > 0;
       if (every && months.length > 1) {
         // The total in the page's money, the same sum the results use.
-        var total = months.reduce(function (sum, mth) { return sum + viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth); }, 0);
+        var total = extraTally(w, horizon).total;
         // Until, said in the same season's terms as At.
         var untilWords = w.repeatUntil === null ? '' : w.untilSeason && anchorIdx >= 0
           ? ' until the end of ' + shortName(seasonName(state.periods[anchorIdx], anchorIdx))
@@ -1041,7 +1061,8 @@
           : 'Withdrawing about ' + Math.ceil((1 - scale) * 100) + '% less in each withdrawing season would make it last');
       }
       var more = Calc.extraStartNeeded(state);
-      if (isFinite(more) && more > 0) {
+      // Past $100M it is not advice, just arithmetic on an impossible plan (a -150% return): leave it out.
+      if (isFinite(more) && more > 0 && more < 1e8) {
         var startMore = Chart.money0.format(Math.ceil(more / 1000) * 1000);
         parts.push(parts.length ? 'starting with ' + startMore + ' more would' : 'Starting with ' + startMore + ' more would make it last');
       }
@@ -1064,6 +1085,10 @@
             ? 'You could withdraw about ' + (Math.floor(scale * 10) / 10) + '\u00d7 as much in each withdrawing season' + leverExample(withdrawing[0], scale) + ' and it would still last.'
             : 'You could withdraw about ' + Math.floor((scale - 1) * 100) + '% more in each withdrawing season' + leverExample(withdrawing[0], scale) + ' and it would still last.';
     }
+    // Lasting with less than 5% to spare still deserves a sentence, not silence.
+    if (!text && drawdown && !depleted && scale !== null && scale >= 1 && scale <= 1.05) {
+      text = 'It only just lasts: there is little room to withdraw more.';
+    }
     // A dip that recovers: how small the expense would need to be to never go below zero.
     if (!text && dipCulprit >= 0) {
       var kd = Calc.extraScale(state, dipCulprit);
@@ -1080,7 +1105,8 @@
           bumped = Calc.inTodaysDollars(bumped, state.inflationPercent);
         }
         var gain = bumped.totals.finalAmount - base.totals.finalAmount;
-        if (gain >= 1) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
+        // A plan losing money gets no "save more" pitch: the return is the thing to look at.
+        if (gain >= 1 && base.totals.totalGrowth >= 0) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
       }
     }
     // The tag sits right after the $/month figure it qualifies, not at the end of the sentence.
@@ -1231,6 +1257,8 @@
       var thenEnd = thenOut === null ? baseline.length - 1 : thenOut;
       var gap = nowEnd - thenEnd;
       var same = gap === 0 && Math.round(projection.totals.finalAmount - then) === 0;
+      // Nothing changed since keeping it: there is nothing to keep instead.
+      if (same) el.keepBaseline.hidden = true;
       el.baselineDelta.innerHTML = same ? 'Kept. The dashed line is your kept plan; change anything to compare.'
         : gap === 0 ? 'Lasts as long as the baseline'
         // Longer, but still running out, is not a win to colour green.
@@ -1239,6 +1267,7 @@
       return;
     }
     var rounded = Math.round(projection.totals.finalAmount - then);
+    if (!rounded) el.keepBaseline.hidden = true;
     el.baselineDelta.className = 'baseline-delta';
     el.baselineDelta.innerHTML = rounded
       ? '<span class="' + (rounded > 0 ? 'up' : 'down') + '">' + (rounded > 0 ? '+' : '−') +
@@ -1383,6 +1412,11 @@
 
     rows = rows.concat(projection.perPeriod.map(function (pp, i) {
       var p = state.periods[i];
+      // Past the 100-year cap a season has no numbers: one honest cell, not a row of zeros.
+      if (!pp.months && pp.truncated) {
+        return row('capped-row', [{ html: escapeHtml(seasonName(p, i)) }, { html: 'Past the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit' }]
+          .concat(cols.slice(2).map(function () { return { html: '&mdash;' }; })));
+      }
       return row('', [
         { html: '<span class="swatch-dot' + (periodMeta()[i].reused ? ' hollow' : '') + '" style="background:' + Chart.colorFor(p.colorSlot) +
             ';color:' + Chart.colorFor(p.colorSlot) + '"></span>' + escapeHtml(seasonName(p, i)) },
@@ -1461,6 +1495,7 @@
     var li = ev.target.closest('.period');
     var p = state.periods[Number(li.dataset.index)];
     var field = input.dataset.field;
+    dropStale(p);
 
     if (field === 'name' || field === 'compounding') {
       p[field] = input.value;
@@ -1528,8 +1563,11 @@
     if (action === 'delete') {
       var removed = state.periods.splice(index, 1)[0];
       focusAt = Math.min(index, state.periods.length - 1);
+      // Every card is collapsed after a delete: focus lands on the next one's row, not a hidden field.
+      focusSel = '.card-summary';
       offerUndo('\u201c' + seasonName(removed, index) + '\u201d deleted', function () {
         state.periods.splice(index, 0, removed);
+        expanded = removed;
         save();
         renderPeriods();
         renderResults();
@@ -1598,7 +1636,7 @@
       renderPeriods();
       renderResults();
       focusIn(el.periodList, index, '[data-flow]');
-    });
+    }, p);
   }
 
   function touch() {
@@ -1662,8 +1700,10 @@
     if (li && !li.classList.contains('collapsed')) { ev.preventDefault(); collapseCard(li); }
   });
 
-  function offerUndo(text, restore) {
-    undoStack.push({ text: text, restore: restore });
+  /* `ref` is the season an entry would rewrite: once that season is edited by
+     hand, undoing the older entry would silently throw the edit away, so it goes. */
+  function offerUndo(text, restore, ref) {
+    undoStack.push({ text: text, restore: restore, ref: ref || null });
     if (undoStack.length > UNDO_DEPTH) undoStack.shift();
     typedSinceOffer = false;
     showTopUndo();
@@ -1701,11 +1741,20 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(hideToast, ms);
   }
+  function dropStale(ref) {
+    var before = undoStack.length;
+    undoStack = undoStack.filter(function (e) { return e.ref !== ref; });
+    if (undoStack.length !== before) syncUndoLink();
+  }
+  /* After an undo the toast says what was undone, with no button: re-offering an
+     older entry there would describe something you are no longer looking at.
+     The rest of the history stays on the Undo link and Cmd/Ctrl+Z. */
   function runUndo() {
     var top = undoStack.pop();
     if (!top) return;
     top.restore();
-    showTopUndo();
+    syncUndoLink();
+    showNotice('Undone: ' + top.text.charAt(0).toLowerCase() + top.text.slice(1));
   }
   // The offer waits while you are reading it or about to press it.
   el.toast.addEventListener('mouseenter', function () { clearTimeout(toastTimer); });
@@ -1757,12 +1806,13 @@
         ? Math.max(1, timeFromInput(everyInput.value, unitOf(w.everyUnit, 12)) || 12)
         : 0;
       li.querySelector('.repeat-fields').hidden = !input.checked;
-      // Repeating multiplies the extra; say by how much, and offer the way back.
-      var times = Calc.windfallMonths(w, Calc.horizonMonths(state.periods)).length;
+      // Repeating multiplies the extra; say by how much (the same count and sum as its note), and offer the way back.
+      syncAnchors();
+      var tally = extraTally(w, Calc.project(state).totals.totalMonths);
       var wi = Number(li.dataset.index);
       offerUndo(input.checked
-        ? '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d now repeats every ' + Chart.durationLabel(w.repeatEvery) + ': ' + times +
-          ' payments' + (Number(w.amount) ? ', ' + Chart.money0.format(Number(w.amount) * times) + ' in total' : '')
+        ? '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d now repeats every ' + Chart.durationLabel(w.repeatEvery) + ': ' + tally.count +
+          ' payments' + (Number(w.amount) ? ', ' + Chart.money0.format(tally.total) + ' in total' : '')
         : '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d no longer repeats', function () {
         state.windfalls[wi].repeatEvery = wasEvery;
         state.windfalls[wi].repeatUntil = wasUntil;
