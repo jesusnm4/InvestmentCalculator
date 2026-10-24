@@ -40,6 +40,10 @@
     toastUndo:      document.getElementById('toast-undo'),
     liveSummary:    document.getElementById('live-summary'),
     exampleNote:    document.getElementById('example-note'),
+    sharedNote:     document.getElementById('shared-note'),
+    sharedNoteText: document.getElementById('shared-note-text'),
+    sharedBack:     document.getElementById('shared-back'),
+    sharedForget:   document.getElementById('shared-forget'),
     finalLabel:     document.getElementById('final-label'),
     moneyMode:      document.getElementById('money-mode'),
     inflation:      document.getElementById('inflation'),
@@ -80,9 +84,15 @@
   var state = load() || defaultState();
 
   /* A shared link carries a whole plan in its #hash (nothing is uploaded: the
-     hash never reaches a server). Opening one replaces what is on screen, with
-     Undo to get your own plan back; the hash is then cleared so a reload does
-     not open it again. */
+     hash never reaches a server). Opening one shows it without saving anything:
+     your own plan stays in storage until you edit the shared one. The first edit
+     makes it yours, keeps your old plan aside (OWN_KEY), and clears the hash so a
+     reload shows your edits; "Back to your own plan" restores it either way. */
+  var OWN_KEY = STORAGE_KEY + '-own';
+  function clearPlanHash() {
+    if (location.hash.indexOf(PLAN_HASH) !== 0) return;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// in some browsers */ }
+  }
   var PLAN_HASH = '#plan=';
   function encodePlan() {
     var json = JSON.stringify({ startingAmount: state.startingAmount, inflationPercent: state.inflationPercent,
@@ -92,16 +102,16 @@
   function readSharedPlan() {
     if (location.hash.indexOf(PLAN_HASH) !== 0) return null;
     var code = location.hash.slice(PLAN_HASH.length).replace(/-/g, '+').replace(/_/g, '/');
-    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// in some browsers */ }
     try {
       while (code.length % 4) code += '=';
       return sanitize(JSON.parse(decodeURIComponent(escape(atob(code)))));
     } catch (e) { return null; }
   }
-  var ownPlan = null;
+  var ownPlan = null, sharedMode = false;
   var shared = readSharedPlan();
   if (shared) {
     ownPlan = state;
+    sharedMode = true;
     // The plan comes from the link; how you view it (money, baseline) stays yours, minus a baseline from another plan.
     shared.view = state.view;
     shared.baseline = null;
@@ -260,10 +270,40 @@
   function save(keepExample) {
     // Anchored extras are stored with the month they land on now, not the one before this edit.
     syncAnchors();
+    if (sharedMode) {
+      // Just looking (a view change): nothing is written, so your own saved plan is untouched.
+      if (keepExample) { syncSharedNote(); return; }
+      // The first real edit makes the shared plan yours; your old one is kept aside (the oldest, if several).
+      try { if (!localStorage.getItem(OWN_KEY)) localStorage.setItem(OWN_KEY, JSON.stringify(ownPlan)); } catch (e) { /* private mode */ }
+      sharedMode = false;
+      clearPlanHash();
+    }
     if (!keepExample) state.isExample = false;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
     el.exampleNote.hidden = !state.isExample;
     el.reset.hidden = !!state.isExample;
+    syncSharedNote();
+  }
+
+  function keptAside() {
+    try { return localStorage.getItem(OWN_KEY); } catch (e) { return null; }
+  }
+  // The persistent line in the plan's head while a shared plan is on screen or your own is kept aside.
+  function syncSharedNote() {
+    var aside = keptAside();
+    el.sharedNote.hidden = !sharedMode && !aside;
+    el.sharedNoteText.textContent = sharedMode
+      ? 'You\u2019re looking at a shared plan. Your own plan is untouched unless you edit this one.'
+      : 'This plan came from a shared link. Your own is kept aside.';
+    el.sharedForget.hidden = sharedMode || !aside;
+  }
+  function showPlan(next) {
+    state = next;
+    el.startingAmount.value = formatMoneyInput(state.startingAmount);
+    syncViewControls();
+    renderPeriods();
+    renderWindfalls();
+    renderResults();
   }
 
   function load() {
@@ -1373,7 +1413,8 @@
       '<p><strong>Baseline.</strong> Keep as baseline saves the plan as it is now and draws it as a dashed line, ' +
       'so you can see what each change does.</p>' +
       '<p><strong>Sharing.</strong> Copy link puts the whole plan inside the link itself, so nothing is uploaded ' +
-      'or stored anywhere but your browser. Opening a shared link replaces the plan on screen, with Undo to get yours back.</p>' +
+      'or stored anywhere but your browser. Opening a shared link shows that plan without saving it; your own plan stays put unless you edit the shared one, ' +
+      'and is kept aside even then, with Back to your own plan at the top.</p>' +
       '<p><strong>Monthly income and the ' + pct + '% rule.</strong> For a plan that only saves, monthly income is ' + pct +
       '% of the final amount in the first year, split across 12 months. It is a retirement rule of thumb ' +
       '(Bengen, 1994; the Trinity study, 1998): withdraw ' + pct + '% in the first year, then adjust that dollar ' +
@@ -2177,18 +2218,27 @@
   el.reset.hidden = !!state.isExample;
   repaintForTheme();
   announceReady = true;
-  if (ownPlan) {
-    save();
-    offerUndo('Opened a shared plan', function () {
-      state = ownPlan;
-      save(true);
-      el.startingAmount.value = formatMoneyInput(state.startingAmount);
-      syncViewControls();
-      renderPeriods();
-      renderWindfalls();
-      renderResults();
-    }, null, 'Back to your own plan');
-  }
+  syncSharedNote();
+  el.sharedBack.addEventListener('click', function () {
+    if (sharedMode) {
+      // Nothing was saved while looking: your plan is still in storage, and in memory.
+      sharedMode = false;
+      clearPlanHash();
+      showPlan(ownPlan);
+    } else {
+      var aside = sanitize((function () { try { return JSON.parse(keptAside()); } catch (e) { return null; } })());
+      try { localStorage.removeItem(OWN_KEY); } catch (e) { /* private mode */ }
+      if (aside) { showPlan(aside); save(true); }
+    }
+    syncSharedNote();
+    showNotice('Back to your own plan');
+    el.reset.focus();
+  });
+  el.sharedForget.addEventListener('click', function () {
+    try { localStorage.removeItem(OWN_KEY); } catch (e) { /* private mode */ }
+    syncSharedNote();
+    showNotice('Your old plan is gone; this one is yours.');
+  });
   // A link pasted into this same tab only changes the hash: open it like a fresh visit.
   window.addEventListener('hashchange', function () { if (location.hash.indexOf(PLAN_HASH) === 0) location.reload(); });
 })();

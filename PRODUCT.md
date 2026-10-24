@@ -72,7 +72,7 @@ stretch of the curve, and the accounting never lets a lump sum masquerade as gro
   out 6y 3m into Retirement"); the owner chose not to ask for an age.
 - Comparing scenarios: "Keep as baseline" stores the current plan; a ghost line and a difference
   show how later edits compare. One baseline at a time. Shareable links (decided 2026-10-24): "Copy link" puts the whole
-  plan in the URL hash, so nothing is uploaded; opening one replaces the plan on screen, with Undo.
+  plan in the URL hash, so nothing is uploaded; opening one never overwrites your saved plan (it is kept aside if you edit the shared one).
 - Math: monthly simulation, contribution at month end; negative rates allowed; 1200-month (100-year)
   cap; effective annual yield shown per period. Details in README.md and CLAUDE.md.
 - **Currency is USD only** with en-US formatting; no localization is planned.

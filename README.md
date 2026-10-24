@@ -76,7 +76,9 @@ what it could pay out each month in retirement.
   extras (a pension, a gift) and planned expenses each get their own line. The breakdown stacks into one block per season.
 - **Copy link** (beside "Your plan") puts the whole plan inside a link to send to someone. The plan
   lives in the part of the URL after `#`, which browsers never send to a server, so nothing is
-  uploaded. Opening a shared link replaces the plan on screen and offers Undo to get yours back.
+  uploaded. Opening a shared link shows that plan without saving anything: your own stays put unless you
+  edit the shared one, and even then it is kept aside, with **Back to your own plan** in the plan's
+  head.
 - **The chart works from the keyboard:** Tab to it, then ← / → step a year (Shift: a month),
   Home / End jump to the ends, Esc hides the readout. Screen readers hear each step.
 - Everything auto-saves in your browser (`localStorage`). There are no accounts and nothing is

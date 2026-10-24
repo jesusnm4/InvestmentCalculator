@@ -450,8 +450,10 @@ Quiet and soft-edged. They read as part of the page until hovered.
   220px) so the column fits a laptop window; only past that does it unpin and scroll.
 - "Copy link" is a quiet text action beside "Undo" and "Start from the example" in the plan's head;
   it confirms in the toast ("Link copied… nothing is uploaded"), or, where the clipboard is off
-  limits, puts the link in the address bar and says so. Opening a link says "Opened a shared plan"
-  with Undo ("Back to your own plan").
+  limits, puts the link in the address bar and says so. A shared plan is shown without being
+  saved; a persistent line in the plan's head says so, with "Back to your own plan". The first edit
+  saves it and keeps your old plan aside (`-own` key), with "Back to your own plan" / "Forget my old
+  plan" until you choose.
 - The chart is a Tab stop (2px Ledger Blue focus ring, 4px offset): ← / → step the readout a year,
   Shift a month, Home / End jump, Esc hides it; the readout is a polite live region.
 - An open season card has Done at its head and, at its foot, "Delete season" (Loss Red text link)

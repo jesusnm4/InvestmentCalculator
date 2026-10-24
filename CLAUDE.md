@@ -155,8 +155,13 @@ changes while the preference is `system`, via `Theme.onSystemChange`). `chart.js
   any user-supplied value must go through `escapeHtml` / `escapeAttr`.
 - **Shared links.** `encodePlan()` puts `{startingAmount, inflationPercent, periods, windfalls}` as
   base64url JSON in `#plan=`; at startup `readSharedPlan()` decodes it through the same `sanitize()`
-  that `load()` uses (so any new persisted field must be validated there too), clears the hash, and
-  offers Undo back to the visitor's own plan. Keep link payloads free of view state and baselines.
+  that `load()` uses (so any new persisted field must be validated there too). While `sharedMode`,
+  `save()` writes nothing for view changes; the first plan edit copies the visitor's own plan to
+  `investment-projection-v1-own`, clears the hash and saves. "Back to your own plan" restores from
+  memory or that key. Keep link payloads free of view state and baselines.
+- **Before every commit:** `.venv/bin/python -I tests/e2e.py` (regression suite: CSS braces, cache
+  versions, math, styled/pinned desktop, phone targets, canonical answers, undo/delete/focus, repeat
+  totals, anchoring, sharing, keyboard chart). A bug fix starts as a failing check there.
 - Every mutation calls `save()` (writes `investment-projection-v1` to `localStorage`). All
   `localStorage` access is wrapped in try/catch for private-mode browsers — keep that.
 - `load()` re-validates persisted data (unknown `compounding` falls back to `monthly`, `colorSlot` is
