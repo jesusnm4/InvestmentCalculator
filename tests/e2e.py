@@ -771,6 +771,73 @@ def toasts_speak_from_a_standing_live_region(env):
     s.close()
 
 
+@check
+def debt_then_runout_keeps_the_debt_in_sight(env):
+    # An expense sinks the plan, then withdrawals go unpaid: the debt stays on the chart and the expense stays named.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    # $600 a month lasts without the expense, so the expense is the lever.
+    pg = s.open(plan([season('Saving', 240, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=600, slot=2)],
+                     [extra('House', 12, -150000)]))
+    head = s.text('#final-amount')
+    expect(head.startswith('Runs out') and 'after House' in head, 'culprit lost: %r' % head)
+    expect(s.text('#kpi-third-label') == 'Owed at the end', 'third figure: %s' % s.text('#kpi-third-label'))
+    expect('while there was money' not in s.text('#kpi-growth-note'), 'growth note: %r' % s.text('#kpi-growth-note'))
+    expect((s.text('#lever-note') or '').startswith('An expense'), 'lever: %r' % s.text('#lever-note'))
+    low = pg.evaluate("Math.min(...[...document.querySelectorAll('.chart-svg path')].map(p => p.getAttribute('d') || '')"
+                      ".flatMap(d => (d.match(/[-\\d.]+/g) || []).filter((_, i) => i % 2).map(Number)))")
+    zero = pg.evaluate("[...document.querySelectorAll('.chart-svg text')].find(t => t.textContent === '$0').getAttribute('y')")
+    ticks = pg.evaluate("[...document.querySelectorAll('.chart-svg text')].map(t => t.textContent).filter(t => /^[−-]\\$/.test(t)).length")
+    expect(ticks > 0, 'chart axis has no negative ticks: the debt is hidden (lowest y %s, $0 at %s)' % (low, zero))
+    drawn = pg.evaluate("!!document.querySelector('.chart-svg path[stroke=\"' + Chart.colorFor(2) + '\"]')")
+    expect(drawn, 'Retirement, all of it after the run-out, is not drawn though it carries the debt')
+    tip = pg.evaluate("(() => { const c = document.getElementById('chart'); c.__showAt(c.__chart.maxMonth); return document.querySelector('.tip-value').textContent; })()")
+    expect(tip.startswith('\u2212') or tip.startswith('-'), 'readout at the end hides the debt: %r' % tip)
+    s.close()
+
+
+@check
+def fully_paid_counts_only_paid_months(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open(plan([season('Saving', 12, rate=4), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)], start=0))
+    expect(s.text('#kpi-income-note') == 'never fully paid', 'nothing paid: %r' % s.text('#kpi-income-note'))
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)]))
+    note = s.text('#kpi-income-note')
+    out, start = pg.evaluate("(() => { const p = Calc.project(JSON.parse(localStorage.getItem('%s'))); return [p.totals.depletedAt, p.perPeriod[1].startMonth]; })()" % KEY)
+    expect(note.startswith('fully paid for the first ' + pg.evaluate('m => Chart.durationLabel(m)', out - 1 - start)),
+           'paid months should stop before the first short month (%d): %r' % (out, note))
+    s.close()
+
+
+@check
+def plan_holds_at_most_40_of_each(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('S%d' % i, 12) for i in range(40)], [extra('E%d' % i, 1, 100) for i in range(40)]))
+    pg.click('#add-windfall')
+    pg.click('#add-period')
+    st = s.stored()
+    expect(len(st['windfalls']) == 40 and len(st['periods']) == 40, 'past 40: %d extras, %d seasons' % (len(st['windfalls']), len(st['periods'])))
+    expect('40' in (s.text('#toast-text') or ''), 'no notice at the limit: %r' % s.text('#toast-text'))
+    s.close()
+
+
+@check
+def phone_header_fits_with_undo(env):
+    bad = []
+    for w in (320, 360, 375, 390):
+        s = Session(env['webkit'], env['base'], viewport={'width': w, 'height': 800}, is_mobile=True, has_touch=True)
+        pg = s.open()
+        pg.tap('#add-windfall')
+        pg.wait_for_timeout(100)
+        m = pg.evaluate("""(() => { const p = document.querySelector('.panel-head').closest('section, .panel') || document.querySelector('.panel-head').parentElement;
+            const pr = p.getBoundingClientRect(); const over = [...document.querySelectorAll('.panel-actions > *')].filter(e => e.offsetParent)
+              .map(e => e.getBoundingClientRect()).some(r => r.right > pr.right + 0.5);
+            return { scroll: document.documentElement.scrollWidth - innerWidth, over, undo: !document.getElementById('undo-link').hidden }; })()""")
+        if m['scroll'] > 0 or m['over'] or not m['undo']:
+            bad.append((w, m))
+        s.close()
+    expect(not bad, 'header overflows: %s' % bad)
+
+
 # ---------------------------------------------------------------- run
 
 def main():

@@ -114,9 +114,10 @@ body {
   .masthead { padding: 20px 16px 0; }
 }
 
-.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.panel-head h2 { margin: 0; }
-.panel-actions { display: flex; gap: 14px; align-items: baseline; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 16px; }
+.panel-head h2 { margin: 0; white-space: nowrap; }
+/* Undo joining Copy link and the reset button outgrows a phone's row: the actions wrap, never overflow. */
+.panel-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 14px; align-items: baseline; }
 
 /* Visible only when focused: the first Tab stop jumps to the results. */
 .skip-link {

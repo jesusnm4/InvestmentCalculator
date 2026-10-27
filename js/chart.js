@@ -197,7 +197,8 @@
     var dep = (opts.depletedAt === null || opts.depletedAt === undefined) ? null : opts.depletedAt;
     /* Withdrawals never go below zero (they stop at what is there), so a negative
        balance is a planned expense's debt: plotted, so the chart shows how deep it goes. */
-    function val(k) { return dep !== null && k >= dep ? 0 : points[k].balance; }
+    // After a run-out the line rests at $0, except debt a planned expense already ran up: that stays plotted.
+    function val(k) { return dep !== null && k >= dep ? Math.min(0, points[k].balance) : points[k].balance; }
     var baseline = opts.baseline ? opts.baseline.map(function (b) { return Math.max(0, b); }) : null;
 
     // --- y domain, snapped to whole ticks ---
@@ -265,11 +266,13 @@
     // --- area + line, one segment per period ---
     var segs = projection.perPeriod;
     var lineParts = [];
+    var debtAfter = false;
+    for (var dk = dep === null ? points.length : dep; dk < points.length; dk++) if (points[dk].balance < 0) { debtAfter = true; break; }
     for (var s = 0; s < segs.length; s++) {
       var pp = segs[s];
       if (pp.months <= 0) continue;
-      // Seasons drawn only up to the month the money runs out.
-      var segEnd = dep !== null ? Math.min(pp.endMonth, dep) : pp.endMonth;
+      // Seasons drawn only up to the month the money runs out, unless a debt is still running there.
+      var segEnd = dep !== null && !debtAfter ? Math.min(pp.endMonth, dep) : pp.endMonth;
       var color = colorFor((periods[pp.index] || {}).colorSlot);
       // A season wholly after the run-out still shows where it sits: a faint line at $0.
       if (segEnd <= pp.startMonth) {
@@ -477,7 +480,9 @@
       if (!pt) return;
 
       var ranOut = ctx.dep !== null && month >= ctx.dep;
-      var cx = ctx.x(month), cy = ctx.y(ranOut ? 0 : pt.balance);
+      // After a run-out the readout rests at $0, or at the debt an expense left.
+      var shown = ranOut ? Math.min(0, pt.balance) : pt.balance;
+      var cx = ctx.x(month), cy = ctx.y(shown);
       var period = pt.periodIndex >= 0 ? ctx.periods[pt.periodIndex] : null;
       var color = period ? colorFor(period.colorSlot) : ink().muted;
 
@@ -487,7 +492,7 @@
 
       tip.innerHTML =
         '<div class="tip-head">' + esc(month ? durationLabel(month) : 'Start') + '</div>' +
-        '<div class="tip-value">' + esc(money0.format(ranOut ? 0 : pt.balance)) + '</div>' +
+        '<div class="tip-value">' + esc(money0.format(shown)) + '</div>' +
         (ranOut ? '<div class="tip-short">Ran out' + (pt.short > 0 ? ' \u00b7 ' + esc(money0.format(pt.short)) + ' unpaid this month'
           : pt.balance < 0 ? ' \u00b7 short by ' + esc(money0.format(-pt.balance)) : '') + '</div>' : '') +
         (period

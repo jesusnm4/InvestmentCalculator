@@ -98,6 +98,8 @@
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// in some browsers */ }
   }
   var PLAN_HASH = '#plan=';
+  // The most seasons, and the most extras, one plan holds (saved or shared).
+  var MAX_ITEMS = 40;
   function encodePlan() {
     var json = JSON.stringify({ startingAmount: state.startingAmount, inflationPercent: state.inflationPercent,
                                 periods: state.periods, windfalls: state.windfalls });
@@ -338,7 +340,7 @@
     try {
       if (!parsed || !Array.isArray(parsed.periods)) return null;
       // A link is typed by no one but could be edited by anyone: keep it to plan-sized plans.
-      parsed.periods = parsed.periods.filter(function (p) { return p && typeof p === 'object'; }).slice(0, 40);
+      parsed.periods = parsed.periods.filter(function (p) { return p && typeof p === 'object'; }).slice(0, MAX_ITEMS);
       parsed.startingAmount = Math.max(0, Number(parsed.startingAmount) || 0);
       parsed.periods.forEach(function (p) {
         p.name = String(p.name === undefined || p.name === null ? '' : p.name).slice(0, 80);
@@ -362,7 +364,7 @@
       });
       // Absent in state saved before one-offs existed — default rather than reject.
       if (!Array.isArray(parsed.windfalls)) parsed.windfalls = [];
-      parsed.windfalls = parsed.windfalls.filter(function (w) { return w && typeof w === 'object'; }).slice(0, 40);
+      parsed.windfalls = parsed.windfalls.filter(function (w) { return w && typeof w === 'object'; }).slice(0, MAX_ITEMS);
       parsed.windfalls.forEach(function (w) {
         w.name = String(w.name === undefined || w.name === null ? '' : w.name).slice(0, 80);
         w.atMonth = Math.max(0, Math.floor(Number(w.atMonth) || 0));
@@ -903,6 +905,15 @@
           if (mth >= from && mth <= t.depletedAt && mth > latest) { latest = mth; culprit = wi; }
         });
       });
+      // Already below zero when the withdrawals went unpaid: the expense that sank it is still the cause.
+      if (culprit < 0 && t.depletedAt > 0 && projection.points[t.depletedAt - 1].balance < 0) {
+        state.windfalls.forEach(function (w, wi) {
+          if (!(Number(w.amount) < 0)) return;
+          Calc.windfallMonths(w, t.totalMonths).forEach(function (mth) {
+            if (mth <= t.depletedAt && mth > latest) { latest = mth; culprit = wi; }
+          });
+        });
+      }
     }
     // One way of saying when, everywhere: "6y 6m into Retirement", with the plan year beside it.
     var outWhen = depleted ? inSeasonText(projection, t.depletedAt) : '';
@@ -1051,7 +1062,7 @@
     // Once the money has run out, "growth" mixes gains with a shrinking debt: no green.
     // Ending in debt is no more a win than running out: no green either way.
     el.growth.className = 'kpi-value ' + (depleted || endsBelow ? '' : t.totalGrowth > 0 ? 'up' : t.totalGrowth < 0 ? 'down' : '');
-    el.growthNote.textContent = t.lowestBalance < 0 && !depleted
+    el.growthNote.textContent = t.lowestBalance < 0 && (!depleted || t.finalAmount < 0)
       ? 'after interest on the borrowed amount'
       : depleted
       ? 'while there was money to grow'
@@ -1059,7 +1070,9 @@
         ? growthNote(t.totalGrowth / (paidIn + Math.max(0, gotExtras)))
         : '\u00a0';
     // The third figure: what a saving plan could pay out, or what a drawdown plan took out.
-    if (drawdown && !endsBelow) {
+    // Run out with a debt still owed: what is owed matters more than what was paid out.
+    var owes = endsBelow || (drawdown && t.finalAmount <= -1);
+    if (drawdown && !owes) {
       el.thirdLabel.textContent = 'Withdrawn';
       el.income.textContent = Chart.money0.format(t.totalWithdrawn);
       // With one withdrawing season, say what it is per month (today's dollars, constant).
@@ -1072,15 +1085,16 @@
       var startOf = firstOut !== undefined ? nominal.perPeriod[firstOut] : null;
       // The shortfall is said once, in the sub-line; here, how much of the withdrawing time it paid for.
       var paidMonths = depleted ? drawing.reduce(function (sum, pp) {
-        return sum + Math.max(0, Math.min(pp.endMonth, t.depletedAt) - pp.startMonth);
+        // The first short month was not fully paid: count only the months before it.
+        return sum + Math.max(0, Math.min(pp.endMonth, t.depletedAt - 1) - pp.startMonth);
       }, 0) : 0;
       el.incomeNote.textContent = depleted
-        ? (paidMonths ? 'fully paid for the first ' + Chart.durationLabel(paidMonths) + ' of ' + Chart.durationLabel(drawMonthsAll) : 'none of it fully paid')
+        ? (paidMonths ? 'fully paid for the first ' + Chart.durationLabel(paidMonths) + ' of ' + Chart.durationLabel(drawMonthsAll) : 'never fully paid')
         : !(monthly > 0) ? 'taken out over the withdrawing seasons'
         : today ? Chart.money0.format(monthly) + '/month' + inFirst + ' in today\u2019s dollars'
         : Chart.money0.format(monthly * Calc.deflator(startOf.startMonth + 1, state.inflationPercent)) +
           (Number(state.inflationPercent) > 0 ? '/month' + inFirst + ' to start, rising with inflation' : '/month' + inFirst);
-    } else if (endsBelow) {
+    } else if (owes) {
       // Ending in debt there is no income to show: say what is owed instead of a dead $0.
       el.thirdLabel.textContent = 'Owed at the end';
       el.income.textContent = Chart.money0.format(-t.finalAmount);
@@ -2149,7 +2163,10 @@
     });
   });
 
+  /* The most seasons and extras a plan holds: load() keeps no more than this, so
+     adding stops here with a notice rather than losing the rest on reload. */
   el.addWindfall.addEventListener('click', function () {
+    if (state.windfalls.length >= MAX_ITEMS) { showNotice('A plan holds up to ' + MAX_ITEMS + ' extras.'); return; }
     state.windfalls.push(makeWindfall(state.windfalls.length));
     save();
     renderWindfalls();
@@ -2169,6 +2186,7 @@
   });
 
   el.addPeriod.addEventListener('click', function () {
+    if (state.periods.length >= MAX_ITEMS) { showNotice('A plan holds up to ' + MAX_ITEMS + ' seasons.'); return; }
     // A season added past the 100-year cap would get no time at all; say so instead.
     if (Calc.horizonMonths(state.periods) >= Calc.MAX_TOTAL_MONTHS) {
       showNotice('The plan already reaches the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit. Shorten a season first.');
