@@ -455,6 +455,13 @@ Quiet and soft-edged. They read as part of the page until hovered.
   example")
   saves it and keeps your old plan aside (`-own` key), with "Back to your own plan" / "Forget my old
   plan" until you choose.
+- Shared-link wording is only ever true: a first-time visitor (no saved plan, or only the
+  untouched example) reads "Edit anything to make it yours" with no Back button; otherwise "Your
+  own plan is kept aside". "Back to your own plan" and "Forget my old plan" are undoable, and so is
+  adding an extra.
+- "(the 4% rule)" is said only at 4%; another percent reads "(the 4% rule's method, at 5%)". Card
+  notes give the starting balance in the page's money. The run-out label goes into the empty wash
+  on the right, falling back to a short "Runs out" before it would sit over the curve.
 - The chart is a Tab stop (2px Ledger Blue focus ring, 4px offset): ← / → step the readout a year,
   Shift a month, Home / End jump, Esc hides it; the readout is a polite live region.
 - A return below -50% or above 30% also shows in the collapsed row ("· is that a typo?", Loss Red),

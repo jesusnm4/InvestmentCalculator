@@ -401,11 +401,18 @@
       svg.push('<line x1="' + dx.toFixed(2) + '" y1="' + m.t + '" x2="' + dx.toFixed(2) + '" y2="' + (m.t + plotH) +
                '" stroke="' + C.bad + '" stroke-width="1.5" stroke-dasharray="4 3"/>');
       // Label at the top of the plot, where the tooltip (which follows the curve near $0) will not cover it.
-      var right = dx < m.l + plotW - 120;
+      /* Into the empty wash on the right, where the curve has ended. If the full
+         label won't fit there (a narrow chart), the short one does; only if neither
+         fits does it go left, over the curve. ~6.6px a character at 12px/600. */
+      var full = opts.depletedLabel || 'Runs out \u00b7 ' + durationLabel(dep);
+      var room = m.l + plotW - dx - 10;
+      var fits = function (t) { return t.length * 6.6 <= room; };
+      var said = fits(full) ? full : opts.depletedLabelShort && fits(opts.depletedLabelShort) ? opts.depletedLabelShort : full;
+      var right = fits(said);
       labels.push('<text x="' + (right ? dx + 6 : dx - 6).toFixed(2) + '" y="' + (m.t + labelY) +
                '" text-anchor="' + (right ? 'start' : 'end') + '" fill="' + C.bad + '" font-size="12" font-weight="600"' +
                ' stroke="' + C.surface + '" stroke-width="4" paint-order="stroke">' +
-               esc(opts.depletedLabel || 'Runs out \u00b7 ' + durationLabel(dep)) + '</text>');
+               esc(said) + '</text>');
     }
 
     // --- axes ---

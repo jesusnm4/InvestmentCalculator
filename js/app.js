@@ -81,7 +81,10 @@
      at every width, so the answer is not three screens away. View state, like openOptions. */
   var expanded = null;
 
-  var state = load() || defaultState();
+  var saved = load();
+  var state = saved || defaultState();
+  // Whether there is a plan of the visitor's own to protect (an untouched example is not one).
+  var hadOwn = !!saved && !saved.isExample;
 
   /* A shared link carries a whole plan in its #hash (nothing is uploaded: the
      hash never reaches a server). Opening one shows it without saving anything:
@@ -289,7 +292,8 @@
 
   // The first real change to a shared plan makes it yours; your old one is kept aside (the oldest, if several).
   function keepOwnAside() {
-    try { if (!localStorage.getItem(OWN_KEY)) localStorage.setItem(OWN_KEY, JSON.stringify(ownPlan)); } catch (e) { /* private mode */ }
+    // A first-time visitor has nothing to keep aside: the shared plan simply becomes theirs.
+    try { if (hadOwn && !localStorage.getItem(OWN_KEY)) localStorage.setItem(OWN_KEY, JSON.stringify(ownPlan)); } catch (e) { /* private mode */ }
     sharedMode = false;
     clearPlanHash();
   }
@@ -301,9 +305,12 @@
   function syncSharedNote() {
     var aside = keptAside();
     el.sharedNote.hidden = !sharedMode && !aside;
+    // Said only when true: a first-time visitor has no "own plan" to be told about.
     el.sharedNoteText.textContent = sharedMode
-      ? 'You\u2019re looking at a shared plan. Your own plan is untouched unless you edit this one.'
-      : 'This plan came from a shared link. Your own is kept aside.';
+      ? (hadOwn ? 'You\u2019re looking at a shared plan. Your own plan is untouched unless you edit this one.'
+                : 'You\u2019re looking at a shared plan. Edit anything to make it yours.')
+      : 'Your own plan is kept aside.';
+    el.sharedBack.hidden = sharedMode && !hadOwn;
     el.sharedForget.hidden = sharedMode || !aside;
   }
   function showPlan(next) {
@@ -787,7 +794,7 @@
                  (amount ? ', ' + Chart.money0.format(total) + ' in total' +
                    (state.view.money === 'today' && Number(state.inflationPercent) > 0 ? ' in today\u2019s dollars' : '') : '');
       }
-      if (rising) lands += '. Rises with prices';
+      lands += '.';
       li.querySelector('[data-role="at-note"]').textContent = lands;
 
       var warn = li.querySelector('[data-role="warn"]');
@@ -1134,6 +1141,7 @@
       periods: periodMeta(), windfalls: windfallMeta(projection, depleted ? t.depletedAt : null),
       baseline: baseline, depletedAt: depleted ? t.depletedAt : null,
       depletedLabel: depleted ? 'Runs out \u00b7 ' + outWhen : null,
+      depletedLabelShort: depleted ? 'Runs out' : null,
       belowZero: dipRanges(projection, endsBelow), belowZeroLabel: endsBelow ? 'Below zero from here'
         : dipOnly ? Chart.money0.format(-t.lowestBalance) + ' below zero' : null,
       label: 'Projected balance. ' + summary,
@@ -1158,7 +1166,10 @@
     var oddAt = state.periods.map(function (p, i) { return rateFlagged(p) ? i : -1; }).filter(function (i) { return i >= 0; })[0];
     if (oddAt !== undefined) {
       var oddP = state.periods[oddAt];
-      el.leverNote.textContent = '\u201c' + shortName(seasonName(oddP, oddAt)) + '\u201d has a ' + String(Number(oddP.annualRatePercent) || 0).replace('-', '\u2212') +
+      var oddRate = String(Number(oddP.annualRatePercent) || 0);
+      // "an 80%", "an 11%", "an 8%"; "a 150%".
+      var article = /^(8|11|18)/.test(oddRate) ? 'an ' : 'a ';
+      el.leverNote.textContent = '\u201c' + shortName(seasonName(oddP, oddAt)) + '\u201d has ' + article + oddRate.replace('-', '\u2212') +
         '% yearly return: is that a typo? The answer above assumes it.';
       el.leverNote.hidden = false;
       return;
@@ -1289,6 +1300,8 @@
       var monthly = pp.firstWithdrawal; // today's dollars, the same every month of the season
       var start = pp.startBalance / Calc.deflator(pp.startMonth, infl);
       var pctYear = start > 0 ? monthly * 12 / start * 100 : 0;
+      // The balance is said in the page's money, like the table beside it; the ratio is the same either way.
+      var startShown = state.view.money === 'future' ? pp.startBalance : start;
       var rule = Calc.SAFE_WITHDRAWAL_PERCENT;
       if (!(monthly > 0)) {
         html = p.withdrawUnit === 'percent' ? 'Nothing to withdraw: the season starts with no money.' : '';
@@ -1302,11 +1315,12 @@
         html = '<strong>' + Chart.money0.format(monthly) + ' a month</strong> in today\u2019s dollars' +
           (Number(infl) > 0 ? ', rising with prices. ' : ', the same every month (inflation is 0%). ');
         if (p.withdrawUnit === 'percent') {
-          html += (Number(p.withdrawPercent) || 0) + '% of the ' + Chart.money0.format(start) +
-            ' it starts with, in its first year (the 4% rule).';
+          var pctW = Number(p.withdrawPercent) || 0;
+          html += pctW + '% of the ' + Chart.money0.format(startShown) + ' it starts with, in its first year (' +
+            (pctW === rule ? 'the ' + rule + '% rule' : 'the ' + rule + '% rule\u2019s method, at ' + pctW + '%') + ').';
         } else if (start > 0) {
           var shown = pctYear < 10 ? pctYear.toFixed(1) : String(Math.round(pctYear));
-          html += '\u2248' + shown + '% a year of the ' + Chart.money0.format(start) + ' it starts with, ' +
+          html += '\u2248' + shown + '% a year of the ' + Chart.money0.format(startShown) + ' it starts with, ' +
             (pctYear > rule + 0.5 ? 'well above' : pctYear < rule - 0.5 ? 'below' : 'close to') + ' the ' + rule + '% rule.';
         } else {
           html += 'It starts with no money, so it is short from the first month.';
@@ -1755,7 +1769,9 @@
       var next = el.periodList.children[focusAt];
       // Focus without the browser's jump, then bring the row into view: you stay where you were.
       // Instant (a smooth scroll is cancelled by the re-render) and centred, clear of the top toast.
-      if (next) { next.tabIndex = -1; next.focus({ preventScroll: true }); next.scrollIntoView({ block: 'center', behavior: 'instant' }); }
+      // The row's own button takes focus (a button raises no keyboard), not the card around it.
+      var row = next && next.querySelector('.card-summary');
+      if (next) { (row || next).focus({ preventScroll: true }); next.scrollIntoView({ block: 'center', behavior: 'instant' }); }
     } else if (focusAt >= 0) focusIn(el.periodList, focusAt, focusSel);
     else el.addPeriod.focus();
   });
@@ -1794,7 +1810,7 @@
     renderResults();
     focusIn(el.periodList, index, '[data-flow="' + mode + '"]');
     offerUndo(note || (seasonName(p, index) + (mode === 'save' ? ' now saves ' + Chart.money0.format(Math.abs(Number(p.monthlyContribution) || 0)) + ' a month'
-        : mode === 'percent' ? ' now withdraws ' + (Number(p.withdrawPercent) || 0) + '% (the 4% rule)' : ' now withdraws a fixed amount')), function () {
+        : mode === 'percent' ? ' now withdraws ' + (Number(p.withdrawPercent) || 0) + '% a year (the ' + Calc.SAFE_WITHDRAWAL_PERCENT + '% rule\u2019s method)' : ' now withdraws a fixed amount')), function () {
       state.periods[index] = JSON.parse(before);
       // The restored season is a new object: keep it the open card, so undo does not lose your place.
       expanded = state.periods[index];
@@ -1916,7 +1932,7 @@
   /* Desktop: the toast floats over the results column, in the lowest spot where
      it covers no text (chart labels and keys, figures, the breakdown title, the
      floating result card). If there is no such spot, it keeps its default place. */
-  var TOAST_AVOID = '.chart-svg text, #legend, #extras-legend, .details-title, .breakdown th, .kpi, .lever, .why summary, .back-link, .result-bar:not([hidden])';
+  var TOAST_AVOID = '.chart-svg text, #legend, #extras-legend, .details-title, .breakdown th, .breakdown td .cell, .kpi, .lever, .why summary, .back-link, .result-bar:not([hidden])';
   function placeToast() {
     el.toast.style.bottom = '';
     if (el.toast.hidden || window.innerWidth <= 900) return;
@@ -2105,6 +2121,15 @@
     save();
     renderWindfalls();
     renderResults();
+    // Undoable like adding a season (it starts at $0, but it is still a new card).
+    var at = state.windfalls.length - 1;
+    offerUndo('Extra added', function () {
+      state.windfalls.splice(at, 1);
+      save();
+      renderWindfalls();
+      renderResults();
+      el.addWindfall.focus();
+    }, null, 'Extra removed');
     // Straight to the amount: the extra does nothing until it has one.
     var added = el.windfallList.lastElementChild;
     if (added) added.querySelector('[data-field="amount"]').focus();
@@ -2295,27 +2320,40 @@
   announceReady = true;
   syncSharedNote();
   if (badLink) showNotice('That link didn\u2019t contain a plan this page can read, so nothing changed.');
+  // Both exits can be undone: they swap out whatever is on screen.
   el.sharedBack.addEventListener('click', function () {
+    var leaving = state, wasShared = sharedMode, raw = keptAside();
     if (sharedMode) {
       // Nothing was saved while looking: your plan is still in storage, and in memory.
       sharedMode = false;
-      clearPlanHash();
       showPlan(ownPlan);
       save(true);
     } else {
-      var aside = sanitize((function () { try { return JSON.parse(keptAside()); } catch (e) { return null; } })());
+      var aside = sanitize((function () { try { return JSON.parse(raw); } catch (e) { return null; } })());
       try { localStorage.removeItem(OWN_KEY); } catch (e) { /* private mode */ }
       if (aside) { showPlan(aside); save(true); }
     }
     syncSharedNote();
-    showNotice('Back to your own plan');
+    offerUndo('Back to your own plan', function () {
+      if (wasShared) { sharedMode = true; showPlan(leaving); }
+      else {
+        try { if (raw) localStorage.setItem(OWN_KEY, raw); } catch (e) { /* private mode */ }
+        showPlan(leaving);
+        save(true);
+      }
+      syncSharedNote();
+    }, null, 'Back on the plan you were viewing');
     // The note just hid itself: focus moves to the plan, never to <body> or a hidden button.
     (el.reset.hidden ? el.startingAmount : el.reset).focus();
   });
   el.sharedForget.addEventListener('click', function () {
+    var raw = keptAside();
     try { localStorage.removeItem(OWN_KEY); } catch (e) { /* private mode */ }
     syncSharedNote();
-    showNotice('Your old plan is gone; this one is yours.');
+    offerUndo('Your old plan is forgotten; this one is yours', function () {
+      try { if (raw) localStorage.setItem(OWN_KEY, raw); } catch (e) { /* private mode */ }
+      syncSharedNote();
+    }, null, 'Your old plan is kept aside again');
   });
   // A link pasted into this same tab only changes the hash: open it like a fresh visit.
   window.addEventListener('hashchange', function () { if (location.hash.indexOf(PLAN_HASH) === 0) location.reload(); });

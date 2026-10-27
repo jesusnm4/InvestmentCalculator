@@ -471,7 +471,7 @@ def share_then_reset_keeps_your_plan(env):
 def back_to_own_plan_keeps_focus(env):
     url = share_url(env)
     s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
-    s.open()  # a first-time visitor: their own plan is the untouched example
+    s.open(plan([season('Mine only', 120, amt=100)], start=777))  # someone with a plan of their own to go back to
     s.pg.goto(url)
     s.pg.wait_for_selector('#final-amount')
     s.pg.focus('#shared-back')
@@ -509,16 +509,143 @@ def toast_covers_no_text(env):
     pg = s.open()
     pg.click('#add-windfall')
     pg.fill('.windfall [data-field="amount"]', '5000')
-    for y in (0, 400, 100000):
+    for y in (0, 300, 400, 600, 900, 100000):
         pg.evaluate('window.scrollTo(0, %d)' % y)
         pg.click('#share-link')
         pg.wait_for_timeout(250)
         hit = pg.evaluate("""(() => {
           const t = document.getElementById('toast'); if (t.hidden) return null; const a = t.getBoundingClientRect();
-          const texts = [...document.querySelectorAll('.chart-svg text, #legend, #extras-legend, .details-title, .breakdown th, .kpi, .lever, .why summary, .back-link')];
+          const texts = [...document.querySelectorAll('.chart-svg text, #legend, #extras-legend, .details-title, .breakdown th, .breakdown td .cell, .kpi, .lever, .why summary, .back-link')];
           const over = texts.find(e => { const r = e.getBoundingClientRect(); return r.width && r.height && a.left < r.right && a.right > r.left && a.top < r.bottom && a.bottom > r.top; });
           return over ? (over.textContent || over.id).trim().slice(0, 40) : null; })()""")
         expect(hit is None, 'at scroll %d the toast covers %r' % (y, hit))
+    s.close()
+
+
+# ---------------------------------------------------------------- critique #18
+
+@check
+def shared_exits_are_undoable(env):
+    url = share_url(env)
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open(plan([season('Mine only', 120, amt=100)], start=777))
+    pg = s.pg
+    pg.goto(url)
+    pg.wait_for_selector('#final-amount')
+    pg.wait_for_timeout(200)
+    pg.fill('#starting-amount', '200000')  # edit the shared plan: it becomes yours, your old one aside
+    pg.wait_for_timeout(100)
+    pg.click('#shared-back')
+    pg.wait_for_timeout(200)
+    expect(s.text('#toast-undo') is not None, 'Back to your own plan offers no undo')
+    pg.click('#toast-undo')
+    pg.wait_for_timeout(200)
+    expect(pg.input_value('#starting-amount') == '200,000', 'undoing Back did not bring the edited plan back')
+    pg.click('#shared-forget')
+    pg.wait_for_timeout(200)
+    expect(s.text('#toast-undo') is not None, 'Forget my old plan offers no undo')
+    pg.click('#toast-undo')
+    pg.wait_for_timeout(200)
+    pg.click('#shared-back')
+    pg.wait_for_timeout(200)
+    expect(pg.input_value('#starting-amount') == '777', 'undoing Forget did not keep your old plan')
+    s.close()
+
+
+@check
+def first_visitor_has_no_phantom_plan(env):
+    url = share_url(env)
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open()  # never saved anything
+    s.pg.goto(url)
+    s.pg.wait_for_selector('#final-amount')
+    s.pg.wait_for_timeout(200)
+    note = s.text('#shared-note-text') or ''
+    expect('your own plan' not in note.lower() and s.text('#shared-back') is None,
+           'a first-time visitor is offered a plan they never had: %r' % note)
+    s.close()
+
+
+@check
+def shared_note_after_reset_is_true(env):
+    url = share_url(env)
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open(plan([season('Mine only', 120, amt=100)], start=777))
+    s.pg.goto(url)
+    s.pg.wait_for_selector('#final-amount')
+    s.pg.click('#reset-btn')
+    s.pg.wait_for_timeout(200)
+    note = s.text('#shared-note') or ''
+    expect('came from a shared link' not in note, 'note says the example came from a shared link: %r' % note)
+    s.close()
+
+
+@check
+def adding_an_extra_is_undoable(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    pg.click('#add-windfall')
+    pg.keyboard.press('Escape')
+    pg.click('#toast-undo')
+    expect(pg.locator('.windfall').count() == 0, 'adding an extra could not be undone')
+    s.close()
+
+
+@check
+def withdrawal_wording(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 240, amt=800, rate=7), season('Retirement', 300, flow='withdraw', pct=5, slot=2)]))
+    pg.click('.period:nth-child(2) .card-summary')
+    note = pg.text_content('.period:nth-child(2) [data-role="flow-note"]')
+    expect('(the 4% rule)' not in note, 'a 5%% withdrawal is called the 4%% rule: %r' % note)
+    s.open(plan([season('Boom', 120, rate=80), season('Retirement', 300, flow='withdraw', slot=2)]))
+    expect('an 80%' in (s.text('#lever-note') or ''), 'article before 80%%: %r' % s.text('#lever-note'))
+    s.open(plan([season('Saving', 240, amt=800, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=3000, slot=2)], money='future'))
+    pg = s.pg
+    pg.click('.period:nth-child(2) .card-summary')
+    note = pg.text_content('.period:nth-child(2) [data-role="flow-note"]')
+    start = pg.evaluate("document.querySelector('.breakdown tbody tr:nth-child(2) td:last-child .cell').firstChild.textContent")
+    expect(start.strip() in note, 'Future $ card note quotes a different start balance than the table (%s): %r' % (start, note))
+    s.close()
+
+
+@check
+def phone_delete_last_focuses_the_row_button(env):
+    s = Session(env['webkit'], env['base'], **env['iphone'])
+    pg = s.open()
+    pg.click('.period:nth-child(3) .card-summary')
+    pg.locator('.period:nth-child(3) .danger-link').scroll_into_view_if_needed()
+    pg.tap('.period:nth-child(3) .danger-link')
+    pg.wait_for_timeout(300)
+    expect(pg.evaluate("document.activeElement.classList.contains('card-summary')"), 'focus landed on %s' % pg.evaluate('document.activeElement.className'))
+    s.close()
+
+
+@check
+def phone_runout_label_sits_in_the_wash(env):
+    s = Session(env['webkit'], env['base'], **env['iphone'])
+    bad = []
+    for amt in (900, 1200, 1500, 2000, 2500, 3000):
+        pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Coast', 120, rate=5, slot=1),
+                          season('Retirement', 300, flow='withdraw', unit='dollars', amt=amt, slot=2)]))
+        pos = pg.evaluate("""(() => { const t = [...document.querySelectorAll('.chart-svg text')].find(e => /^Runs out/.test(e.textContent));
+            const rule = [...document.querySelectorAll('.chart-svg line')].find(l => l.getAttribute('stroke-dasharray') === '4 3');
+            if (!t || !rule) return null; const svg = document.querySelector('.chart-svg');
+            const right = svg.viewBox.baseVal.width - 16 - Number(rule.getAttribute('x1'));
+            return { anchor: t.getAttribute('text-anchor'), room: right, text: t.textContent }; })()""")
+        # Whenever there is room for even the short label on the right, it must sit there (in the wash, not over the curve).
+        if pos and pos['room'] >= 70 and pos['anchor'] != 'start':
+            bad.append((amt, pos))
+    expect(not bad, 'run-out label over the curve: %s' % bad)
+    s.close()
+
+
+@check
+def skip_link_leaves_no_smudge(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    shadow = pg.evaluate("getComputedStyle(document.querySelector('.skip-link')).boxShadow")
+    expect(shadow == 'none', 'the hidden skip link still casts a shadow: %s' % shadow)
     s.close()
 
 
