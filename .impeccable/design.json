@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T17:06:41+00:00",
+  "generatedAt": "2026-10-27T02:42:48+00:00",
   "title": "Design System: Seasons",
   "extensions": {
     "colorMeta": {
@@ -109,6 +109,21 @@
           "#f0efe8"
         ]
       },
+      "field-edge": {
+        "role": "neutral",
+        "displayName": "Field Edge",
+        "canonical": "#8f8d86",
+        "tonalRamp": [
+          "#0d0b07",
+          "#27251f",
+          "#44423c",
+          "#63615b",
+          "#84827b",
+          "#a7a59e",
+          "#cbc9c2",
+          "#f1eee7"
+        ]
+      },
       "axis-grey": {
         "role": "neutral",
         "displayName": "Axis Grey",
@@ -137,6 +152,21 @@
           "#64a7fe",
           "#90ccff",
           "#bdf2ff"
+        ]
+      },
+      "ledger-blue-deep": {
+        "role": "primary",
+        "displayName": "Ledger Blue Deep",
+        "canonical": "#256abc",
+        "tonalRamp": [
+          "#00062e",
+          "#002354",
+          "#0a417e",
+          "#2561aa",
+          "#4083d7",
+          "#6ba7f5",
+          "#96ccff",
+          "#c2f2ff"
         ]
       },
       "gain-green": {
@@ -199,6 +229,21 @@
           "#eeeeed"
         ]
       },
+      "night-faded-pencil": {
+        "role": "neutral",
+        "displayName": "Night Faded Pencil",
+        "canonical": "#898781",
+        "tonalRamp": [
+          "#0d0b07",
+          "#272520",
+          "#44423d",
+          "#63615b",
+          "#84827c",
+          "#a7a59f",
+          "#cbc9c3",
+          "#f1eee8"
+        ]
+      },
       "night-field": {
         "role": "neutral",
         "displayName": "Night Field",
@@ -227,6 +272,21 @@
           "#a5a5a3",
           "#c9c9c7",
           "#efefec"
+        ]
+      },
+      "night-field-edge": {
+        "role": "neutral",
+        "displayName": "Night Field Edge",
+        "canonical": "#6a6964",
+        "tonalRamp": [
+          "#0c0b08",
+          "#262521",
+          "#43423d",
+          "#62615c",
+          "#83827d",
+          "#a6a5a0",
+          "#cac9c4",
+          "#f0efe9"
         ]
       },
       "night-axis": {
@@ -307,61 +367,61 @@
       "series-orange": {
         "role": "series",
         "displayName": "Series Orange",
-        "canonical": "#eb6834",
+        "canonical": "#e96632",
         "tonalRamp": [
-          "#290000",
-          "#500000",
-          "#7a1900",
-          "#a73600",
-          "#d4541c",
-          "#f57f53",
-          "#ffa982",
-          "#ffd3b0"
+          "#1a0400",
+          "#441200",
+          "#712603",
+          "#a43a04",
+          "#d5531b",
+          "#fd7845",
+          "#feb59b",
+          "#ffe9e2"
         ]
       },
       "series-aqua": {
         "role": "series",
         "displayName": "Series Aqua",
-        "canonical": "#1baf7a",
+        "canonical": "#00a26e",
         "tonalRamp": [
-          "#001402",
-          "#003215",
-          "#00532f",
-          "#00764a",
-          "#009b68",
-          "#4dbd8d",
-          "#82e0b3",
-          "#b3ffdb"
+          "#000f07",
+          "#012d1c",
+          "#024f34",
+          "#0b734e",
+          "#109a69",
+          "#3cbf89",
+          "#68e5ad",
+          "#c3ffdf"
         ]
       },
       "series-yellow": {
         "role": "series",
         "displayName": "Series Yellow",
-        "canonical": "#eda100",
+        "canonical": "#af6600",
         "tonalRamp": [
-          "#200000",
-          "#421700",
-          "#683300",
-          "#8f5000",
-          "#b87000",
-          "#d99621",
-          "#f9bd64",
-          "#ffe499"
+          "#150800",
+          "#391e00",
+          "#613600",
+          "#8c5106",
+          "#b86e14",
+          "#de9142",
+          "#ffb876",
+          "#ffead9"
         ]
       },
       "series-magenta": {
         "role": "series",
         "displayName": "Series Magenta",
-        "canonical": "#e87ba4",
+        "canonical": "#d66b94",
         "tonalRamp": [
-          "#22000b",
-          "#470625",
-          "#6e2142",
-          "#973d62",
+          "#1d000b",
+          "#490025",
+          "#771042",
+          "#9c3762",
           "#c25a83",
-          "#e382a6",
-          "#ffaaca",
-          "#ffd4ef"
+          "#ea7da6",
+          "#feafc9",
+          "#ffe7ee"
         ]
       },
       "series-green": {
@@ -407,36 +467,6 @@
           "#fe746d",
           "#ffa097",
           "#ffcbc2"
-        ]
-      },
-      "night-faded-pencil": {
-        "role": "neutral",
-        "displayName": "Night Faded Pencil",
-        "canonical": "#898781",
-        "tonalRamp": [
-          "#0d0b07",
-          "#272520",
-          "#44423d",
-          "#63615b",
-          "#84827c",
-          "#a7a59f",
-          "#cbc9c3",
-          "#f1eee8"
-        ]
-      },
-      "ledger-blue-deep": {
-        "role": "primary",
-        "displayName": "Ledger Blue Deep",
-        "canonical": "#256abc",
-        "tonalRamp": [
-          "#00062e",
-          "#002354",
-          "#0a417e",
-          "#2561aa",
-          "#4083d7",
-          "#6ba7f5",
-          "#96ccff",
-          "#c2f2ff"
         ]
       }
     },
@@ -485,18 +515,32 @@
         "purpose": "Setup/results panels and chart tooltip, light theme only."
       },
       {
-        "name": "pressed-ring",
-        "value": "0 0 0 1px var(--ring)",
-        "purpose": "Pressed theme-toggle segment; inset on swatches."
-      },
-      {
         "name": "bar-lift",
         "value": "0 -8px 24px rgba(11,11,11,0.06)",
         "purpose": "Upward lift on the pinned result bar (narrow screens)."
+      },
+      {
+        "name": "pressed-ring",
+        "value": "0 0 0 1px var(--muted)",
+        "purpose": "Selected segment of the theme toggle and money switch, with weight 600 (~5:1 against the track)."
+      },
+      {
+        "name": "flow-pressed",
+        "value": "0 0 0 1.5px var(--accent)",
+        "purpose": "Selected Save / Withdraw segment on a card, over a 14% Ledger Blue tint."
+      },
+      {
+        "name": "swatch-ring",
+        "value": "inset 0 0 0 1px var(--ring)",
+        "purpose": "Hairline inside each color swatch."
       }
     ],
     "motion": [],
     "breakpoints": [
+      {
+        "name": "narrow-phone",
+        "value": "420px"
+      },
       {
         "name": "kpi-stack",
         "value": "560px"
@@ -504,6 +548,10 @@
       {
         "name": "single-column",
         "value": "900px"
+      },
+      {
+        "name": "pinned-results",
+        "value": "901px wide and 760px tall"
       }
     ]
   },
@@ -514,7 +562,7 @@
       "refersTo": "button-primary",
       "description": "The single full-width action, + Add period.",
       "html": "<button class=\"ds-btn ds-btn-primary\" type=\"button\">+ Add period</button>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-primary{background:#256abc;border-color:#256abc;color:var(--accent-ink);width:100%} .ds-btn-primary:hover{filter:brightness(1.06);border-color:var(--accent)}"
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-primary{background:#256abc;border-color:#256abc;color:var(--accent-ink);width:100%} .ds-btn-primary:hover{filter:brightness(1.06);border-color:var(--accent)}"
     },
     {
       "name": "Secondary Button",
@@ -522,7 +570,7 @@
       "refersTo": "button-secondary",
       "description": "Quiet full-width action on Field White, e.g. + Add extra.",
       "html": "<button class=\"ds-btn ds-btn-block\" type=\"button\">+ Add extra</button>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-block{width:100%}"
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-block{width:100%}"
     },
     {
       "name": "Ghost Button",
@@ -530,7 +578,7 @@
       "refersTo": "button-ghost",
       "description": "Transparent top-bar action, e.g. Reset.",
       "html": "<button class=\"ds-btn ds-btn-ghost\" type=\"button\">Reset</button>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-ghost{background:transparent}"
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-btn{font:inherit;font-weight:500;cursor:pointer;border-radius:8px;border:1px solid var(--line);padding:8px 14px;background:var(--field);color:var(--ink)} .ds-btn:hover{border-color:var(--axis)} .ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-btn-ghost{background:transparent}"
     },
     {
       "name": "Theme Toggle",
@@ -538,7 +586,7 @@
       "refersTo": "segmented-toggle",
       "description": "Light / Dark / Auto segmented control in the top bar.",
       "html": "<div class=\"ds-toggle\" role=\"group\" aria-label=\"Color theme\"><button type=\"button\" aria-pressed=\"true\">Light</button><button type=\"button\" aria-pressed=\"false\">Dark</button><button type=\"button\" aria-pressed=\"false\">Auto</button></div>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-toggle{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:9px;background:var(--page)} .ds-toggle button{height:26px;padding:0 11px;line-height:1;font:inherit;font-size:13px;font-weight:500;border:none;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer} .ds-toggle button:hover{color:var(--ink)} .ds-toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-toggle button[aria-pressed=\"true\"]{background:var(--field);color:var(--ink);box-shadow:0 0 0 1px var(--ring)}"
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-toggle{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--field-line);border-radius:9px;background:var(--page)} .ds-toggle button{height:26px;padding:0 11px;line-height:1;font:inherit;font-size:13px;font-weight:500;border:none;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer} .ds-toggle button:hover{color:var(--ink)} .ds-toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-toggle button[aria-pressed=\"true\"]{background:var(--field);color:var(--ink);box-shadow:0 0 0 1px var(--muted)}"
     },
     {
       "name": "Money Input",
@@ -546,15 +594,15 @@
       "refersTo": "input",
       "description": "Labelled numeric field with a fixed $ affix and tabular figures.",
       "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Starting amount</span><span class=\"ds-money\"><span class=\"ds-affix\">$</span><input type=\"number\" value=\"10000\"></span></label>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-field{display:block;max-width:260px} .ds-field-label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:5px} .ds-money{position:relative;display:block} .ds-affix{position:absolute;top:50%;left:10px;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none} .ds-money input{box-sizing:border-box;width:100%;padding:8px 10px 8px 22px;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;font-variant-numeric:tabular-nums} .ds-money input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-field{display:block;max-width:260px} .ds-field-label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:5px} .ds-money{position:relative;display:block} .ds-affix{position:absolute;top:50%;left:10px;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none} .ds-money input{box-sizing:border-box;width:100%;padding:8px 10px 8px 22px;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--field-line);border-radius:8px;font-variant-numeric:tabular-nums} .ds-money input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
     },
     {
       "name": "Period Timeline Entry",
       "kind": "card",
       "refersTo": "period-card",
       "description": "One period hanging off the timeline spine at its numbered node; range line under the name.",
-      "html": "<ol class=\"ds-timeline\"><li class=\"ds-period\"><span class=\"ds-node\">1</span><div class=\"ds-period-head\"><input type=\"text\" value=\"Accumulation\" aria-label=\"Period 1 name\"><button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Move period 1 down\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4 6l4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button><button class=\"ds-icon-btn ds-danger\" type=\"button\" aria-label=\"Delete period 1\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4.5 4.5l7 7M11.5 4.5l-7 7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button></div><p class=\"ds-range\">From the start to 10 yrs</p></li><li class=\"ds-period\" style=\"--period-color:#eb6834\"><span class=\"ds-node\">2</span><div class=\"ds-period-head\"><input type=\"text\" value=\"Coasting\" aria-label=\"Period 2 name\"><button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Move period 2 up\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4 10l4-4 4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button><button class=\"ds-icon-btn ds-danger\" type=\"button\" aria-label=\"Delete period 2\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4.5 4.5l7 7M11.5 4.5l-7 7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button></div><p class=\"ds-range\">From 10 yrs to 20 yrs</p></li></ol>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-timeline{list-style:none;margin:0;padding:0 0 0 32px;display:grid;gap:12px;position:relative;max-width:380px} .ds-timeline::before{content:\"\";position:absolute;left:11px;top:22px;bottom:22px;width:1px;background:var(--axis)} .ds-period{--period-color:#2a78d6;position:relative;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--field)} .ds-node{position:absolute;left:-32px;top:13px;width:23px;height:23px;border-radius:6px;background:var(--period-color);color:#0b0b0b;box-shadow:0 0 0 3px var(--surface);font-size:11px;font-weight:700;display:grid;place-items:center} .ds-period-head{display:flex;align-items:center;gap:6px} .ds-period-head input{flex:1;min-width:0;padding:5px 8px;font:inherit;font-weight:600;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px} .ds-period-head input:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-icon-btn{flex:none;width:26px;height:26px;padding:0;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink-2);cursor:pointer} .ds-icon-btn svg{display:block} .ds-icon-btn:hover{border-color:var(--axis);color:var(--ink)} .ds-danger{margin-left:6px} .ds-icon-btn.ds-danger:hover{color:var(--bad);border-color:var(--bad)} .ds-icon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-range{margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}"
+      "html": "<ol class=\"ds-timeline\"><li class=\"ds-period\"><span class=\"ds-node\">1</span><div class=\"ds-period-head\"><input type=\"text\" value=\"Accumulation\" aria-label=\"Period 1 name\"><button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Move period 1 down\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4 6l4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button><button class=\"ds-icon-btn ds-danger\" type=\"button\" aria-label=\"Delete period 1\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4.5 4.5l7 7M11.5 4.5l-7 7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button></div><p class=\"ds-range\">From the start to 10 yrs</p></li><li class=\"ds-period\" style=\"--period-color:#e96632\"><span class=\"ds-node\">2</span><div class=\"ds-period-head\"><input type=\"text\" value=\"Coasting\" aria-label=\"Period 2 name\"><button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Move period 2 up\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4 10l4-4 4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button><button class=\"ds-icon-btn ds-danger\" type=\"button\" aria-label=\"Delete period 2\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M4.5 4.5l7 7M11.5 4.5l-7 7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button></div><p class=\"ds-range\">From 10 yrs to 20 yrs</p></li></ol>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-timeline{list-style:none;margin:0;padding:0 0 0 32px;display:grid;gap:12px;position:relative;max-width:380px} .ds-timeline::before{content:\"\";position:absolute;left:11px;top:22px;bottom:22px;width:1px;background:var(--axis)} .ds-period{--period-color:#2a78d6;position:relative;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--field)} .ds-node{position:absolute;left:-32px;top:13px;width:23px;height:23px;border-radius:6px;background:var(--period-color);color:#0b0b0b;box-shadow:0 0 0 3px var(--surface);font-size:11px;font-weight:700;display:grid;place-items:center} .ds-period-head{display:flex;align-items:center;gap:6px} .ds-period-head input{flex:1;min-width:0;padding:5px 8px;font:inherit;font-weight:600;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px} .ds-period-head input:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-icon-btn{flex:none;width:26px;height:26px;padding:0;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink-2);cursor:pointer} .ds-icon-btn svg{display:block} .ds-icon-btn:hover{border-color:var(--axis);color:var(--ink)} .ds-danger{margin-left:6px} .ds-icon-btn.ds-danger:hover{color:var(--bad);border-color:var(--bad)} .ds-icon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px} .ds-range{margin:4px 0 0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}"
     },
     {
       "name": "Summary Row",
@@ -562,15 +610,15 @@
       "refersTo": "kpi-cell",
       "description": "Three figures in a ruled row inside the results panel: no boxes, hairlines between.",
       "html": "<div class=\"ds-kpis\"><div class=\"ds-kpi\"><div class=\"ds-kpi-label\">Total paid in</div><div class=\"ds-kpi-value\">$70,000</div><div class=\"ds-kpi-note\">starting amount + contributions</div></div><div class=\"ds-kpi\"><div class=\"ds-kpi-label\">Total growth</div><div class=\"ds-kpi-value ds-up\">$105,635</div><div class=\"ds-kpi-note\">150.9% of what you paid in</div></div><div class=\"ds-kpi\"><div class=\"ds-kpi-label\">Monthly income</div><div class=\"ds-kpi-value\">$585</div><div class=\"ds-kpi-note\">under the 4% rule</div></div></div>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);max-width:640px} .ds-kpi{padding:12px 16px} .ds-kpi:first-child{padding-left:0} .ds-kpi+.ds-kpi{border-left:1px solid var(--line)} .ds-kpi-label{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em} .ds-kpi-value{font-family:'Source Serif 4',Georgia,serif;font-variant-numeric:lining-nums tabular-nums;font-size:22px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums} .ds-up{color:var(--good)} .ds-kpi-note{font-size:13px;color:var(--muted);margin-top:2px}"
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);max-width:640px} .ds-kpi{padding:12px 16px} .ds-kpi:first-child{padding-left:0} .ds-kpi+.ds-kpi{border-left:1px solid var(--line)} .ds-kpi-label{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em} .ds-kpi-value{font-family:'Source Serif 4',Georgia,serif;font-variant-numeric:lining-nums tabular-nums;font-size:22px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums} .ds-up{color:var(--good)} .ds-kpi-note{font-size:13px;color:var(--muted);margin-top:2px}"
     },
     {
       "name": "Color Swatches",
       "kind": "custom",
       "refersTo": "swatch",
       "description": "Period color picker; each swatch reads Chart.colorFor(slot).",
-      "html": "<div class=\"ds-swatches\"><button class=\"ds-swatch\" style=\"background:#2a78d6\" aria-pressed=\"true\" aria-label=\"Blue\"></button><button class=\"ds-swatch\" style=\"background:#eb6834\" aria-pressed=\"false\" aria-label=\"Orange\"></button><button class=\"ds-swatch\" style=\"background:#1baf7a\" aria-pressed=\"false\" aria-label=\"Aqua\"></button><button class=\"ds-swatch\" style=\"background:#eda100\" aria-pressed=\"false\" aria-label=\"Yellow\"></button><button class=\"ds-swatch\" style=\"background:#e87ba4\" aria-pressed=\"false\" aria-label=\"Magenta\"></button><button class=\"ds-swatch\" style=\"background:#008300\" aria-pressed=\"false\" aria-label=\"Green\"></button><button class=\"ds-swatch\" style=\"background:#4a3aa7\" aria-pressed=\"false\" aria-label=\"Violet\"></button><button class=\"ds-swatch\" style=\"background:#e34948\" aria-pressed=\"false\" aria-label=\"Red\"></button></div>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-swatches{display:flex;gap:6px;flex-wrap:wrap} .ds-swatch{width:22px;height:22px;border-radius:6px;cursor:pointer;border:2px solid transparent;padding:0;box-shadow:inset 0 0 0 1px var(--ring)} .ds-swatch[aria-pressed=\"true\"]{border-color:var(--ink)} .ds-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
+      "html": "<div class=\"ds-swatches\"><button class=\"ds-swatch\" style=\"background:#2a78d6\" aria-pressed=\"true\" aria-label=\"Blue\"></button><button class=\"ds-swatch\" style=\"background:#e96632\" aria-pressed=\"false\" aria-label=\"Orange\"></button><button class=\"ds-swatch\" style=\"background:#00a26e\" aria-pressed=\"false\" aria-label=\"Aqua\"></button><button class=\"ds-swatch\" style=\"background:#af6600\" aria-pressed=\"false\" aria-label=\"Yellow\"></button><button class=\"ds-swatch\" style=\"background:#d66b94\" aria-pressed=\"false\" aria-label=\"Magenta\"></button><button class=\"ds-swatch\" style=\"background:#008300\" aria-pressed=\"false\" aria-label=\"Green\"></button><button class=\"ds-swatch\" style=\"background:#4a3aa7\" aria-pressed=\"false\" aria-label=\"Violet\"></button><button class=\"ds-swatch\" style=\"background:#e34948\" aria-pressed=\"false\" aria-label=\"Red\"></button></div>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-swatches{display:flex;gap:6px;flex-wrap:wrap} .ds-swatch{width:22px;height:22px;border-radius:6px;cursor:pointer;border:2px solid transparent;padding:0;box-shadow:inset 0 0 0 1px var(--ring)} .ds-swatch[aria-pressed=\"true\"]{border-color:var(--ink)} .ds-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
     },
     {
       "name": "Undo Toast",
@@ -578,7 +626,7 @@
       "refersTo": "toast",
       "description": "Offered after a delete or Reset instead of a confirm dialog.",
       "html": "<div class=\"ds-toast\" role=\"status\"><span>“Coasting” deleted</span><button type=\"button\" class=\"ds-undo\">Undo</button></div>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-toast{display:inline-flex;align-items:center;gap:14px;padding:8px 8px 8px 14px;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--ring);border-radius:10px;box-shadow:0 1px 2px rgba(11,11,11,.06),0 8px 24px rgba(11,11,11,.05)} .ds-undo{font:inherit;font-weight:600;color:var(--accent);cursor:pointer;background:transparent;border:none;border-radius:6px;padding:4px 8px} .ds-undo:hover{background:rgba(42,120,214,.10)} .ds-undo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-toast{display:inline-flex;align-items:center;gap:14px;padding:8px 8px 8px 14px;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--ring);border-radius:10px;box-shadow:0 1px 2px rgba(11,11,11,.06),0 8px 24px rgba(11,11,11,.05)} .ds-undo{font:inherit;font-weight:600;color:var(--accent);cursor:pointer;background:transparent;border:none;border-radius:6px;padding:4px 8px} .ds-undo:hover{background:rgba(42,120,214,.10)} .ds-undo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
     },
     {
       "name": "Masthead",
@@ -591,7 +639,7 @@
   ],
   "narrative": {
     "northStar": "The Field Notebook",
-    "overview": "The calculator reads like a carefully kept notebook: warm off-white paper, graphite and pencil-grey text, hairline ruled lines, and one hand-drawn curve that carries nearly all of the color. Each period is a different ink on that curve. Everything around the chart is calm, precise and unshowy. It is there to record the plan and report the numbers, never to compete with them.\n\nDensity is moderate and work-focused. A fixed-width column on the left holds the plan, written as a timeline: a ruled spine with each period hanging off a numbered node in its own ink. The results column on the right puts the final amount first, then a ruled row of three supporting figures (paid in, growth, monthly income), the chart with each period's stretch labeled above it, and the ledger-style breakdown. Type pairs a serif for the answers (figures and headings, like ink in a ledger) with a quiet sans for the working parts, on a role scale of eight sizes. The one large number on the page is the final amount.\n\nDark mode is the same notebook read by lamplight: the same roles and the same hues, re-stepped for a near-black page. It is never a separate look.",
+    "overview": "The calculator reads like a carefully kept notebook: warm off-white paper, graphite and pencil-grey text, hairline ruled lines, and one hand-drawn curve that carries nearly all of the color. Each period is a different ink on that curve. Everything around the chart is calm, precise and unshowy. It is there to record the plan and report the numbers, never to compete with them.\n\nDensity is moderate and work-focused. A fixed-width column on the left holds the plan, written as a timeline: a ruled spine with each period hanging off a numbered node in its own ink. The results column on the right puts the final amount first, then a ruled row of three supporting figures (paid in, growth, monthly income), the chart with each period's stretch labeled above it, and the ledger-style breakdown. Type pairs a serif for the answers (figures and headings, like ink in a ledger) with a quiet sans for the working parts, on a role scale of nine sizes. The one large number on the page is the final amount.\n\nDark mode is the same notebook read by lamplight: the same roles and the same hues, re-stepped for a near-black page. It is never a separate look.",
     "keyCharacteristics": [
       "Warm neutral paper surfaces; color is reserved for data and the single action accent.",
       "The plan reads as a sequence: a timeline spine down the setup column, labeled stretches on the chart.",
@@ -643,7 +691,7 @@
       },
       {
         "name": "The No Green Shortfall Rule",
-        "body": "Once the balance goes below zero, the plan is short: the final amount turns Loss Red under \"Shortfall at the end\", a Loss Red warning names the month the money runs out, the chart marks it, and nothing about that plan's growth is tinted green.",
+        "body": "Once a withdrawal can't be paid, the money has run out: the hero says so in one Loss Red sentence (\"Runs out 6y 3m into Retirement\", then \"About $1,750 a month unpaid for 16y 10m\" beneath: per month, not one unpicturable lifetime lump), the chart marks it with the grey wash, and nothing about that plan's growth is tinted green. Only withdrawals run out. A saving plan that a planned expense leaves below zero ends in debt and is said like a dip: \"Ends $31,678 below zero, after New house\", with the Loss Red below-zero wash (\"Below zero from here\"). Any borrowing adds \"after interest on the borrowed amount\" under growth.",
         "section": "typography"
       },
       {

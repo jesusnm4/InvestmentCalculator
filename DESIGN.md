@@ -572,12 +572,12 @@ Quiet and soft-edged. They read as part of the page until hovered.
 
 ### Segmented control
 - Shared by the theme toggle and the money switch (`.segmented`).
-- A Paper-filled track (9px radius, 2px inset) holding three 26px-tall text segments: Light, Dark,
+- A Paper-filled track (9px radius, 2px inset, 1px Field Edge border) holding three 26px-tall text segments: Light, Dark,
   Auto. Unpressed segments are Faded Pencil. The pressed segment (`aria-pressed`) takes a Field White
   fill, Graphite text and the 1px pressed ring.
 
 ### Inputs / Fields
-- **Style:** Field White fill, 1px Ruled Line border, 8px radius, padding 8px 10px, inheriting
+- **Style:** Field White fill, 1px Field Edge border (3:1 against what it sits on), 8px radius, padding 8px 10px, inheriting
   body type with tabular figures.
 - **Label:** a caption-size Pencil label set 5px above the input.
 - **Affixes:** `$` sits inside on the left and `%` on the right, in Faded Pencil at 13px, and the
