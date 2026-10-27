@@ -278,16 +278,20 @@
     if (sharedMode) {
       // Just looking (a view change): nothing is written, so your own saved plan is untouched.
       if (keepExample) { syncSharedNote(); return; }
-      // The first real edit makes the shared plan yours; your old one is kept aside (the oldest, if several).
-      try { if (!localStorage.getItem(OWN_KEY)) localStorage.setItem(OWN_KEY, JSON.stringify(ownPlan)); } catch (e) { /* private mode */ }
-      sharedMode = false;
-      clearPlanHash();
+      keepOwnAside();
     }
     if (!keepExample) state.isExample = false;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
     el.exampleNote.hidden = !state.isExample;
     el.reset.hidden = !!state.isExample;
     syncSharedNote();
+  }
+
+  // The first real change to a shared plan makes it yours; your old one is kept aside (the oldest, if several).
+  function keepOwnAside() {
+    try { if (!localStorage.getItem(OWN_KEY)) localStorage.setItem(OWN_KEY, JSON.stringify(ownPlan)); } catch (e) { /* private mode */ }
+    sharedMode = false;
+    clearPlanHash();
   }
 
   function keptAside() {
@@ -954,6 +958,7 @@
       el.resultBarValue.textContent = Chart.money0.format(t.finalAmount);
     }
     el.finalAmount.classList.toggle('short', depleted || short);
+    el.finalAmount.classList.toggle('doubt', state.periods.some(rateFlagged));
     // The pinned bar says a run-out in the same Loss Red as the headline.
     el.resultBar.classList.toggle('short', depleted || short);
     el.finalAmount.classList.toggle('answer', drawdown || !!cappedDraw || endsBelow);
@@ -1148,6 +1153,16 @@
      the day they are spent), so they are not restated in today's money. */
   function renderLever(depleted, drawdown, culprit, today, dipCulprit) {
     var text = '';
+    /* A return that looks like a typo makes every figure suspect: say that instead
+       of advising on it, and mute the headline (renderResults). */
+    var oddAt = state.periods.map(function (p, i) { return rateFlagged(p) ? i : -1; }).filter(function (i) { return i >= 0; })[0];
+    if (oddAt !== undefined) {
+      var oddP = state.periods[oddAt];
+      el.leverNote.textContent = '\u201c' + shortName(seasonName(oddP, oddAt)) + '\u201d has a ' + String(Number(oddP.annualRatePercent) || 0).replace('-', '\u2212') +
+        '% yearly return: is that a typo? The answer above assumes it.';
+      el.leverNote.hidden = false;
+      return;
+    }
     var withdrawing = state.periods.filter(Calc.isWithdrawing);
     var scale = drawdown ? Calc.withdrawalScale(state) : null;
     var only = withdrawing.length === 1 ? withdrawing[0] : null;
@@ -1156,9 +1171,20 @@
     function roundDown(v) { return Math.floor(v / 10) * 10; }
     // Say a withdrawal the way it was typed: a percent, or today's dollars a month.
     // In Future $ mode, typed dollar amounts are still today's: say so once, at the end.
-    var tagToday = state.view.money === 'future' && !asPct;
+    /* In Future $, a monthly amount is said in the dollars of its season's first
+       month (like the Withdrawn note), never as today's dollars mixed in. */
+    var future = state.view.money === 'future' && Number(state.inflationPercent) > 0;
+    var starts = seasonStarts();
+    function inFuture(p, v) {
+      if (!future) return v;
+      var sp = starts.filter(function (x) { return x.id === p.id; })[0];
+      return v * Calc.deflator((sp ? sp.start : 0) + 1, state.inflationPercent);
+    }
+    var tagFuture = future && !asPct;
     function amount(v, down) {
-      return asPct ? (Math.floor(v * 10) / 10) + '%' : Chart.money0.format(down ? roundDown(v) : v) + '/month';
+      if (asPct) return (Math.floor(v * 10) / 10) + '%';
+      var f = only ? inFuture(only, v) : v;
+      return Chart.money0.format(down ? roundDown(f) : f) + '/month';
     }
     /* Several withdrawing seasons: say each one's own figure ("9.3% in Early and
        $1,240/month in Late") rather than a percent of a percent. Past three, too long to say. */
@@ -1168,7 +1194,7 @@
       var said = items.map(function (x) {
         var pct = x.p.flow === 'withdraw' && x.p.withdrawUnit === 'percent';
         var v = pct ? Number(x.p.withdrawPercent) * k : Math.abs(Number(x.p.monthlyContribution) || 0) * k;
-        return (pct ? (Math.floor(v * 10) / 10) + '%' : Chart.money0.format(roundDown(v)) + '/month') + ' in ' + shortName(seasonName(x.p, x.i));
+        return (pct ? (Math.floor(v * 10) / 10) + '%' : Chart.money0.format(roundDown(inFuture(x.p, v))) + '/month') + ' in ' + shortName(seasonName(x.p, x.i));
       });
       return said.slice(0, -1).join(', ') + ' and ' + said[said.length - 1];
     }
@@ -1240,7 +1266,9 @@
       }
     }
     // The tag sits right after the $/month figure it qualifies, not at the end of the sentence.
-    if (tagToday && text) text = text.replace(/(\$[\d,]+\/month)(?![\s\S]*\$[\d,]+\/month)/, '$1 (in today\u2019s dollars)');
+    // Say once which dollars those are: the season's first year, rising with prices after.
+    // Right after the last $/month figure, so it never lands on another clause ("starting with $90,000 more").
+    if (tagFuture && text) text = text.replace(/(\$[\d,]+\/month)(?![\s\S]*\$[\d,]+\/month)/, '$1 (first-year dollars, rising with prices)');
     el.leverNote.hidden = !text;
     el.leverNote.textContent = text;
   }
@@ -1885,19 +1913,20 @@
   /* Desktop: the toast floats over the results column. If that would cover the
      chart's keys or the breakdown title, it lifts to sit just above them (over the
      plot, which is a picture, not text). Re-checked as the page scrolls. */
+  /* Desktop: the toast floats over the results column, in the lowest spot where
+     it covers no text (chart labels and keys, figures, the breakdown title, the
+     floating result card). If there is no such spot, it keeps its default place. */
+  var TOAST_AVOID = '.chart-svg text, #legend, #extras-legend, .details-title, .breakdown th, .kpi, .lever, .why summary, .back-link, .result-bar:not([hidden])';
   function placeToast() {
     el.toast.style.bottom = '';
     if (el.toast.hidden || window.innerWidth <= 900) return;
-    var keys = ['extras-legend', 'legend', 'details-h'].map(function (id) { return document.getElementById(id); });
-    for (var pass = 0; pass < 3; pass++) {
-      var t = el.toast.getBoundingClientRect(), hit = null;
-      keys.forEach(function (k) {
-        if (!k || !k.offsetParent || hit) return;
-        var r = k.getBoundingClientRect();
-        if (r.height && t.left < r.right && t.right > r.left && t.top < r.bottom && t.bottom > r.top) hit = r;
-      });
-      if (!hit) return;
-      el.toast.style.bottom = Math.round(window.innerHeight - hit.top + 8) + 'px';
+    var t = el.toast.getBoundingClientRect(), vh = window.innerHeight;
+    var boxes = Array.prototype.map.call(document.querySelectorAll(TOAST_AVOID), function (e) { return e.getBoundingClientRect(); })
+      .filter(function (r) { return r.width && r.height && r.bottom > 0 && r.top < vh && r.left < t.right && r.right > t.left; });
+    for (var b = 20; b < vh * 0.6; b += 4) {
+      var top = vh - b - t.height, bottom = vh - b;
+      var clear = boxes.every(function (r) { return r.bottom <= top - 4 || r.top >= bottom + 4; });
+      if (clear) { el.toast.style.bottom = b + 'px'; return; }
     }
   }
   window.addEventListener('scroll', function () { if (!el.toast.hidden) placeToast(); }, { passive: true });
@@ -2127,6 +2156,8 @@
 
   el.reset.addEventListener('click', function () {
     var before = JSON.stringify(state);
+    // Starting over from a shared plan is a change like any edit: keep your own plan aside first.
+    if (sharedMode) keepOwnAside();
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
     state = defaultState();
     renderAll();
@@ -2270,6 +2301,7 @@
       sharedMode = false;
       clearPlanHash();
       showPlan(ownPlan);
+      save(true);
     } else {
       var aside = sanitize((function () { try { return JSON.parse(keptAside()); } catch (e) { return null; } })());
       try { localStorage.removeItem(OWN_KEY); } catch (e) { /* private mode */ }
@@ -2277,7 +2309,8 @@
     }
     syncSharedNote();
     showNotice('Back to your own plan');
-    el.reset.focus();
+    // The note just hid itself: focus moves to the plan, never to <body> or a hidden button.
+    (el.reset.hidden ? el.startingAmount : el.reset).focus();
   });
   el.sharedForget.addEventListener('click', function () {
     try { localStorage.removeItem(OWN_KEY); } catch (e) { /* private mode */ }

@@ -451,7 +451,8 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - "Copy link" is a quiet text action beside "Undo" and "Start from the example" in the plan's head;
   it confirms in the toast ("Link copied… nothing is uploaded"), or, where the clipboard is off
   limits, puts the link in the address bar and says so. A shared plan is shown without being
-  saved; a persistent line in the plan's head says so, with "Back to your own plan". The first edit
+  saved; a persistent line in the plan's head says so, with "Back to your own plan". The first edit (or "Start from the
+  example")
   saves it and keeps your old plan aside (`-own` key), with "Back to your own plan" / "Forget my old
   plan" until you choose.
 - The chart is a Tab stop (2px Ledger Blue focus ring, 4px offset): ← / → step the readout a year,
@@ -461,8 +462,14 @@ Quiet and soft-edged. They read as part of the page until hovered.
 - Placeholders use Faded Pencil (`input::placeholder`), never the browser's grey. The pinned result
   bar's run-out reads in Loss Red, like the headline. A repeating extra's markers get no drop lines
   (a row of them reads as a picket fence); one-offs keep theirs.
-- On desktop the toast lifts above the chart keys or the breakdown title when it would cover them
-  (`placeToast`, re-checked on scroll), sitting over the plot instead.
+- On desktop the toast takes the lowest spot over the results column where it covers no text
+  (chart labels and keys, figures, the breakdown title, the floating card); `placeToast`, re-checked
+  on scroll.
+- A return that looks like a typo mutes the headline (Faded Pencil) and replaces the lever with
+  "'Crash' has a −150% yearly return: is that a typo? The answer above assumes it."
+- In Future $, lever amounts are in the season's first-year dollars, tagged right after the figure
+  ("$420/month instead of $1,154/month (first-year dollars, rising with prices)"), never mixed with
+  today's.
 - Screen readers: the chart is a named group (`aria-roledescription="chart"`), each summary figure a
   labelled group, and the spoken result reuses the headline's words. A link that can't be read says
   so and changes nothing. Undoing a delete says "'Letting it grow' is back".

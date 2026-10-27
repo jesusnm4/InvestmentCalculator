@@ -443,6 +443,85 @@ def repeating_extras_have_no_stems(env):
     s.close()
 
 
+# ---------------------------------------------------------------- critique #17
+
+@check
+def share_then_reset_keeps_your_plan(env):
+    url = share_url(env)
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open(plan([season('Mine only', 120, amt=100)], start=777))
+    pg = s.pg
+    pg.goto(url)
+    pg.wait_for_selector('#final-amount')
+    pg.wait_for_timeout(200)
+    pg.click('#reset-btn')  # "Start from the example" while looking at a shared plan
+    pg.wait_for_timeout(200)
+    pg.reload()
+    pg.wait_for_selector('#final-amount')
+    expect(s.text('#shared-note') is not None, 'after reset from a shared plan, nothing says your plan is kept aside')
+    pg.click('#shared-back')
+    pg.wait_for_timeout(200)
+    pg.reload()
+    pg.wait_for_selector('#final-amount')
+    expect(pg.input_value('#starting-amount') == '777', 'own plan lost after reset from a shared plan: %s' % pg.input_value('#starting-amount'))
+    s.close()
+
+
+@check
+def back_to_own_plan_keeps_focus(env):
+    url = share_url(env)
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open()  # a first-time visitor: their own plan is the untouched example
+    s.pg.goto(url)
+    s.pg.wait_for_selector('#final-amount')
+    s.pg.focus('#shared-back')
+    s.pg.keyboard.press('Enter')
+    s.pg.wait_for_timeout(200)
+    expect(s.pg.evaluate('document.activeElement !== document.body && document.activeElement.offsetParent !== null'),
+           'focus dropped to the page (or a hidden button) after Back to your own plan')
+    s.close()
+
+
+@check
+def flagged_return_tempers_the_answer(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open(plan([season('Crash', 120, rate=-150), season('Retirement', 300, flow='withdraw', slot=2)], start=100000))
+    lever = s.text('#lever-note') or ''
+    expect('typo' in lever and 'withdraw up to' not in lever, 'results answer confidently despite a flagged return: %r' % lever)
+    s.close()
+
+
+@check
+def future_money_is_one_kind(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    s.open(plan([season('Saving', 240, amt=800, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=300, slot=2)], money='future'))
+    lever = s.text('#lever-note') or ''
+    expect('today' not in lever, 'Future $ lever mixes in today\u2019s dollars: %r' % lever)
+    s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)], money='future'))
+    lever = s.text('#lever-note') or ''
+    expect(re.search(r'more \(', lever) is None, 'the dollars tag landed on the starting-amount clause: %r' % lever)
+    s.close()
+
+
+@check
+def toast_covers_no_text(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900}, permissions=['clipboard-read', 'clipboard-write'])
+    pg = s.open()
+    pg.click('#add-windfall')
+    pg.fill('.windfall [data-field="amount"]', '5000')
+    for y in (0, 400, 100000):
+        pg.evaluate('window.scrollTo(0, %d)' % y)
+        pg.click('#share-link')
+        pg.wait_for_timeout(250)
+        hit = pg.evaluate("""(() => {
+          const t = document.getElementById('toast'); if (t.hidden) return null; const a = t.getBoundingClientRect();
+          const texts = [...document.querySelectorAll('.chart-svg text, #legend, #extras-legend, .details-title, .breakdown th, .kpi, .lever, .why summary, .back-link')];
+          const over = texts.find(e => { const r = e.getBoundingClientRect(); return r.width && r.height && a.left < r.right && a.right > r.left && a.top < r.bottom && a.bottom > r.top; });
+          return over ? (over.textContent || over.id).trim().slice(0, 40) : null; })()""")
+        expect(hit is None, 'at scroll %d the toast covers %r' % (y, hit))
+    s.close()
+
+
 # ---------------------------------------------------------------- run
 
 def main():

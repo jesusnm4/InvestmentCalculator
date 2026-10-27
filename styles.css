@@ -706,6 +706,8 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .result-bar-label { font-size: var(--text-caps); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .result-bar-value { font-size: var(--text-figure); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .result-bar.short .result-bar-value { color: var(--bad); }
+/* An answer built on a return that looks like a typo is shown, but muted. */
+.hero-value.doubt { color: var(--muted); }
 /* Small phones: the label goes, so the answer and "See results" stay on one line. */
 @media (max-width: 420px) {
   .result-bar-label { display: none; }
