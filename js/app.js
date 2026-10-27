@@ -37,6 +37,7 @@
     resultBarValue: document.getElementById('result-bar-value'),
     toast:          document.getElementById('toast'),
     toastText:      document.getElementById('toast-text'),
+    toastLive:      document.getElementById('toast-live'),
     toastUndo:      document.getElementById('toast-undo'),
     liveSummary:    document.getElementById('live-summary'),
     exampleNote:    document.getElementById('example-note'),
@@ -914,12 +915,14 @@
     var outSeason = outSpot ? shortName(outSpot.name) : depleted ? 'year ' + (Math.floor((t.depletedAt - 1) / 12) + 1) : '';
     /* Nothing "runs out" without a withdrawal: a saving plan that a planned
        expense leaves below zero ends in debt, said like a dip. "Runs out" is
-       kept for withdrawals that could not be paid. */
-    var endsBelow = depleted && !drawdown;
+       kept for withdrawals that could not be paid; a withdrawing plan that an
+       expense sinks with nothing left unpaid (a 4% season starting below zero
+       withdraws nothing) ends in debt too. */
+    var endsBelow = depleted && !nominal.points.some(function (pt) { return pt.short > 0; });
     var belowCause = endsBelow && culprit >= 0 ? state.windfalls[culprit].name || 'Extra ' + (culprit + 1) : '';
     if (endsBelow) depleted = false;
 
-    if (drawdown) {
+    if (drawdown && !endsBelow) {
       el.finalLabel.textContent = 'Will it last?';
       // "Lasts through Retirement", not "lasts all 45 yrs": the saving years are not the question.
       var lastDraw = drawing[drawing.length - 1];
@@ -951,7 +954,7 @@
         '-year limit. Shorten an earlier season. \u00b7 ' + Chart.money0.format(t.finalAmount) + ' at the end';
       el.resultBarValue.textContent = 'Gets no time';
     } else if (endsBelow) {
-      el.finalLabel.textContent = 'Final amount';
+      el.finalLabel.textContent = drawdown ? 'Will it last?' : 'Final amount';
       el.finalAmount.textContent = 'Ends ' + Chart.money0.format(-t.finalAmount) + ' below zero' + (belowCause ? ', after ' + belowCause : '');
       el.finalSub.textContent = 'Borrowed against the plan from ' + inSeasonText(projection, t.depletedAt) + ' \u00b7 ' +
         Chart.durationLabel(t.totalMonths) + ', ' + seasons;
@@ -1056,7 +1059,7 @@
         ? growthNote(t.totalGrowth / (paidIn + Math.max(0, gotExtras)))
         : '\u00a0';
     // The third figure: what a saving plan could pay out, or what a drawdown plan took out.
-    if (drawdown) {
+    if (drawdown && !endsBelow) {
       el.thirdLabel.textContent = 'Withdrawn';
       el.income.textContent = Chart.money0.format(t.totalWithdrawn);
       // With one withdrawing season, say what it is per month (today's dollars, constant).
@@ -1128,7 +1131,7 @@
     renderTable(projection, drawdown, today ? nominal : null);
     // Spoken with the same words as the headline, so what is heard matches what is shown.
     var summary = !t.totalMonths ? 'No seasons yet.'
-      : drawdown
+      : drawdown && !endsBelow
         ? (depleted ? el.finalAmount.textContent + '.'
                     : 'The money lasts all ' + Chart.durationLabel(t.totalMonths) + ', ending with ' +
                       Chart.money0.format(t.finalAmount) + (today ? ' in today’s dollars.' : '.'))
@@ -1433,10 +1436,15 @@
       var same = gap === 0 && Math.round(projection.totals.finalAmount - then) === 0;
       // Nothing changed since keeping it: there is nothing to keep instead.
       if (same) el.keepBaseline.hidden = true;
+      /* Outcomes before time: a plan that now lasts beats a baseline that ran out,
+         however long either timeline is. The time gap is for two run-outs. */
       el.baselineDelta.innerHTML = same ? 'Kept. The dashed line is your kept plan; change anything to compare.'
+        : nowOut === null ? '<span class="up">Lasts now</span>; the baseline ran out after ' + Chart.durationLabel(thenOut)
+        : thenOut === null ? '<span class="down">' + (projection.points.some(function (pt) { return pt.short > 0; })
+            ? 'Runs out now' : 'Ends below zero now') + '</span>; the baseline lasted'
         : gap === 0 ? 'Lasts as long as the baseline'
         // Longer, but still running out, is not a win to colour green.
-        : '<span class="' + (gap > 0 ? (nowOut === null ? 'up' : '') : 'down') + '">Lasts ' + Chart.durationLabel(Math.abs(gap)) +
+        : '<span class="' + (gap > 0 ? '' : 'down') + '">Lasts ' + Chart.durationLabel(Math.abs(gap)) +
           (gap > 0 ? ' longer' : ' shorter') + '</span> than the baseline';
       return;
     }
@@ -1650,6 +1658,8 @@
     return Number(n) ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n) : '';
   }
   el.startingAmount.addEventListener('input', function () {
+    // Text with no number in it ("abc") is not $0: keep the last amount, shown again on blur.
+    if (this.value.trim() && !/\d/.test(this.value)) return;
     state.startingAmount = Math.max(0, parseMoney(this.value));
     save();
     renderResults();
@@ -1672,6 +1682,8 @@
     var li = ev.target.closest('.period');
     var p = state.periods[Number(li.dataset.index)];
     var field = input.dataset.field;
+    // A cleared number is mid-typing, not 0: keep the last value until there is one (it comes back on blur).
+    if (NUMBER_FIELDS.indexOf(field) >= 0 && input.value === '') return;
     dropStale(p);
 
     if (field === 'name' || field === 'compounding') {
@@ -1690,6 +1702,18 @@
     refreshCardNotes(li, p);
     save();
     renderResults();
+  });
+
+  /* Leaving a cleared (or unreadable) number puts back the value the math is
+     using, so the field and the answer never disagree. */
+  var NUMBER_FIELDS = ['months', 'monthlyContribution', 'withdrawPercent', 'annualRatePercent'];
+  el.periodList.addEventListener('focusout', function (ev) {
+    var input = ev.target;
+    if (!input.dataset || NUMBER_FIELDS.indexOf(input.dataset.field) < 0 || input.value !== '') return;
+    var p = state.periods[Number(input.closest('.period').dataset.index)];
+    var f = input.dataset.field;
+    input.value = f === 'months' ? timeDisplay(p.months, unitOf(p.lengthUnit, p.months))
+      : f === 'monthlyContribution' ? Math.abs(Number(p.monthlyContribution) || 0) : p[f];
   });
 
   el.periodList.addEventListener('click', function (ev) {
@@ -1911,7 +1935,15 @@
     }
     el.toastUndo.hidden = false;
     el.toast.hidden = false;
+    speakToast(top.text);
     startToastTimer(UNDO_MS);
+  }
+  /* Screen readers hear a toast from a standing live region: one that is itself
+     un-hidden is announced unreliably. Emptied first, so the same words twice are
+     still said twice. */
+  function speakToast(text) {
+    el.toastLive.textContent = '';
+    setTimeout(function () { el.toastLive.textContent = text; }, 50);
   }
   /* The toast goes away; the history does not. While anything can be undone, a
      quiet "Undo" stays beside the plan title. */
@@ -1924,6 +1956,7 @@
     el.toastText.textContent = text;
     el.toastUndo.hidden = true;
     el.toast.hidden = false;
+    speakToast(text);
     startToastTimer(5000);
   }
   /* Desktop: the toast floats over the results column. If that would cover the

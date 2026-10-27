@@ -9,6 +9,7 @@ colors:
   pencil: "#52514e"
   faded-pencil: "#6e6c66"
   ruled-line: "#e1e0d9"
+  field-edge: "#8f8d86"
   axis-grey: "#c3c2b7"
   ledger-blue: "#2a78d6"
   ledger-blue-deep: "#256abc"
@@ -19,15 +20,16 @@ colors:
   night-faded-pencil: "#898781"
   night-field: "#131312"
   night-ruled-line: "#2c2c2a"
+  night-field-edge: "#6a6964"
   night-axis: "#383835"
   night-ledger-blue: "#3987e5"
   night-gain-green: "#0ca30c"
   night-loss-red: "#e66767"
   series-blue: "#2a78d6"
-  series-orange: "#eb6834"
-  series-aqua: "#1baf7a"
-  series-yellow: "#eda100"
-  series-magenta: "#e87ba4"
+  series-orange: "#e96632"
+  series-aqua: "#00a26e"
+  series-yellow: "#af6600"
+  series-magenta: "#d66b94"
   series-green: "#008300"
   series-violet: "#4a3aa7"
   series-red: "#e34948"
@@ -203,7 +205,10 @@ categorical palette that belongs to the chart.
 - **Faded Pencil** (`faded-pencil` / `night-faded-pencil`): hints, notes, affixes, axis labels,
   period ranges, empty states. Light mode uses the deeper value so 11–12px text clears 4.5:1 on every
   paper surface.
-- **Ruled Line** (`ruled-line` / `night-ruled-line`): every hairline border, divider and grid line.
+- **Ruled Line** (`ruled-line` / `night-ruled-line`): every hairline border, divider and grid line,
+  except a field's own edge.
+- **Field Edge** (`field-edge` / `night-field-edge`, CSS `--field-line`): the border of inputs, selects
+  and segmented tracks, at 3:1 against what they sit on, so a field reads as a field.
 - **Axis Grey** (`axis-grey` / `night-axis`): chart axes and the hover border on controls. One step
   firmer than a ruled line.
 
@@ -214,7 +219,9 @@ categorical palette that belongs to the chart.
 
 ### Series palette (owned by `js/chart.js`)
 Blue, Orange, Aqua, Yellow, Magenta, Green, Violet and Red (`series-*`). These eight hues are
-validated to stay distinguishable under colorblindness in both themes. The frontmatter lists the
+validated to stay distinguishable under colorblindness in both themes, and every line clears 3:1
+against the card (light orange, aqua, yellow and magenta are stepped darker for it; yellow to an
+ochre, so it stays apart from orange under deuteranopia). The frontmatter lists the
 light values; the dark column in `PALETTE.dark` is the same hues re-stepped. `js/chart.js` is the
 normative source; this file only mirrors it.
 

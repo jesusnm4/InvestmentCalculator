@@ -649,6 +649,128 @@ def skip_link_leaves_no_smudge(env):
     s.close()
 
 
+@check
+def withdrawing_plan_in_debt_does_not_run_out(env):
+    # An expense sinks the balance before a 4%-rule season: nothing goes unpaid, so it ends in debt.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 240, amt=500, rate=7), season('Retirement', 300, flow='withdraw', slot=2)],
+                     [extra('House', 12, -150000)]))
+    head = s.text('#final-amount')
+    expect(head.startswith('Ends ') and 'below zero' in head, 'debt in a withdrawing plan: %r' % head)
+    expect('Short by' not in s.text('#final-sub'), 'debt called a shortfall: %r' % s.text('#final-sub'))
+    bar = pg.text_content('#result-bar-value')
+    expect('Runs out' not in bar, 'bar says runs out: %r' % bar)
+    expect(s.text('#kpi-third-label') == 'Owed at the end', 'third figure: %s' % s.text('#kpi-third-label'))
+    expect('while there was money' not in s.text('#kpi-growth-note'), 'growth note: %r' % s.text('#kpi-growth-note'))
+    chart = pg.evaluate("[...document.querySelectorAll('.chart-svg text')].map(t => t.textContent).join('|')")
+    expect('Runs out' not in chart and 'Below zero' in chart, 'chart hides the debt: %s' % chart[:200])
+    # A real unpaid withdrawal after the expense still runs out.
+    s.open(plan([season('Saving', 240, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)],
+                [extra('House', 12, -150000)]))
+    expect(s.text('#final-amount').startswith('Runs out'), 'unpaid withdrawals: %r' % s.text('#final-amount'))
+    s.close()
+
+
+@check
+def baseline_compares_outcomes_first(env):
+    # Keep a plan that runs out, then make it last on a shorter timeline: that is better, not "shorter".
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)]))
+    expect(s.text('#final-amount').startswith('Runs out'), 'setup should run out: %r' % s.text('#final-amount'))
+    pg.click('#keep-baseline')
+    pg.click('.period:nth-child(2) .card-summary')
+    pg.fill('.period:nth-child(2) [data-field="months"]', '3')
+    pg.fill('.period:nth-child(2) [data-field="monthlyContribution"]', '300')
+    pg.wait_for_timeout(100)
+    expect(s.text('#final-amount').startswith('Lasts'), 'edit should last: %r' % s.text('#final-amount'))
+    delta = s.text('#baseline-delta') or ''
+    expect('shorter' not in delta and 'ran out' in delta, 'lasting plan vs a run-out baseline: %r' % delta)
+    expect(pg.locator('#baseline-delta .down').count() == 0, 'a lasting plan is coloured as a loss: %r' % delta)
+    s.close()
+
+
+@check
+def fields_and_math_never_disagree(env):
+    # A cleared or unreadable field keeps the last value, and shows it again on leaving the field.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    head = s.text('#final-amount')
+    pg.click('.period:nth-child(1) .card-summary')
+    for field in ('annualRatePercent', 'monthlyContribution', 'months'):
+        sel = '.period:nth-child(1) [data-field="%s"]' % field
+        before = pg.input_value(sel)
+        pg.fill(sel, '')
+        pg.wait_for_timeout(50)
+        expect(s.text('#final-amount') == head, 'clearing %s changed the answer: %r' % (field, s.text('#final-amount')))
+        pg.locator(sel).blur()
+        expect(pg.input_value(sel) == before, 'cleared %s shows %r, the math uses %r' % (field, pg.input_value(sel), before))
+    pg.fill('#starting-amount', 'abc')
+    pg.locator('#starting-amount').blur()
+    expect(pg.input_value('#starting-amount') == '10,000', 'unreadable start shows %r' % pg.input_value('#starting-amount'))
+    expect(s.text('#final-amount') == head, 'unreadable start changed the answer: %r' % s.text('#final-amount'))
+    pg.fill('#inflation', '')
+    pg.locator('#inflation').blur()
+    expect(pg.input_value('#inflation') == '2.5' and '2.5%' in s.text('#money-note'), 'inflation field vs note: %r / %r' % (pg.input_value('#inflation'), s.text('#money-note')))
+    s.close()
+
+
+CONTRAST_JS = """(() => {
+  const rgb = c => (c.match(/[\\d.]+/g) || []).map(Number);
+  const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  const lum = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const bgOf = el => { for (let e = el; e; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c.length === 3 || c[3] > 0) return c; } return [255, 255, 255]; };
+  const bad = [];
+  // Field boundaries against what surrounds them (WCAG 1.4.11).
+  document.querySelectorAll('input[type=number], input[type=text], select, .segmented').forEach(el => {
+    const cs = getComputedStyle(el);
+    if (!el.offsetParent || parseFloat(cs.borderTopWidth) === 0) return;
+    const r = ratio(rgb(cs.borderTopColor), bgOf(el.parentElement));
+    if (r < 3) bad.push((el.id || el.dataset.field || el.className) + ' border ' + r.toFixed(2));
+  });
+  // Series strokes against the chart card.
+  const surface = bgOf(document.querySelector('.chart-svg'));
+  for (let k = 0; k < Chart.slotCount; k++) {
+    const hex = Chart.colorFor(k), c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const r = ratio(c, surface);
+    if (r < 3) bad.push('series ' + k + ' ' + hex + ' ' + r.toFixed(2));
+  }
+  return bad;
+})()"""
+
+
+@check
+def lines_and_fields_are_visible(env):
+    for theme in ('light', 'dark'):
+        s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900}, color_scheme=theme)
+        pg = s.open()
+        pg.click('.period:nth-child(1) .card-summary')
+        bad = pg.evaluate(CONTRAST_JS)
+        expect(not bad, '%s: under 3:1: %s' % (theme, sorted(set(bad))))
+        s.close()
+
+
+@check
+def toasts_speak_from_a_standing_live_region(env):
+    # A live region that is itself un-hidden is announced unreliably; the words go to one that is always there.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    live = pg.evaluate("""(() => { const r = document.getElementById('toast-live');
+        return r && { role: r.getAttribute('role'), hidden: r.hidden || getComputedStyle(r).display === 'none', text: r.textContent }; })()""")
+    expect(live and live['role'] == 'status' and not live['hidden'], 'no standing live region for toasts: %s' % live)
+    expect(pg.evaluate("!document.getElementById('toast').hasAttribute('role') && !document.getElementById('toast').hasAttribute('aria-live')"),
+           'the toast that hides and shows is still a live region')
+    pg.click('.period:nth-child(3) .card-summary')
+    pg.click('.period:nth-child(3) .danger-link')
+    pg.wait_for_timeout(100)
+    said = pg.text_content('#toast-live')
+    expect('deleted' in said, 'delete not announced: %r' % said)
+    pg.click('#share-link')
+    pg.wait_for_timeout(100)
+    expect(pg.text_content('#toast-live') == pg.text_content('#toast-text'), 'notice not announced: %r' % pg.text_content('#toast-live'))
+    s.close()
+
+
 # ---------------------------------------------------------------- run
 
 def main():

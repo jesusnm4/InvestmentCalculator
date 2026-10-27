@@ -6,9 +6,12 @@
   /* Validated categorical palette (dataviz reference palette). The dark column
      is the same eight hues re-stepped for a dark surface, not a second palette.
      This is the single source of truth for series color — the swatch buttons and
-     the legend read from here too, so CSS never hardcodes a series hex. */
+     the legend read from here too, so CSS never hardcodes a series hex.
+     Light orange, aqua, yellow and magenta are stepped darker (same hues) so every
+     line clears 3:1 on the card; yellow goes deepest, to an ochre, so it stays
+     apart from orange under deuteranopia. */
   var PALETTE = {
-    light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'],
+    light: ['#2a78d6', '#e96632', '#00a26e', '#af6600', '#d66b94', '#008300', '#4a3aa7', '#e34948'],
     dark:  ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']
   };
   var COLOR_NAMES = ['Blue', 'Orange', 'Aqua', 'Yellow', 'Magenta', 'Green', 'Violet', 'Red'];
