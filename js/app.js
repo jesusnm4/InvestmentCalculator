@@ -279,7 +279,7 @@
     item[UNIT_KEY[field]] = unit;
     var input = li.querySelector('[data-field="' + field + '"]');
     // An anchored extra's "At" shows its offset into the season.
-    input.value = timeDisplay(field === 'atMonth' && item.anchor ? item.anchorOffset
+    input.value = timeDisplay(field === 'atMonth' ? atShown(item)
       : field === 'repeatUntil' ? untilShown(item) : item[field], unit);
     input.step = unit === 'years' ? 'any' : '1';
     input.inputMode = unit === 'years' ? 'decimal' : 'numeric';
@@ -422,7 +422,8 @@
       parsed.baseline = (b && Array.isArray(b.balances) && b.balances.length > 1 &&
         b.balances.length <= Calc.MAX_TOTAL_MONTHS + 1 &&
         b.balances.every(function (x) { return typeof x === 'number' && isFinite(x); }))
-        ? { balances: b.balances, depletedAt: typeof b.depletedAt === 'number' ? b.depletedAt : null } : null;
+        ? { balances: b.balances, depletedAt: typeof b.depletedAt === 'number' ? b.depletedAt : null,
+            outText: typeof b.outText === 'string' ? b.outText.slice(0, 120) : null } : null;
       return parsed;
     } catch (e) { return null; }
   }
@@ -731,7 +732,7 @@
             // Measured from the plan start or from a season's start, so "when I retire" stays put.
             '<div class="anchor-row">' +
               '<span class="select-wrap"><select data-field="anchor" aria-label="At, measured from, extra ' + (i + 1) + '">' + anchorOptions(w) + '</select></span>' +
-              timeField('atMonth', w.anchor ? w.anchorOffset : w.atMonth, unitOf(w.atUnit, w.anchor ? w.anchorOffset : w.atMonth), 'At, extra ' + (i + 1),
+              timeField('atMonth', atShown(w), unitOf(w.atUnit, atShown(w)), 'At, extra ' + (i + 1),
                 ' data-from="' + escapeAttr(w.anchor || '') + '"') +
             '</div>' +
           '</div>' +
@@ -782,7 +783,7 @@
       var atInput = li.querySelector('[data-field="atMonth"]');
       if (atInput && atInput.dataset.from !== (w.anchor || '') && document.activeElement !== atInput) {
         atInput.dataset.from = w.anchor || '';
-        var shownAt = w.anchor ? w.anchorOffset : w.atMonth;
+        var shownAt = atShown(w);
         w.atUnit = unitOf(null, shownAt);
         atInput.value = timeDisplay(shownAt, w.atUnit);
         atInput.closest('.unit-field').querySelector('select').value = w.atUnit;
@@ -802,7 +803,7 @@
       var anchorIdx = w.anchor ? state.periods.map(function (p) { return p.id; }).indexOf(w.anchor) : -1;
       var lands = anchorIdx >= 0
         // Said in the season's own terms, the way it was set.
-        ? 'Lands ' + (w.anchorOffset ? Chart.durationLabel(w.anchorOffset) + ' into ' : 'in the first month of ') +
+        ? 'Lands ' + Chart.durationLabel(atShown(w)) + ' into ' +
           shortName(seasonName(state.periods[anchorIdx], anchorIdx)) + ' (' + Chart.durationLabel(at) + ' into the plan)'
         : at
         ? 'Lands at ' + Chart.durationLabel(at) + (within ? ', during ' + within : '')
@@ -857,6 +858,15 @@
       at = Math.min(Calc.MAX_TOTAL_MONTHS, at + Math.max(0, Math.floor(Number(p.months) || 0)));
       return { id: p.id, start: start, end: at };
     });
+  }
+  /* At, as the field shows it: months from the plan start, or months into its
+     season, on the headline's clock ("5 yrs into Retirement" = season start + 5 yrs).
+     Stored as anchorOffset = shown - 1 (0 is the season's first month), so saved
+     plans keep their months. */
+  function atShown(w) { return w.anchor ? w.anchorOffset + 1 : w.atMonth; }
+  function setAtShown(w, months) {
+    if (w.anchor) w.anchorOffset = Math.max(0, months - 1);
+    else w.atMonth = months;
   }
   // Where an extra's At and Until are counted from: its season's start, or the plan start.
   function anchorStart(w) {
@@ -1503,7 +1513,8 @@
       /* Outcomes before time: a plan that now lasts beats a baseline that ran out,
          however long either timeline is. The time gap is for two run-outs. */
       el.baselineDelta.innerHTML = same ? 'Kept. The dashed line is your kept plan; change anything to compare.'
-        : nowOut === null ? '<span class="up">Lasts now</span>; the baseline ran out after ' + Chart.durationLabel(thenOut)
+        : nowOut === null ? '<span class="up">Lasts now</span>; the baseline ran out ' +
+          (state.baseline.outText || 'after ' + Chart.durationLabel(thenOut))
         : thenOut === null ? '<span class="down">' + (projection.points.some(function (pt) { return pt.short > 0; })
             ? 'Runs out now' : 'Ends below zero now') + '</span>; the baseline lasted'
         : gap === 0 ? 'Lasts as long as the baseline'
@@ -2194,8 +2205,7 @@
       w.name = input.value;
     } else if (field === 'atMonth') {
       // Anchored, the field is the offset into the season; otherwise months from the plan start.
-      if (w.anchor) w.anchorOffset = timeFromInput(input.value, unitOf(w.atUnit, w.anchorOffset));
-      else w.atMonth = timeFromInput(input.value, unitOf(w.atUnit, w.atMonth));
+      setAtShown(w, timeFromInput(input.value, unitOf(w.atUnit, atShown(w))));
     } else if (field === 'anchor') {
       /* Re-expressed, not moved: switching what it is measured from keeps the
          month it lands on (a season start later than it moves it to that start). */
@@ -2213,7 +2223,7 @@
       untilField.closest('.unit-field').querySelector('select').value = w.untilUnit;
       var atField = li.querySelector('[data-field="atMonth"]');
       atField.dataset.from = w.anchor || '';
-      var shown = w.anchor ? w.anchorOffset : w.atMonth;
+      var shown = atShown(w);
       w.atUnit = unitOf(null, shown);
       atField.value = timeDisplay(shown, w.atUnit);
       atField.closest('.unit-field').querySelector('select').value = w.atUnit;
@@ -2232,7 +2242,7 @@
     // Always the value in use: whole months, the last readable entry.
     input.value = f === 'amount' ? (Number(w.amount) ? w.amount : '')
       : f === 'repeatEvery' ? timeDisplay(w.repeatEvery || 12, unitOf(w.everyUnit, w.repeatEvery || 12))
-      : f === 'atMonth' ? timeDisplay(w.anchor ? w.anchorOffset : w.atMonth, unitOf(w.atUnit, w.anchor ? w.anchorOffset : w.atMonth))
+      : f === 'atMonth' ? timeDisplay(atShown(w), unitOf(w.atUnit, atShown(w)))
       : timeDisplay(untilShown(w), unitOf(w.untilUnit, untilShown(w) || 0));
     if (f !== 'amount') unitWords(input);
   });
@@ -2391,7 +2401,9 @@
     var kept = Calc.project(state);
     state.baseline = {
       balances: pts.map(function (pt) { return Math.round(pt.balance * 100) / 100; }),
-      depletedAt: kept.totals.depletedAt
+      depletedAt: kept.totals.depletedAt,
+      // Said as the headline said it then ("9y 8m into Retirement"): its seasons may change later.
+      outText: kept.totals.depletedAt === null ? null : inSeasonText(kept, kept.totals.depletedAt)
     };
     state.baselineSeen = true;
     save(true);

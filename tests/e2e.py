@@ -1210,6 +1210,35 @@ def os_theme_flip_keeps_number_typing_and_recolours(env):
     expect(not bad, '; '.join(bad))
 
 
+@check
+def one_clock_for_when(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    st = plan([season('Saving', 120, amt=500, rate=7), season('Growing', 120, rate=5, slot=1),
+               season('Retirement', 300, flow='withdraw', unit='dollars', amt=1000, slot=2)], [dict(extra('Car', 300, -1000), atUnit='years')])
+    pg = s.open(st)
+    # 25 yrs from the plan start is 5 yrs into Retirement (which starts at 20 yrs).
+    pg.select_option('#windfall-list [data-field="anchor"]', label='Retirement')
+    pg.wait_for_timeout(50)
+    shown = pg.input_value('#windfall-list [data-field="atMonth"]')
+    note = pg.text_content('#windfall-list [data-role="at-note"]')
+    shown != '5' and bad.append('At 25 yrs re-anchored to Retirement shows %r' % shown)
+    '5 yrs into Retirement' not in note and bad.append('note: %r' % note)
+    stored = s.stored()['windfalls'][0]['atMonth']
+    stored != 300 and bad.append('re-anchoring moved it to month %r' % stored)
+    # The baseline's run-out is said the way the headline says it.
+    head = s.text('#final-amount')
+    when = re.search(r'Runs out (.+? into Retirement)', head)
+    pg.click('#keep-baseline')
+    pg.click('.period:nth-child(3) .card-summary')
+    pg.fill('.period:nth-child(3) [data-field="monthlyContribution"]', '300')
+    pg.wait_for_timeout(50)
+    delta = s.text('#baseline-delta') or ''
+    when and when.group(1) not in delta and bad.append('headline said %r; the baseline delta says %r' % (when.group(1), delta))
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
 # ---------------------------------------------------------------- run
 
 def main():
