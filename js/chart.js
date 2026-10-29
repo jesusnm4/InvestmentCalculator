@@ -275,7 +275,7 @@
       var pp = segs[s];
       if (pp.months <= 0) continue;
       // Seasons drawn only up to the month the money runs out, unless a debt is still running there.
-      var segEnd = dep !== null && !debtAfter ? Math.min(pp.endMonth, dep) : pp.endMonth;
+      var segEnd = dep !== null ? Math.min(pp.endMonth, dep) : pp.endMonth;
       var color = colorFor((periods[pp.index] || {}).colorSlot);
       // A season wholly after the run-out still shows where it sits: a dashed line at $0
       // (dashed, not faded, so it keeps its 3:1).
@@ -321,7 +321,7 @@
         svg.push('<line x1="' + wx.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + wx.toFixed(2) +
                  '" y2="' + wy.toFixed(2) + '" stroke="' + C.muted + '" stroke-width="1" stroke-dasharray="3 3"/>');
       }
-      wfDots.push(shapeMark(wf[wi].shapeSlot, wx, wy, markR, C.surface, C.muted, 2));
+      wfDots.push('<g data-month="' + wm + '">' + shapeMark(wf[wi].shapeSlot, wx, wy, markR, C.surface, C.muted, 2) + '</g>');
     }
 
     // Surface-colored divider at each handoff: reads as the boundary and keeps
@@ -375,6 +375,20 @@
                '" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round" opacity="0.9"/>');
     }
 
+    /* Debt a planned expense runs up after the run-out is a loss, not the season:
+       a Loss Red line and wash from the run-out on, never the season's colour. */
+    if (debtAfter) {
+      var dd = [], da = [];
+      for (var dm = dep; dm <= planEnd; dm++) {
+        var dpx = x(dm).toFixed(2), dpy = y(val(dm)).toFixed(2);
+        dd.push((dm === dep ? 'M' : 'L') + dpx + ' ' + dpy);
+        da.push('L' + dpx + ' ' + dpy);
+      }
+      svg.push('<path d="M' + x(dep).toFixed(2) + ' ' + yBase.toFixed(2) + da.join('') + 'L' + x(planEnd).toFixed(2) + ' ' +
+               yBase.toFixed(2) + 'Z" fill="' + C.bad + '" opacity="0.1"/>');
+      lineParts.push('<path d="' + dd.join('') + '" fill="none" stroke="' + C.bad +
+                     '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>');
+    }
     svg.push(lineParts.join(''));
     svg.push(wfDots.join(''));
 

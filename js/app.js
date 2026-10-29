@@ -456,7 +456,8 @@
       months.forEach(function (mth, k) {
         if (k % step && k !== months.length - 1) return;
         // Past a run-out the money only passes through; markers along $0 in the wash are noise (the key counts them).
-        if (ranOutAt !== null && ranOutAt !== undefined && mth > ranOutAt) return;
+        // An expense that digs debt there is not passing through: it keeps its marker.
+        if (ranOutAt !== null && ranOutAt !== undefined && mth > ranOutAt && !(projection.points[mth] && projection.points[mth].balance < 0)) return;
         out.push({ name: w.name || ('Extra ' + (i + 1)), atMonth: mth, amount: viewMoney(Calc.extraAt(w, mth, state.inflationPercent), mth),
                    shapeSlot: w.shapeSlot, repeat: months.length > 1 });
       });
@@ -975,9 +976,22 @@
       el.finalAmount.textContent = depleted ? runsOut
         : through;
       // One line: where it ends, then the frame (withdrawal years). The cap caveat lives here, not in the headline.
+      /* Withdrawals stop at $0, but a planned expense after the run-out keeps adding
+         debt; "a month unpaid" alone would hide it, so the sub-line names it. */
+      var debtNote = '';
+      if (depleted && t.finalAmount <= -1) {
+        var later = [];
+        state.windfalls.forEach(function (w, wi) {
+          if (Number(w.amount) < 0 && Calc.windfallMonths(w, t.totalMonths).some(function (mth) { return mth >= t.depletedAt; })) later.push(wi);
+        });
+        var debtFrom = later.length === 1 ? later[0] : !later.length && culprit >= 0 ? culprit : -1;
+        debtNote = ' \u00b7 ends ' + Chart.money0.format(-t.finalAmount) + ' below zero' +
+          (debtFrom >= 0 ? ', from ' + (state.windfalls[debtFrom].name || 'Extra ' + (debtFrom + 1))
+            : later.length ? ', from ' + later.length + ' expenses' : '');
+      }
       el.finalSub.textContent = (!depleted && trimmed ? shortName(seasonName(state.periods[trimmed.index], trimmed.index)) + ' cut to ' +
           Chart.durationLabel(trimmed.months) + ' by the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit \u00b7 ' : '') + (depleted
-        ? shortText + ' \u00b7 ' + planYear
+        ? shortText + debtNote + ' \u00b7 ' + planYear
         : Chart.money0.format(t.finalAmount) + ' left at the end') +
         (!depleted ? ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals' : '');
       // The bar gets the short form, so it stays on one line on a phone.

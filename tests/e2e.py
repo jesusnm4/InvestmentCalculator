@@ -1134,6 +1134,28 @@ def names_say_which_and_from_where(env):
     expect(not bad, '; '.join(bad))
 
 
+@check
+def repeating_expense_after_runout_shows_its_debt(env):
+    # A withdrawal that can't be paid stops at $0, but a planned expense keeps adding debt: say so, in Loss Red.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    st = plan([season('Saving', 120, amt=500, rate=7), season('Growing', 120, rate=5, slot=1),
+               season('Retirement', 300, flow='withdraw', slot=2)], [extra('Care', 300, -60000, every=12)])
+    pg = s.open(st)
+    owed = s.text('#kpi-income')
+    sub = s.text('#final-sub') or ''
+    expect('below zero' in sub and 'Care' in sub, 'headline sub-line hides a %s debt: %r' % (owed, sub))
+    got = pg.evaluate("""(() => { const c = document.getElementById('chart').__chart, bad = getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();
+        const depX = c.x(c.dep);
+        const red = [...document.querySelectorAll('.chart-svg path')].filter(p => (p.getAttribute('stroke') || '').toLowerCase() === bad.toLowerCase());
+        const green = [...document.querySelectorAll('.chart-svg path[fill="none"]')].filter(p => p.getAttribute('stroke') === Chart.colorFor(2));
+        const pastGreen = green.some(p => (p.getAttribute('d').match(/[ML]([\\d.]+) /g) || []).some(t => parseFloat(t.slice(1)) > depX + 2));
+        const marks = [...document.querySelectorAll('.chart-svg [data-month]')].filter(g => +g.dataset.month > c.dep).length;
+        return { red: red.length, pastGreen, marks }; })()""")
+    expect(got['red'] > 0 and not got['pastGreen'], 'debt after the run-out is drawn in the season colour: %s' % got)
+    expect(got['marks'] > 0, 'the expenses that dig the debt have no markers: %s' % got)
+    s.close()
+
+
 # ---------------------------------------------------------------- run
 
 def main():
