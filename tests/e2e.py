@@ -922,6 +922,78 @@ def absurd_rates_stay_readable(env):
     expect(not bad, '; '.join(bad))
 
 
+FOCUS_JS = "(() => { const a = document.activeElement; return !a || a === document.body || !a.isConnected || !a.offsetParent ? null : (a.id || a.dataset.field || a.className); })()"
+
+
+@check
+def focus_survives_whole_plan_actions(env):
+    # Buttons that hide or rebuild themselves must hand focus on, not drop it to the page.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7)], [extra('Bonus', 12, 1000)]))
+    lost = []
+    pg.focus('#reset-btn'); pg.keyboard.press('Enter'); pg.wait_for_timeout(50)
+    pg.evaluate(FOCUS_JS) or lost.append('Start from the example')
+    pg.focus('#undo-link'); pg.keyboard.press('Enter'); pg.wait_for_timeout(50)
+    pg.evaluate(FOCUS_JS) or lost.append('undo of the example')
+    pg.focus('#keep-baseline'); pg.keyboard.press('Enter'); pg.wait_for_timeout(50)
+    pg.evaluate(FOCUS_JS) or lost.append('Keep as baseline')
+    pg.check('#windfall-list [data-field="repeat"]')
+    pg.focus('#undo-link'); pg.keyboard.press('Enter'); pg.wait_for_timeout(50)
+    pg.evaluate(FOCUS_JS) or lost.append('undo of a repeat')
+    pg.focus('#clear-baseline'); pg.keyboard.press('Enter'); pg.wait_for_timeout(50)
+    pg.focus('.toast-undo'); pg.keyboard.press('Enter'); pg.wait_for_timeout(50)
+    pg.evaluate(FOCUS_JS) or lost.append('toast undo of a cleared baseline')
+    expect(not lost, 'focus fell to the page after: %s' % lost)
+    s.close()
+
+
+@check
+def os_theme_flip_keeps_typing(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900}, color_scheme='light')
+    pg = s.open()
+    pg.click('.period:nth-child(1) .card-summary')
+    sel = '.period:nth-child(1) [data-field="name"]'
+    pg.fill(sel, '')
+    pg.keyboard.type('ab')
+    pg.emulate_media(color_scheme='dark')
+    pg.wait_for_timeout(50)
+    pg.keyboard.type('cd')
+    expect(pg.input_value(sel) == 'abcd', 'typing across a theme flip gave %r' % pg.input_value(sel))
+    s.close()
+
+
+@check
+def chart_readout_speaks_from_a_standing_region(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    expect(pg.evaluate("!document.querySelector('.chart-tooltip').hasAttribute('aria-live')"), 'the tooltip that hides itself is the live region')
+    pg.focus('#chart')
+    pg.keyboard.press('ArrowRight')
+    pg.wait_for_timeout(100)
+    live = pg.evaluate("(() => { const r = document.getElementById('chart-live'); return r && r.getAttribute('aria-live') && r.textContent; })()")
+    expect(live and 'Start' in live, 'no standing chart readout region: %r' % live)
+    s.close()
+
+
+@check
+def landscape_toast_clear_of_the_field(env):
+    # A short landscape screen: the toast may sit on the result bar, never on the extra you just changed.
+    s = Session(env['webkit'], env['base'], viewport={'width': 844, 'height': 390}, is_mobile=True, has_touch=True)
+    pg = s.open()
+    pg.tap('#add-windfall')
+    pg.wait_for_timeout(200)
+    pg.evaluate("window.scrollBy(0, document.querySelector('#windfall-list li:last-child [data-field=repeat]').getBoundingClientRect().top - 60)")
+    pg.locator('#windfall-list li:last-child [data-field="repeat"]').tap()
+    pg.wait_for_timeout(200)
+    hit = pg.evaluate("""(() => { const toast = document.getElementById('toast'); if (toast.hidden) return 'no toast';
+        const bar = document.getElementById('result-bar'), floor = bar && !bar.hidden ? bar.getBoundingClientRect().top : innerHeight;
+        const t = toast.getBoundingClientRect(), c = document.querySelector('#windfall-list li:last-child').getBoundingClientRect();
+        const top = Math.max(0, c.top), bottom = Math.min(floor, c.bottom);
+        return (t.bottom > top && t.top < bottom) ? [Math.round(t.top), Math.round(t.bottom), Math.round(top), Math.round(bottom)] : null; })()""")
+    expect(hit is None, 'the toast covers the extra being edited: %s' % (hit,))
+    s.close()
+
+
 # ---------------------------------------------------------------- run
 
 def main():

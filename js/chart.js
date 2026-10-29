@@ -445,8 +445,9 @@
     svg.push(labels.join(''));
     svg.push('</svg>');
 
-    // The readout is a polite live region, so stepping through it by keyboard is heard.
-    container.innerHTML = svg.join('') + '<div class="chart-tooltip" aria-live="polite" hidden></div>';
+    /* The readout is heard from a standing live region (opts.live): one that hides
+       and shows itself is announced unreliably. */
+    container.innerHTML = svg.join('') + '<div class="chart-tooltip" hidden></div>';
     var wfByMonth = {};
     for (var wj = 0; wj < wf.length; wj++) {
       var wjm = Math.max(0, Math.floor(Number(wf[wj].atMonth) || 0));
@@ -455,7 +456,7 @@
 
     container.__chart = { m: m, plotW: plotW, plotH: plotH, maxMonth: maxMonth, x: x, y: y,
                          points: points, periods: periods, windfalls: wfByMonth, width: width,
-                         baseline: baseline, allLabels: allLabels, dep: dep };
+                         baseline: baseline, allLabels: allLabels, dep: dep, live: opts.live || null };
     attachHover(container);
   }
 
@@ -522,6 +523,9 @@
       tip.hidden = false;
       placeTip(cx, cy);
     }
+    function speak() {
+      if (ctx.live) ctx.live.textContent = Array.prototype.map.call(tip.children, function (d) { return d.textContent; }).join(', ');
+    }
 
     // Flip to the left of the crosshair when it would overflow the container.
     function placeTip(cx, cy) {
@@ -555,6 +559,7 @@
     // A touch that turns into a page scroll cancels the pointer; drop the readout.
     target.addEventListener('pointercancel', leave);
     container.__showAt = showAt;
+    container.__speak = speak;
     container.__leave = leave;
     // Keyboard: wired once per container (the svg inside is rebuilt on every render).
     if (!container.__keys) {
@@ -572,6 +577,8 @@
         if (next === null) return;
         ev.preventDefault();
         container.__showAt(Math.max(0, Math.min(c.maxMonth, next)));
+        // Only keyboard steps are spoken: a pointer sweep would flood the region.
+        container.__speak();
       });
       container.addEventListener('blur', function () { container.__month = null; if (container.__leave) container.__leave(); });
     }

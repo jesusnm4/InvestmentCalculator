@@ -53,6 +53,7 @@
     keepBaseline:   document.getElementById('keep-baseline'),
     clearBaseline:  document.getElementById('clear-baseline'),
     baselineDelta:  document.getElementById('baseline-delta'),
+    chartLive:      document.getElementById('chart-live'),
     growthLabel:    document.getElementById('kpi-growth-label'),
     thirdLabel:     document.getElementById('kpi-third-label'),
     leverNote:      document.getElementById('lever-note'),
@@ -1162,6 +1163,7 @@
     // The container's reserved height follows the chart's, or a shorter chart would not shrink the column.
     el.chart.style.minHeight = chartHeight + 'px';
     Chart.render(el.chart, projection, {
+      live: el.chartLive,
       periods: periodMeta(), windfalls: windfallMeta(projection, depleted ? t.depletedAt : null),
       baseline: baseline, depletedAt: depleted ? t.depletedAt : null,
       depletedLabel: depleted ? 'Runs out \u00b7 ' + outWhen : null,
@@ -2040,6 +2042,16 @@
     top.restore();
     syncUndoLink();
     showNotice(top.undone || 'Undone: ' + top.text.charAt(0).toLowerCase() + top.text.slice(1));
+    handFocus([el.undoLink, el.reset, el.startingAmount]);
+  }
+  /* A button that hides itself, or a rebuild under it, drops focus to the page;
+     hand it to the first of these still on screen. Focus that survived stays put. */
+  function handFocus(next) {
+    var a = document.activeElement;
+    if (a && a !== document.body && a.isConnected && a.offsetParent) return;
+    for (var i = 0; i < next.length; i++) {
+      if (next[i] && next[i].offsetParent) { next[i].focus(); return; }
+    }
   }
   // The offer waits while you are reading it or about to press it.
   el.toast.addEventListener('mouseenter', function () { clearTimeout(toastTimer); });
@@ -2282,6 +2294,7 @@
       state = JSON.parse(before);
       renderAll();
     });
+    handFocus([el.reset, el.undoLink, el.startingAmount]);
   });
 
   function renderAll() {
@@ -2348,6 +2361,7 @@
         renderResults();
       });
     }
+    handFocus([el.keepBaseline, el.clearBaseline]);
   });
   el.clearBaseline.addEventListener('click', function () {
     var kept = state.baseline;
@@ -2389,9 +2403,19 @@
     el.themeToggle.querySelectorAll('[data-theme-choice]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.dataset.themeChoice === Theme.get()));
     });
+    /* An OS flip can land mid-typing: the rebuilt cards get the focus and caret
+       back, so the next keystroke goes where the last one did. */
+    var a = document.activeElement, card = a && a.closest && a.closest('.period, .windfall');
+    var at = card && a.dataset.field ? { list: card.parentNode, index: card.dataset.index, field: a.dataset.field,
+      start: a.selectionStart, end: a.selectionEnd } : null;
     renderPeriods();
     renderWindfalls();
     renderResults();
+    if (!at) return;
+    var back = at.list.querySelector('[data-index="' + at.index + '"] [data-field="' + at.field + '"]');
+    if (!back) return;
+    back.focus();
+    try { if (at.start !== null) back.setSelectionRange(at.start, at.end); } catch (e) { /* not a text field */ }
   }
 
   el.themeToggle.addEventListener('click', function (ev) {

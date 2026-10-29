@@ -8,9 +8,9 @@
 <link rel="preload" href="fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!-- ?v= busts browser caches: bump it whenever CSS or JS changes (see CLAUDE.md). -->
-<link rel="stylesheet" href="styles.css?v=2026-10-29.1">
+<link rel="stylesheet" href="styles.css?v=2026-10-29.2">
 <!-- Blocking on purpose: stamps the theme before first paint. -->
-<script src="js/theme.js?v=2026-10-29.1"></script>
+<script src="js/theme.js?v=2026-10-29.2"></script>
 </head>
 <body>
 
@@ -152,6 +152,7 @@
       <figcaption class="chart-title">Projected balance</figcaption>
       <!-- Focusable: arrow keys walk the readout a year at a time (Shift: a month), Home/End jump to the ends. -->
       <div id="chart" class="chart" tabindex="0" role="group" aria-roledescription="chart" aria-label="Projected balance" aria-describedby="chart-keys"></div>
+      <p class="sr-only" id="chart-live" aria-live="polite"></p>
       <p class="sr-only" id="chart-keys">Use the left and right arrow keys to read the balance year by year.</p>
       <div id="legend" class="legend"></div>
       <div id="extras-legend" class="extras-legend" hidden></div>
@@ -197,8 +198,8 @@
 <!-- What a toast says, spoken from a region that is always present (the toast itself hides and shows). -->
 <p class="sr-only" id="toast-live" role="status"></p>
 
-<script src="js/calc.js?v=2026-10-29.1"></script>
-<script src="js/chart.js?v=2026-10-29.1"></script>
-<script src="js/app.js?v=2026-10-29.1"></script>
+<script src="js/calc.js?v=2026-10-29.2"></script>
+<script src="js/chart.js?v=2026-10-29.2"></script>
+<script src="js/app.js?v=2026-10-29.2"></script>
 </body>
 </html>
