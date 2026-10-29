@@ -994,6 +994,60 @@ def landscape_toast_clear_of_the_field(env):
     s.close()
 
 
+# Colour-vision simulation (Machado et al. 2009, severity 1.0) and OKLab distance, x100.
+CVD = {'protan': [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+       'deutan': [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+       'tritan': [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]]}
+
+
+def _lin(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _oklab(lin):
+    r, g, b = lin
+    l, m, s_ = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b, 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+                0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+    l, m, s_ = [max(0, v) ** (1 / 3) for v in (l, m, s_)]
+    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s_, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s_,
+            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s_)
+
+
+def _seen(hexc, kind):
+    lin = [_lin(int(hexc[i:i + 2], 16) / 255) for i in (1, 3, 5)]
+    if kind:
+        lin = [min(1, max(0, sum(CVD[kind][i][j] * lin[j] for j in range(3)))) for i in range(3)]
+    return _oklab(lin)
+
+
+@check
+def series_tellable_apart_in_every_vision(env):
+    bad = []
+    for theme in ('light', 'dark'):
+        s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900}, color_scheme=theme)
+        pg = s.open()
+        hexes = pg.evaluate('[...Array(Chart.slotCount).keys()].map(k => Chart.colorFor(k))')
+        names = pg.evaluate('Chart.colorNames')
+        for kind in (None, 'protan', 'deutan', 'tritan'):
+            seen = [_seen(h, kind) for h in hexes]
+            for i in range(len(seen)):
+                for j in range(i + 1, len(seen)):
+                    d = sum((a - b) ** 2 for a, b in zip(seen[i], seen[j])) ** 0.5 * 100
+                    if d < (10 if kind is None else 5):
+                        bad.append('%s %s %s/%s %.1f' % (theme, kind or 'normal', names[i], names[j], d))
+        # The dashed season dividers above the curve are the only mark of a handoff there.
+        div = pg.evaluate("""(() => { const l = document.querySelector('.chart-svg line[stroke-dasharray="2 3"]'); return l && l.getAttribute('stroke'); })()""")
+        surface = pg.evaluate("getComputedStyle(document.querySelector('.chart')).backgroundColor")
+        r = pg.evaluate("""([a, b]) => { const rgb = c => c.startsWith('#') ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : c.match(/[\\d.]+/g).map(Number);
+            const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+            const x = L(rgb(a)), y = L(rgb(b)); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }""", [div, surface]) if div else 0
+        if r < 3:
+            bad.append('%s season divider %s %.2f:1' % (theme, div, r))
+        s.close()
+    expect(not bad, 'too close: %s' % bad)
+
+
 # ---------------------------------------------------------------- run
 
 def main():

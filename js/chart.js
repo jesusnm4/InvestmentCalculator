@@ -3,16 +3,16 @@
 (function (global) {
   'use strict';
 
-  /* Validated categorical palette (dataviz reference palette). The dark column
-     is the same eight hues re-stepped for a dark surface, not a second palette.
+  /* Categorical palette: eight hues, each tuned in OKLCh (hue within a few degrees,
+     chroma kept) so every pair stays apart under protanopia, deuteranopia and
+     tritanopia (simulated ΔE ≥ 5 in OKLab) and every line clears 3:1 on its card.
+     tests/e2e.py (series_tellable_apart_in_every_vision) holds it to that. The
+     dark column is the same hues re-stepped for a dark surface, not a second palette.
      This is the single source of truth for series color — the swatch buttons and
-     the legend read from here too, so CSS never hardcodes a series hex.
-     Light orange, aqua, yellow and magenta are stepped darker (same hues) so every
-     line clears 3:1 on the card; yellow goes deepest, to an ochre, so it stays
-     apart from orange under deuteranopia. */
+     the legend read from here too, so CSS never hardcodes a series hex. */
   var PALETTE = {
-    light: ['#2a78d6', '#e96632', '#00a26e', '#af6600', '#d66b94', '#008300', '#4a3aa7', '#e34948'],
-    dark:  ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']
+    light: ['#3a78d2', '#e27041', '#029d70', '#ab5800', '#d07496', '#037e26', '#4a3aa7', '#e5263e'],
+    dark:  ['#2775e7', '#d84700', '#33b186', '#df9b00', '#ba3373', '#00871d', '#9996f8', '#ff747e']
   };
   var COLOR_NAMES = ['Blue', 'Orange', 'Aqua', 'Yellow', 'Magenta', 'Green', 'Violet', 'Red'];
 
@@ -324,7 +324,8 @@
 
     // Surface-colored divider at each handoff: reads as the boundary and keeps
     // adjacent fills from bleeding together. Above the curve a dashed ruled line
-    // carries the boundary up to the label band, so the plan reads as a sequence.
+    // carries the boundary up to the label band, so the plan reads as a sequence
+    // (in muted ink: the axis grey is too faint, at 1.8:1, to be the only mark).
     for (var b = 1; b < segs.length; b++) {
       if (segs[b].months <= 0 && segs[b - 1].months <= 0) continue;
       var bx = x(segs[b].startMonth).toFixed(2);
@@ -332,7 +333,7 @@
       svg.push('<line x1="' + bx + '" y1="' + yBase.toFixed(2) + '" x2="' + bx + '" y2="' + by +
                '" stroke="' + C.surface + '" stroke-width="2"/>');
       svg.push('<line x1="' + bx + '" y1="' + (m.t - 14) + '" x2="' + bx + '" y2="' + by +
-               '" stroke="' + C.axis + '" stroke-width="1" stroke-dasharray="2 3"/>');
+               '" stroke="' + C.muted + '" stroke-width="1" stroke-dasharray="2 3"/>');
     }
 
     /* Period names in the band above the plot, one per stretch of the curve.

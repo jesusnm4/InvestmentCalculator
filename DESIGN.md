@@ -25,14 +25,14 @@ colors:
   night-ledger-blue: "#3987e5"
   night-gain-green: "#0ca30c"
   night-loss-red: "#e66767"
-  series-blue: "#2a78d6"
-  series-orange: "#e96632"
-  series-aqua: "#00a26e"
-  series-yellow: "#af6600"
-  series-magenta: "#d66b94"
-  series-green: "#008300"
+  series-blue: "#3a78d2"
+  series-orange: "#e27041"
+  series-aqua: "#029d70"
+  series-yellow: "#ab5800"
+  series-magenta: "#d07496"
+  series-green: "#037e26"
   series-violet: "#4a3aa7"
-  series-red: "#e34948"
+  series-red: "#e5263e"
 typography:
   masthead:
     fontFamily: "Source Serif 4, Georgia, Times New Roman, serif"
@@ -219,9 +219,9 @@ categorical palette that belongs to the chart.
 
 ### Series palette (owned by `js/chart.js`)
 Blue, Orange, Aqua, Yellow, Magenta, Green, Violet and Red (`series-*`). These eight hues are
-validated to stay distinguishable under colorblindness in both themes, and every line clears 3:1
-against the card (light orange, aqua, yellow and magenta are stepped darker for it; yellow to an
-ochre, so it stays apart from orange under deuteranopia). The frontmatter lists the
+tuned in OKLCh (hue within a few degrees, chroma kept) so every pair stays apart under
+protanopia, deuteranopia and tritanopia (simulated ΔE ≥ 5) in both themes, and every line clears
+3:1 against the card; `tests/e2e.py` checks both. Yellow sits at an ochre. The frontmatter lists the
 light values; the dark column in `PALETTE.dark` is the same hues re-stepped. `js/chart.js` is the
 normative source; this file only mirrors it.
 

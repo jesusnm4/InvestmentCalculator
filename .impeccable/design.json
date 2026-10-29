@@ -352,7 +352,7 @@
       "series-blue": {
         "role": "series",
         "displayName": "Series Blue",
-        "canonical": "#2a78d6",
+        "canonical": "#3a78d2",
         "tonalRamp": [
           "#000432",
           "#00215a",
@@ -367,7 +367,7 @@
       "series-orange": {
         "role": "series",
         "displayName": "Series Orange",
-        "canonical": "#e96632",
+        "canonical": "#e27041",
         "tonalRamp": [
           "#1a0400",
           "#441200",
@@ -382,7 +382,7 @@
       "series-aqua": {
         "role": "series",
         "displayName": "Series Aqua",
-        "canonical": "#00a26e",
+        "canonical": "#029d70",
         "tonalRamp": [
           "#000f07",
           "#012d1c",
@@ -397,7 +397,7 @@
       "series-yellow": {
         "role": "series",
         "displayName": "Series Yellow",
-        "canonical": "#af6600",
+        "canonical": "#ab5800",
         "tonalRamp": [
           "#150800",
           "#391e00",
@@ -412,7 +412,7 @@
       "series-magenta": {
         "role": "series",
         "displayName": "Series Magenta",
-        "canonical": "#d66b94",
+        "canonical": "#d07496",
         "tonalRamp": [
           "#1d000b",
           "#490025",
@@ -427,7 +427,7 @@
       "series-green": {
         "role": "series",
         "displayName": "Series Green",
-        "canonical": "#008300",
+        "canonical": "#037e26",
         "tonalRamp": [
           "#001300",
           "#003200",
@@ -457,7 +457,7 @@
       "series-red": {
         "role": "series",
         "displayName": "Series Red",
-        "canonical": "#e34948",
+        "canonical": "#e5263e",
         "tonalRamp": [
           "#2c0000",
           "#550000",
@@ -617,8 +617,8 @@
       "kind": "custom",
       "refersTo": "swatch",
       "description": "Period color picker; each swatch reads Chart.colorFor(slot).",
-      "html": "<div class=\"ds-swatches\"><button class=\"ds-swatch\" style=\"background:#2a78d6\" aria-pressed=\"true\" aria-label=\"Blue\"></button><button class=\"ds-swatch\" style=\"background:#e96632\" aria-pressed=\"false\" aria-label=\"Orange\"></button><button class=\"ds-swatch\" style=\"background:#00a26e\" aria-pressed=\"false\" aria-label=\"Aqua\"></button><button class=\"ds-swatch\" style=\"background:#af6600\" aria-pressed=\"false\" aria-label=\"Yellow\"></button><button class=\"ds-swatch\" style=\"background:#d66b94\" aria-pressed=\"false\" aria-label=\"Magenta\"></button><button class=\"ds-swatch\" style=\"background:#008300\" aria-pressed=\"false\" aria-label=\"Green\"></button><button class=\"ds-swatch\" style=\"background:#4a3aa7\" aria-pressed=\"false\" aria-label=\"Violet\"></button><button class=\"ds-swatch\" style=\"background:#e34948\" aria-pressed=\"false\" aria-label=\"Red\"></button></div>",
-      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#2a78d6;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-swatches{display:flex;gap:6px;flex-wrap:wrap} .ds-swatch{width:22px;height:22px;border-radius:6px;cursor:pointer;border:2px solid transparent;padding:0;box-shadow:inset 0 0 0 1px var(--ring)} .ds-swatch[aria-pressed=\"true\"]{border-color:var(--ink)} .ds-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
+      "html": "<div class=\"ds-swatches\"><button class=\"ds-swatch\" style=\"background:#3a78d2\" aria-pressed=\"true\" aria-label=\"Blue\"></button><button class=\"ds-swatch\" style=\"background:#e27041\" aria-pressed=\"false\" aria-label=\"Orange\"></button><button class=\"ds-swatch\" style=\"background:#029d70\" aria-pressed=\"false\" aria-label=\"Aqua\"></button><button class=\"ds-swatch\" style=\"background:#ab5800\" aria-pressed=\"false\" aria-label=\"Yellow\"></button><button class=\"ds-swatch\" style=\"background:#d07496\" aria-pressed=\"false\" aria-label=\"Magenta\"></button><button class=\"ds-swatch\" style=\"background:#037e26\" aria-pressed=\"false\" aria-label=\"Green\"></button><button class=\"ds-swatch\" style=\"background:#4a3aa7\" aria-pressed=\"false\" aria-label=\"Violet\"></button><button class=\"ds-swatch\" style=\"background:#e5263e\" aria-pressed=\"false\" aria-label=\"Red\"></button></div>",
+      "css": "@font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3-latin.woff2') format('woff2');font-weight:400 700} @font-face{font-family:'Source Serif 4';src:url('fonts/source-serif-4-latin.woff2') format('woff2');font-weight:400 700} :host{--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6e6c66;--line:#e1e0d9;--field-line:#8f8d86;--axis:#c3c2b7;--field:#fff;--accent:#3a78d2;--accent-ink:#fff;--good:#006300;--bad:#d03b3b;--ring:rgba(11,11,11,.10);font:15px/1.5 'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink)} .ds-swatches{display:flex;gap:6px;flex-wrap:wrap} .ds-swatch{width:22px;height:22px;border-radius:6px;cursor:pointer;border:2px solid transparent;padding:0;box-shadow:inset 0 0 0 1px var(--ring)} .ds-swatch[aria-pressed=\"true\"]{border-color:var(--ink)} .ds-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:1px}"
     },
     {
       "name": "Undo Toast",
