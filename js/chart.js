@@ -175,7 +175,8 @@
     opts = opts || {};
     var periods = opts.periods || [];
     var height = opts.height || 320;
-    var width = Math.max(260, container.clientWidth || 640);
+    // Drawn at the box's own width (down to a 320px phone's 250), so chart text is never scaled.
+    var width = Math.max(200, container.clientWidth || 640);
 
     var points = projection.points;
     var planEnd = projection.totals.totalMonths;
@@ -276,11 +277,12 @@
       // Seasons drawn only up to the month the money runs out, unless a debt is still running there.
       var segEnd = dep !== null && !debtAfter ? Math.min(pp.endMonth, dep) : pp.endMonth;
       var color = colorFor((periods[pp.index] || {}).colorSlot);
-      // A season wholly after the run-out still shows where it sits: a faint line at $0.
+      // A season wholly after the run-out still shows where it sits: a dashed line at $0
+      // (dashed, not faded, so it keeps its 3:1).
       if (segEnd <= pp.startMonth) {
         if (dep !== null && pp.startMonth >= dep) {
           svg.push('<line x1="' + x(pp.startMonth).toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + x(pp.endMonth).toFixed(2) +
-                   '" y2="' + yBase.toFixed(2) + '" stroke="' + color + '" stroke-width="2.5" opacity="0.55"/>');
+                   '" y2="' + yBase.toFixed(2) + '" stroke="' + color + '" stroke-width="2.5" stroke-dasharray="6 5"/>');
         }
         continue;
       }

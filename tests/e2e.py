@@ -1048,6 +1048,92 @@ def series_tellable_apart_in_every_vision(env):
     expect(not bad, 'too close: %s' % bad)
 
 
+@check
+def small_wording_round_20(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    # A withdrawing season at $0 a month, sunk by an expense: still the "will it last" question.
+    s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=0, slot=2)],
+                [extra('House', 60, -150000)]))
+    if s.text('#final-amount').startswith('Ends') and s.text('#final-label') != 'Will it last?':
+        bad.append('label %r over %r' % (s.text('#final-label'), s.text('#final-amount')))
+    # Money lost to a negative return is not "growth while there was money".
+    s.open(plan([season('Saving', 120, amt=100, rate=-5), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)]))
+    if s.text('#kpi-growth').startswith('−') and 'money to grow' in (s.text('#kpi-growth-note') or ''):
+        bad.append('negative growth: %r' % s.text('#kpi-growth-note'))
+    # Inflation as people write it, not as floats print.
+    st = plan([season('Saving', 120, amt=500)]); st['inflationPercent'] = 1e-9
+    s.open(st)
+    if 'e-' in (s.text('#money-note') or ''):
+        bad.append('note: %r' % s.text('#money-note'))
+    # The 100-year cap in years, and every season it leaves without time.
+    pg = s.open(plan([season('Saving', 1300, amt=500), season('Retirement', 120, flow='withdraw', slot=2), season('Legacy', 120, flow='withdraw', slot=3)]))
+    warn = pg.text_content('.period:nth-child(1) [data-role="warn"]')
+    if '1200' in warn:
+        bad.append('warn: %r' % warn)
+    hero = s.text('#final-amount')
+    if 'Retirement' not in hero or 'Legacy' not in hero:
+        bad.append('hero names only one: %r' % hero)
+    # "1 years" in the extra pickers.
+    pg = s.open(plan([season('Saving', 120, amt=500)], [extra('Bonus', 12, 1000, every=12)]))
+    unit = pg.evaluate("(() => { const s = document.querySelector('#windfall-list [data-unit=repeatEvery]'); return s.options[s.selectedIndex].text; })()")
+    if unit != 'year':
+        bad.append('picker says 1 %s' % unit)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def small_marks_and_targets(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    pg.click('.period:nth-child(1) .card-summary')
+    pg.click('#add-windfall')
+    small = pg.evaluate("""[...document.querySelectorAll('.more summary, .why summary, .hint-more summary, label.repeat-toggle')]
+        .filter(e => e.offsetParent).map(e => [e.textContent.trim().slice(0, 20), e.getBoundingClientRect().height]).filter(x => x[1] < 24)""")
+    small and bad.append('pointer targets under 24px: %s' % small)
+    # A season wholly after a run-out: its faint line still clears 3:1 once its opacity is counted.
+    s.open(plan([season('Saving', 12, rate=4), season('Retirement', 120, flow='withdraw', unit='dollars', amt=900, slot=2),
+                 season('Legacy', 120, flow='withdraw', unit='dollars', amt=900, slot=3)], start=1000))
+    faint = pg.evaluate("""(() => { const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+        const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+        const bg = hex(Chart.ink ? Chart.ink().surface : '#fcfcfb');
+        return [...document.querySelectorAll('.chart-svg line[opacity]')].filter(l => l.getAttribute('stroke').startsWith('#') && +l.getAttribute('opacity') > 0 && +l.getAttribute('opacity') < 1)
+          .map(l => { const a = +l.getAttribute('opacity'), c = hex(l.getAttribute('stroke')).map((v, i) => v * a + bg[i] * (1 - a));
+            const x = L(c), y = L(bg); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }).filter(r => r < 3); })()""")
+    faint and bad.append('faint season line after a run-out: %s' % ['%.2f' % r for r in faint])
+    s.close()
+    s = Session(env['webkit'], env['base'], viewport={'width': 320, 'height': 700}, is_mobile=True, has_touch=True)
+    pg = s.open(plan([season('Saving', 120, amt=500)], [extra('A long-named yearly bonus', 12, 12000)]))
+    w = pg.evaluate("[+document.querySelector('.chart-svg').getAttribute('width'), document.getElementById('chart').clientWidth]")
+    w[0] != w[1] and bad.append('chart drawn %dpx wide into %dpx (text scaled)' % tuple(w))
+    pg.locator('#windfall-list [data-field="repeat"]').tap()
+    pg.wait_for_timeout(150)
+    clip = pg.evaluate("(() => { const t = document.getElementById('toast-text'); return t.scrollHeight - t.clientHeight; })()")
+    clip > 1 and bad.append('repeat toast clipped by %dpx' % clip)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def names_say_which_and_from_where(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 120, amt=500)], [extra('A', 12, 100, every=12), extra('B', 24, 100, every=12)]))
+    names = pg.evaluate("[...document.querySelectorAll('#windfall-list [data-field=repeatEvery], #windfall-list [data-field=repeatUntil]')].map(e => e.getAttribute('aria-label'))")
+    len(set(names)) != len(names) and bad.append('repeat fields share names: %s' % names)
+    until = pg.text_content('#windfall-list li:first-child .repeat-fields .field:last-child .field-label')
+    'start' not in until and bad.append('Until has no reference point: %r' % until)
+    intro = pg.text_content('.windfall-head .hint')
+    intro.startswith('A lump sum') and bad.append('intro: %r' % intro[:40])
+    h = pg.evaluate("[...document.querySelectorAll('h1, h2, h3')].filter(e => e.offsetParent || e.closest('.sr-only') || e.classList.contains('sr-only')).map(e => e.textContent.trim())")
+    len([x for x in h if x == 'Seasons']) > 1 and bad.append('two headings read just "Seasons": %s' % h)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
 # ---------------------------------------------------------------- run
 
 def main():

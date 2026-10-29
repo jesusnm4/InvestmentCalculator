@@ -257,12 +257,13 @@
 
   /* A number with its unit picker inside the field, like the $ and % affixes. */
   function timeField(field, months, unit, label, extra) {
+    var one = Number(timeDisplay(months, unit)) === 1;
     return '<span class="unit-field">' +
       '<input type="number" min="0" data-field="' + field + '"' + timeInputAttrs(unit) +
         ' aria-label="' + label + '" value="' + escapeAttr(timeDisplay(months, unit)) + '"' + (extra || '') + '>' +
       '<span class="unit-select"><select data-unit="' + field + '" aria-label="' + label + ' unit">' +
-        '<option value="years"' + (unit === 'years' ? ' selected' : '') + '>years</option>' +
-        '<option value="months"' + (unit === 'months' ? ' selected' : '') + '>months</option>' +
+        '<option value="years"' + (unit === 'years' ? ' selected' : '') + '>' + (one ? 'year' : 'years') + '</option>' +
+        '<option value="months"' + (unit === 'months' ? ' selected' : '') + '>' + (one ? 'month' : 'months') + '</option>' +
       '</select></span>' +
     '</span>';
   }
@@ -282,7 +283,19 @@
       : field === 'repeatUntil' ? untilShown(item) : item[field], unit);
     input.step = unit === 'years' ? 'any' : '1';
     input.inputMode = unit === 'years' ? 'decimal' : 'numeric';
+    unitWords(input);
   }
+  // "1 year", not "1 years": the picker's words follow the number beside it.
+  function unitWords(input) {
+    var wrap = input.closest('.unit-field'), sel = wrap && wrap.querySelector('select');
+    if (!sel) return;
+    var one = Number(input.value) === 1;
+    sel.options[0].text = one ? 'year' : 'years';
+    sel.options[1].text = one ? 'month' : 'months';
+  }
+  document.addEventListener('input', function (ev) {
+    if (ev.target.closest && ev.target.closest('.unit-field') && ev.target.tagName === 'INPUT') unitWords(ev.target);
+  });
 
   /* Every edit to the plan ends the example. View changes (money mode, baseline)
      pass keepExample, since they do not change the plan itself. */
@@ -736,11 +749,12 @@
         '<div class="repeat-fields"' + (repeats ? '' : ' hidden') + '>' +
           '<div class="field">' +
             '<span class="field-label">Every</span>' +
-            timeField('repeatEvery', w.repeatEvery || 12, unitOf(w.everyUnit, w.repeatEvery || 12), 'Every') +
+            timeField('repeatEvery', w.repeatEvery || 12, unitOf(w.everyUnit, w.repeatEvery || 12), 'Every, extra ' + (i + 1)) +
           '</div>' +
           '<div class="field">' +
-            '<span class="field-label">Until <span class="field-aside">(blank: to the end of the plan)</span></span>' +
-            timeField('repeatUntil', untilShown(w), unitOf(w.untilUnit, untilShown(w) || 0), 'Until', ' data-from="' + escapeAttr(w.anchor || '') + '"') +
+            // Counted from the same start as At, which the label has to say: "Until 5" alone could mean either.
+            '<span class="field-label">Until, from the same start <span class="field-aside">(blank: to the end of the plan)</span></span>' +
+            timeField('repeatUntil', untilShown(w), unitOf(w.untilUnit, untilShown(w) || 0), 'Until, counted from the same start as At, extra ' + (i + 1), ' data-from="' + escapeAttr(w.anchor || '') + '"') +
           '</div>' +
         '</div>' +
         '<p class="months-note" data-role="at-note" id="at-note-' + i + '"></p>' +
@@ -893,11 +907,13 @@
     var drawdown = t.totalMonths > 0 && drawing.length > 0;
     var drawMonthsAll = drawing.reduce(function (sum, pp) { return sum + pp.months; }, 0);
     // A withdrawing season pushed past the 100-year cap: say so rather than quietly switching questions.
-    var cappedDraw = !drawdown && nominal.perPeriod.filter(function (pp, i) {
+    var cappedAll = drawdown ? [] : nominal.perPeriod.filter(function (pp, i) {
       return !pp.months && pp.truncated && Calc.isWithdrawing(state.periods[i]);
-    })[0];
+    });
+    var cappedDraw = cappedAll[0];
     // Which money the page is in lives by its switch, not in every sub-line.
-    el.moneyNote.textContent = today ? 'at ' + state.inflationPercent + '% inflation' : 'as they\u2019ll be';
+    // Rounded the way it is typed: a stored 1e-9 reads "0%", not "1e-9%".
+    el.moneyNote.textContent = today ? 'at ' + Number(Number(state.inflationPercent).toFixed(2)) + '% inflation' : 'as they\u2019ll be';
     var seasons = state.periods.length + (state.periods.length === 1 ? ' season' : ' seasons');
     // How far into its season the money runs out: "7y 6m into Retirement".
     /* Which planned expense (negative extra), if any, lands in the month the
@@ -968,12 +984,17 @@
       el.resultBarValue.textContent = depleted ? 'Runs out in ' + outSeason : 'Lasts \u00b7 ' + Chart.money0.format(t.finalAmount) + ' left';
     } else if (cappedDraw) {
       el.finalLabel.textContent = 'Will it last?';
-      el.finalAmount.textContent = seasonName(state.periods[cappedDraw.index], cappedDraw.index) + ' gets no time';
+      // Every withdrawing season the cap leaves out, not only the first.
+      var cappedNames = cappedAll.map(function (pp) { return seasonName(state.periods[pp.index], pp.index); });
+      el.finalAmount.textContent = (cappedNames.length > 1
+        ? cappedNames.slice(0, -1).join(', ') + ' and ' + cappedNames[cappedNames.length - 1] + ' get'
+        : cappedNames[0] + ' gets') + ' no time';
       el.finalSub.textContent = 'The plan already reaches the ' + (Calc.MAX_TOTAL_MONTHS / 12) +
         '-year limit. Shorten an earlier season. \u00b7 ' + Chart.money0.format(t.finalAmount) + ' at the end';
       el.resultBarValue.textContent = 'Gets no time';
     } else if (endsBelow) {
-      el.finalLabel.textContent = drawdown ? 'Will it last?' : 'Final amount';
+      // A withdrawing season (even at $0 a month) makes it the "will it last" question.
+      el.finalLabel.textContent = drawdown || state.periods.some(function (p) { return p.flow === 'withdraw'; }) ? 'Will it last?' : 'Final amount';
       el.finalAmount.textContent = 'Ends ' + Chart.money0.format(-t.finalAmount) + ' below zero' + (belowCause ? ', after ' + belowCause : '');
       el.finalSub.textContent = 'Borrowed against the plan from ' + inSeasonText(projection, t.depletedAt) + ' \u00b7 ' +
         Chart.durationLabel(t.totalMonths) + ', ' + seasons;
@@ -991,7 +1012,8 @@
     // The pinned bar says a run-out in the same Loss Red as the headline.
     el.resultBar.classList.toggle('short', depleted || short);
     el.finalAmount.classList.toggle('answer', drawdown || !!cappedDraw || endsBelow);
-    document.querySelector('.result-bar-label').textContent = drawdown || cappedDraw ? 'Will it last?' : 'Final amount';
+    // The bar asks the same question as the headline.
+    document.querySelector('.result-bar-label').textContent = el.finalLabel.textContent === 'Will it last?' ? 'Will it last?' : 'Final amount';
 
     /* Running out without any withdrawals (a big negative extra) still needs
        saying; with withdrawals the headline already says it. */
@@ -1073,7 +1095,7 @@
     el.growthNote.textContent = t.lowestBalance < 0 && (!depleted || t.finalAmount < 0)
       ? 'after interest on the borrowed amount'
       : depleted
-      ? 'while there was money to grow'
+      ? (t.totalGrowth < 0 ? 'lost before it ran out' : 'while there was money to grow')
       : t.totalMonths && paidIn + Math.max(0, gotExtras) > 0
         ? growthNote(t.totalGrowth / (paidIn + Math.max(0, gotExtras)))
         : '\u00a0';
@@ -1140,7 +1162,7 @@
       var warn = li.querySelector('[data-role="warn"]');
       warn.hidden = !pp.truncated || !pp.months;
       if (pp.truncated && pp.months) {
-        warn.textContent = 'Trimmed to ' + pp.months + ' months — the projection caps at ' +
+        warn.textContent = 'Trimmed to ' + Chart.durationLabel(pp.months) + ' — the projection caps at ' +
           (Calc.MAX_TOTAL_MONTHS / 12) + ' years total.';
       }
     });
