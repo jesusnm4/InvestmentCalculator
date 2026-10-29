@@ -242,6 +242,13 @@
     if (months === null || months === undefined || months === '') return '';
     return unit === 'years' ? String(Number((Number(months) / 12).toFixed(2))) : String(months);
   }
+  /* A yearly return past 100% is a typo, not a plan, and far past it the math
+     overflows to $∞ or NaN. The field shows the capped rate on leaving it.
+     (A literal, not a var: load() runs before a var here would be set.) */
+  function clampRate(value) {
+    var n = Number(value);
+    return isFinite(n) ? Math.min(100, n) : 0;
+  }
   function timeFromInput(value, unit) {
     var n = Number(value) || 0;
     return Math.max(0, Math.round(unit === 'years' ? n * 12 : n));
@@ -346,7 +353,7 @@
         p.name = String(p.name === undefined || p.name === null ? '' : p.name).slice(0, 80);
         p.months = Math.max(0, Math.floor(Number(p.months) || 0));
         p.monthlyContribution = Number(p.monthlyContribution) || 0;
-        p.annualRatePercent = isFinite(Number(p.annualRatePercent)) ? Number(p.annualRatePercent) : 0;
+        p.annualRatePercent = clampRate(p.annualRatePercent);
         // Absent before extras could be anchored to a season.
         if (typeof p.id !== 'string' || !p.id) p.id = newPeriodId();
         // Absent before lengths could be typed in years.
@@ -1433,6 +1440,11 @@
     el.keepBaseline.textContent = baseline ? 'Keep this instead' : 'Keep as baseline';
     if (!baseline) return;
     var then = baseline[baseline.length - 1];
+    /* Two timelines of different length end on different dates: say so, and
+       don't colour the gap a win or a loss. */
+    var nowSpan = projection.totals.totalMonths, thenSpan = baseline.length - 1;
+    var otherSpan = nowSpan !== thenSpan;
+    var spans = otherSpan ? ' (over ' + Chart.durationLabel(nowSpan) + '; the baseline ran ' + Chart.durationLabel(thenSpan) + ')' : '';
     /* When the question is "will it last", compare in time: how much longer or
        shorter the money lasts than the baseline did. */
     var nowOut = projection.totals.depletedAt;
@@ -1442,7 +1454,7 @@
       thenOut = null;
       for (var bm = 1; bm < baseline.length; bm++) if (baseline[bm] < 0) { thenOut = bm; break; }
     }
-    if (Calc.hasWithdrawals(state) && (nowOut !== null || thenOut !== null)) {
+    if ((Calc.hasWithdrawals(state) || thenOut !== null) && (nowOut !== null || thenOut !== null)) {
       el.baselineDelta.className = 'baseline-delta';
       var nowEnd = nowOut === null ? projection.totals.totalMonths : nowOut;
       var thenEnd = thenOut === null ? baseline.length - 1 : thenOut;
@@ -1460,12 +1472,16 @@
         // Longer, but still running out, is not a win to colour green.
         : '<span class="' + (gap > 0 ? '' : 'down') + '">Lasts ' + Chart.durationLabel(Math.abs(gap)) +
           (gap > 0 ? ' longer' : ' shorter') + '</span> than the baseline';
+      // On another timeline the outcome is said plainly, without a win or loss colour.
+      if (!same && otherSpan) el.baselineDelta.innerHTML = el.baselineDelta.innerHTML.replace(/ class="(up|down)"/g, '') + spans;
       return;
     }
     var rounded = Math.round(projection.totals.finalAmount - then);
-    if (!rounded) el.keepBaseline.hidden = true;
+    if (!rounded && !otherSpan) el.keepBaseline.hidden = true;
     el.baselineDelta.className = 'baseline-delta';
-    el.baselineDelta.innerHTML = rounded
+    el.baselineDelta.innerHTML = otherSpan
+      ? 'Ends at ' + Chart.money0.format(projection.totals.finalAmount) + ' vs baseline ending at ' + Chart.money0.format(then) + spans
+      : rounded
       ? '<span class="' + (rounded > 0 ? 'up' : 'down') + '">' + (rounded > 0 ? '+' : '−') +
         Chart.money0.format(Math.abs(rounded)) + '</span> vs baseline ending at ' + Chart.money0.format(then)
       : 'Kept. The dashed line is your kept plan; change anything to compare.';
@@ -1664,17 +1680,21 @@
   /* The starting amount is a text field so it can show thousands separators.
      Typing is parsed leniently ("250,000", "$250000"); the grouping comes back on
      blur, never mid-typing, so the caret stays put. */
+  // "5k" and "1.5M" are thousands and millions; anything else that is not a plain amount is null.
   function parseMoney(text) {
-    var n = Number(String(text).replace(/[^0-9.\-]/g, ''));
-    return isFinite(n) ? n : 0;
+    var t = String(text).replace(/[\s$,]/g, '');
+    var m = /^(\d*\.?\d*)([kKmM]?)$/.exec(t);
+    if (!m || !/\d/.test(m[1])) return null;
+    return Number(m[1]) * (/k/i.test(m[2]) ? 1e3 : /m/i.test(m[2]) ? 1e6 : 1);
   }
   function formatMoneyInput(n) {
     return Number(n) ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n) : '';
   }
   el.startingAmount.addEventListener('input', function () {
-    // Text with no number in it ("abc") is not $0: keep the last amount, shown again on blur.
-    if (this.value.trim() && !/\d/.test(this.value)) return;
-    state.startingAmount = Math.max(0, parseMoney(this.value));
+    // Unreadable text ("abc", "-500", "1e9") is not $0: keep the last amount, shown again on blur.
+    var typed = this.value.trim() ? parseMoney(this.value) : 0;
+    if (typed === null) return;
+    state.startingAmount = typed;
     save();
     renderResults();
   });
@@ -1697,7 +1717,7 @@
     var p = state.periods[Number(li.dataset.index)];
     var field = input.dataset.field;
     // A cleared number is mid-typing, not 0: keep the last value until there is one (it comes back on blur).
-    if (NUMBER_FIELDS.indexOf(field) >= 0 && input.value === '') return;
+    if (NUMBER_FIELDS.indexOf(field) >= 0 && !usable(input)) return;
     dropStale(p);
 
     if (field === 'name' || field === 'compounding') {
@@ -1710,7 +1730,7 @@
     } else if (field === 'withdrawPercent') {
       p.withdrawPercent = Math.min(100, Math.max(0, Number(input.value) || 0));
     } else {
-      p[field] = input.value === '' ? 0 : Number(input.value);
+      p[field] = field === 'annualRatePercent' ? clampRate(input.value) : input.value === '' ? 0 : Number(input.value);
     }
 
     refreshCardNotes(li, p);
@@ -1721,11 +1741,18 @@
   /* Leaving a cleared (or unreadable) number puts back the value the math is
      using, so the field and the answer never disagree. */
   var NUMBER_FIELDS = ['months', 'monthlyContribution', 'withdrawPercent', 'annualRatePercent'];
+  // Only a rate may be negative; a blank or negative entry elsewhere is mid-typing or a slip.
+  function usable(input) {
+    return input.value !== '' && isFinite(Number(input.value)) &&
+      (input.dataset.field === 'annualRatePercent' || Number(input.value) >= 0);
+  }
   el.periodList.addEventListener('focusout', function (ev) {
     var input = ev.target;
-    if (!input.dataset || NUMBER_FIELDS.indexOf(input.dataset.field) < 0 || input.value !== '') return;
+    if (!input.dataset || NUMBER_FIELDS.indexOf(input.dataset.field) < 0) return;
     var p = state.periods[Number(input.closest('.period').dataset.index)];
     var f = input.dataset.field;
+    // A clamped rate shows the rate in use too.
+    if (usable(input) && (f !== 'annualRatePercent' || Number(input.value) === p.annualRatePercent)) return;
     input.value = f === 'months' ? timeDisplay(p.months, unitOf(p.lengthUnit, p.months))
       : f === 'monthlyContribution' ? Math.abs(Number(p.monthlyContribution) || 0) : p[f];
   });
@@ -2066,6 +2093,10 @@
     var input = ev.target.closest('[data-field]');
     if (!input) return;
     var field = input.dataset.field;
+    // A cleared or negative time is mid-typing, not month 0 or "every month" (Until's blank means to the end).
+    if ((field === 'repeatEvery' || field === 'atMonth' || field === 'repeatUntil') && input.value !== '' &&
+        !(Number(input.value) >= 0)) return;
+    if ((field === 'repeatEvery' || field === 'atMonth') && input.value === '') return;
 
     if (field === 'repeat') {
       // The checkbox is a view of repeatEvery: 0 means "does not repeat".
@@ -2139,6 +2170,16 @@
 
     save();
     renderResults();
+  });
+  // Leaving a time field shows the time in use again (a blank Until means to the end, and stays blank).
+  el.windfallList.addEventListener('focusout', function (ev) {
+    var input = ev.target, f = input.dataset && input.dataset.field;
+    if (f !== 'repeatEvery' && f !== 'atMonth' && f !== 'repeatUntil') return;
+    if (input.value === '' ? f === 'repeatUntil' : Number(input.value) >= 0) return;
+    var w = state.windfalls[Number(input.closest('.windfall').dataset.index)];
+    input.value = f === 'repeatEvery' ? timeDisplay(w.repeatEvery || 12, unitOf(w.everyUnit, w.repeatEvery || 12))
+      : f === 'atMonth' ? timeDisplay(w.anchor ? w.anchorOffset : w.atMonth, unitOf(w.atUnit, w.anchor ? w.anchorOffset : w.atMonth))
+      : timeDisplay(untilShown(w), unitOf(w.untilUnit, untilShown(w) || 0));
   });
 
   el.windfallList.addEventListener('click', function (ev) {

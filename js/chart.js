@@ -178,7 +178,9 @@
     var width = Math.max(260, container.clientWidth || 640);
 
     var points = projection.points;
-    var maxMonth = projection.totals.totalMonths;
+    var planEnd = projection.totals.totalMonths;
+    // A kept baseline on a longer timeline widens the axis, so its line stays in view.
+    var maxMonth = Math.max(planEnd, opts.baseline && planEnd > 0 ? opts.baseline.length - 1 : 0);
 
     if (maxMonth <= 0) {
       container.innerHTML = '<div class="chart-empty">Add a season to see the projection.</div>';
@@ -309,7 +311,7 @@
     var markR = stems ? 4.5 : 3.2;
     var wfDots = [];
     for (var wi = 0; wi < wf.length; wi++) {
-      var wm = Math.max(0, Math.min(maxMonth, Math.floor(Number(wf[wi].atMonth) || 0)));
+      var wm = Math.max(0, Math.min(planEnd, Math.floor(Number(wf[wi].atMonth) || 0)));
       if (!points[wm]) continue;
       var wx = x(wm), wy = y(val(wm));
       // A repeat's occurrences get no stems: a row of drop lines reads as a picket fence.
@@ -397,12 +399,12 @@
       }
     }
 
-    if (dep !== null && dep <= maxMonth) {
+    if (dep !== null && dep <= planEnd) {
       var dx = x(dep);
       // The stretch with no money left: a quiet wash, and a flat pencil line at $0.
-      svg.push('<rect x="' + dx.toFixed(2) + '" y="' + m.t + '" width="' + (m.l + plotW - dx).toFixed(2) +
+      svg.push('<rect x="' + dx.toFixed(2) + '" y="' + m.t + '" width="' + (x(planEnd) - dx).toFixed(2) +
                '" height="' + plotH + '" fill="' + C.muted + '" opacity="0.08"/>');
-      svg.push('<line x1="' + dx.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + (m.l + plotW).toFixed(2) +
+      svg.push('<line x1="' + dx.toFixed(2) + '" y1="' + yBase.toFixed(2) + '" x2="' + x(planEnd).toFixed(2) +
                '" y2="' + yBase.toFixed(2) + '" stroke="' + C.muted + '" stroke-width="2" stroke-dasharray="2 4"/>');
       svg.push('<line x1="' + dx.toFixed(2) + '" y1="' + m.t + '" x2="' + dx.toFixed(2) + '" y2="' + (m.t + plotH) +
                '" stroke="' + C.bad + '" stroke-width="1.5" stroke-dasharray="4 3"/>');
@@ -411,7 +413,7 @@
          label won't fit there (a narrow chart), the short one does; only if neither
          fits does it go left, over the curve. ~6.6px a character at 12px/600. */
       var full = opts.depletedLabel || 'Runs out \u00b7 ' + durationLabel(dep);
-      var room = m.l + plotW - dx - 10;
+      var room = x(planEnd) - dx - 10;
       var fits = function (t) { return t.length * 6.6 <= room; };
       var said = fits(full) ? full : opts.depletedLabelShort && fits(opts.depletedLabelShort) ? opts.depletedLabelShort : full;
       var right = fits(said);
@@ -477,6 +479,19 @@
     function showAt(month) {
       container.__month = month;
       var pt = ctx.points[month];
+      // Past the plan's end only the longer baseline is left to read.
+      if (!pt && ctx.baseline && ctx.baseline[month] !== undefined) {
+        var bx = ctx.x(month), by = ctx.y(ctx.baseline[month]);
+        cross.setAttribute('x1', bx); cross.setAttribute('x2', bx); cross.setAttribute('opacity', '1');
+        dot.setAttribute('cx', bx); dot.setAttribute('cy', by);
+        dot.setAttribute('stroke', ink().muted); dot.setAttribute('opacity', '1');
+        tip.innerHTML = '<div class="tip-head">' + esc(durationLabel(month)) + '</div>' +
+          '<div class="tip-period">Plan ended at ' + esc(durationLabel(ctx.points.length - 1)) + '</div>' +
+          '<div class="tip-baseline">Baseline ' + esc(money0.format(ctx.baseline[month])) + '</div>';
+        tip.hidden = false;
+        placeTip(bx, by);
+        return;
+      }
       if (!pt) return;
 
       var ranOut = ctx.dep !== null && month >= ctx.dep;
@@ -505,8 +520,11 @@
                  esc(w.name || 'extra') + '</div>';
         }).join('');
       tip.hidden = false;
+      placeTip(cx, cy);
+    }
 
-      // Flip to the left of the crosshair when it would overflow the container.
+    // Flip to the left of the crosshair when it would overflow the container.
+    function placeTip(cx, cy) {
       var tw = tip.offsetWidth;
       var left = cx + 14;
       if (left + tw > ctx.width - 4) left = cx - tw - 14;

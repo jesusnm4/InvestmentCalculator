@@ -838,6 +838,90 @@ def phone_header_fits_with_undo(env):
     expect(not bad, 'header overflows: %s' % bad)
 
 
+@check
+def baseline_on_another_timeline_says_so(env):
+    # Deleting Retirement ends the plan 25 years early: more money at an earlier date is no green win.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=300, slot=2)]))
+    pg.click('#keep-baseline')
+    pg.click('.period:nth-child(2) .card-summary')
+    pg.click('.period:nth-child(2) [data-action="delete"]')
+    pg.wait_for_timeout(100)
+    delta = s.text('#baseline-delta') or ''
+    expect(pg.locator('#baseline-delta .up').count() == 0, 'a shorter plan is coloured as a win: %r' % delta)
+    expect('10 yrs' in delta and '35 yrs' in delta, 'the two timelines are not named: %r' % delta)
+    span = pg.evaluate("document.getElementById('chart').__chart.maxMonth")
+    expect(span == 420, 'the axis stops at %r, hiding the baseline past month 120' % span)
+    pg.hover('.hover-target', position={'x': 1, 'y': 50}, force=True)
+    box = pg.locator('.hover-target').bounding_box()
+    pg.mouse.move(box['x'] + box['width'] - 2, box['y'] + 50)
+    tip = pg.text_content('.chart-tooltip') or ''
+    expect('Baseline' in tip, 'no readout past the plan end: %r' % tip)
+    s.close()
+
+
+@check
+def money_fields_read_like_people_write(env):
+    # One rule: k / M are thousands / millions; anything else unreadable keeps the last value.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open()
+    for typed, shown in (('5k', '5,000'), ('1.5M', '1,500,000'), ('1e9', '10,000'), ('-500', '10,000'), ('1.234.567', '10,000'), ('$2,500', '2,500')):
+        pg.fill('#starting-amount', '10000')
+        pg.locator('#starting-amount').blur()
+        pg.fill('#starting-amount', typed)
+        pg.locator('#starting-amount').blur()
+        got = pg.input_value('#starting-amount')
+        expect(got == shown, '%r shows %r, expected %r' % (typed, got, shown))
+        expect(s.stored()['startingAmount'] == float(shown.replace(',', '')), '%r stored %r' % (typed, s.stored()['startingAmount']))
+    s.close()
+
+
+@check
+def extra_fields_never_hide_their_value(env):
+    # A cleared or negative entry shows what the math uses once you leave the field.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7)], [extra('Bonus', 12, 1000, every=12)]))
+    bad = []
+    for sel in ('#windfall-list [data-field="repeatEvery"]', '#windfall-list [data-field="atMonth"]',
+                '.period:nth-child(1) [data-field="months"]', '.period:nth-child(1) [data-field="monthlyContribution"]'):
+        if sel.startswith('.period'):
+            if not pg.is_visible(sel):
+                pg.click('.period:nth-child(1) .card-summary')
+        for typed in ('', '-5'):
+            before = pg.input_value(sel)
+            pg.fill(sel, typed)
+            pg.locator(sel).blur()
+            pg.wait_for_timeout(50)
+            if pg.input_value(sel) != before:
+                bad.append('%s %r -> %r (was %r)' % (sel, typed, pg.input_value(sel), before))
+    expect(not bad, 'fields show values the math does not use: %s' % bad)
+    s.close()
+
+
+@check
+def absurd_rates_stay_readable(env):
+    bad = []
+    for w in (1440, 320):
+        s = Session(env['chromium'], env['base'], viewport={'width': w, 'height': 900})
+        pg = s.open()
+        for rate in ('1e9', '5000', '300'):
+            if not pg.is_visible('.period:nth-child(1) [data-field="annualRatePercent"]'):
+                pg.click('.period:nth-child(1) .card-summary')
+            pg.fill('.period:nth-child(1) [data-field="annualRatePercent"]', rate)
+            pg.locator('.period:nth-child(1) [data-field="annualRatePercent"]').blur()
+            pg.wait_for_timeout(100)
+            body = pg.text_content('#results')
+            if 'NaN' in body or '∞' in body or 'Infinity' in body:
+                bad.append('%dpx %s%%: %s' % (w, rate, re.findall(r'.{0,20}(?:NaN|∞|Infinity).{0,10}', body)[:2]))
+            over = pg.evaluate('document.documentElement.scrollWidth - innerWidth')
+            if over > 0:
+                bad.append('%dpx %s%%: page scrolls %dpx sideways' % (w, rate, over))
+        s.errors and bad.append('%dpx: %d console errors' % (w, len(s.errors)))
+        s.errors = []
+        s.close()
+    expect(not bad, '; '.join(bad))
+
+
 # ---------------------------------------------------------------- run
 
 def main():
