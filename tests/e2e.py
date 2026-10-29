@@ -1156,6 +1156,60 @@ def repeating_expense_after_runout_shows_its_debt(env):
     s.close()
 
 
+@check
+def every_number_field_shows_what_the_math_uses(env):
+    # One rule: blank, unreadable or out of range keeps the last value; leaving a field shows the value in use.
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    st = plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', slot=2)],
+              [dict(extra('Bonus', 12, 1000, every=12), atUnit='months')])
+    pg = s.open(st)
+    cases = [('.period:nth-child(1) [data-field="monthlyContribution"]', '1e9', '500'),
+             ('.period:nth-child(2) [data-field="withdrawPercent"]', '150', '100'),
+             ('.period:nth-child(1) [data-field="months"]', '0.3', '0.33'),
+             ('#windfall-list [data-field="repeatEvery"]', '0', '1'),
+             ('#windfall-list [data-field="atMonth"]', '2.5', '3'),
+             ('#windfall-list [data-field="amount"]', '', '1000'),
+             ('#windfall-list [data-field="amount"]', '1e9', '1000'),
+             ('#starting-amount', '', '10,000')]
+    for sel, typed, shown in cases:
+        if sel.startswith('.period') and not pg.is_visible(sel):
+            pg.click(sel.split(' ')[0] + ' .card-summary')
+        pg.fill(sel, typed)
+        pg.locator(sel).blur()
+        pg.wait_for_timeout(30)
+        got = pg.input_value(sel)
+        got != shown and bad.append('%s %r shows %r, the math uses %r' % (sel.split(' ')[-1], typed, got, shown))
+    w = s.stored()['windfalls'][0]
+    w['repeatEvery'] != 12 and bad.append('Every 0 stored as %r months' % w['repeatEvery'])
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def os_theme_flip_keeps_number_typing_and_recolours(env):
+    bad = []
+    for engine in ('chromium', 'webkit'):
+        s = Session(env[engine], env['base'], viewport={'width': 1440, 'height': 900}, color_scheme='light')
+        pg = s.open(plan([season('Saving', 120, amt=500, rate=7)], [extra('Bonus', 12, 1000)]))
+        pg.click('.period:nth-child(1) .card-summary')
+        sel = '.period:nth-child(1) [data-field="monthlyContribution"]'
+        pg.click(sel)
+        pg.keyboard.press('End')
+        pg.keyboard.type('1')
+        pg.emulate_media(color_scheme='dark')
+        pg.wait_for_timeout(50)
+        pg.keyboard.type('2')
+        got = pg.input_value(sel)
+        got != '50012' and bad.append('%s: typing across a theme flip gave %r' % (engine, got))
+        stale = pg.evaluate("""(() => { const li = document.querySelector('.period'); const sw = li.querySelector('.swatch[data-slot="0"]');
+            const want = Chart.colorFor(0).toLowerCase(), rgb = c => c.match(/\\d+/g).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('');
+            return [li.style.getPropertyValue('--period-color').trim().toLowerCase() === want, sw && rgb(sw.style.background) === want.slice(1)]; })()""")
+        not all(stale) and bad.append('%s: card colours stale after the flip %s' % (engine, stale))
+        s.close()
+    expect(not bad, '; '.join(bad))
+
+
 # ---------------------------------------------------------------- run
 
 def main():

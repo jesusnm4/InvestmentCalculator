@@ -1726,11 +1726,12 @@
     return Number(m[1]) * (/k/i.test(m[2]) ? 1e3 : /m/i.test(m[2]) ? 1e6 : 1);
   }
   function formatMoneyInput(n) {
-    return Number(n) ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n) : '';
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(n) || 0);
   }
   el.startingAmount.addEventListener('input', function () {
     // Unreadable text ("abc", "-500", "1e9") is not $0: keep the last amount, shown again on blur.
-    var typed = this.value.trim() ? parseMoney(this.value) : 0;
+    // Blank is mid-typing too, as in every other field (type 0 for none).
+    var typed = parseMoney(this.value);
     if (typed === null) return;
     state.startingAmount = typed;
     save();
@@ -1781,18 +1782,19 @@
   var NUMBER_FIELDS = ['months', 'monthlyContribution', 'withdrawPercent', 'annualRatePercent'];
   // Only a rate may be negative; a blank or negative entry elsewhere is mid-typing or a slip.
   function usable(input) {
-    return input.value !== '' && isFinite(Number(input.value)) &&
-      (input.dataset.field === 'annualRatePercent' || Number(input.value) >= 0);
+    return plainNumber(input.value) && (input.dataset.field === 'annualRatePercent' || Number(input.value) >= 0);
   }
+  // A number as people type one: no blank, no "1e9" (a number box takes it; nobody means it).
+  function plainNumber(v) { return v !== '' && !/e/i.test(v) && isFinite(Number(v)); }
   el.periodList.addEventListener('focusout', function (ev) {
     var input = ev.target;
     if (!input.dataset || NUMBER_FIELDS.indexOf(input.dataset.field) < 0) return;
     var p = state.periods[Number(input.closest('.period').dataset.index)];
     var f = input.dataset.field;
-    // A clamped rate shows the rate in use too.
-    if (usable(input) && (f !== 'annualRatePercent' || Number(input.value) === p.annualRatePercent)) return;
+    // Always the value in use: a capped rate or percent, whole months, the last readable entry.
     input.value = f === 'months' ? timeDisplay(p.months, unitOf(p.lengthUnit, p.months))
       : f === 'monthlyContribution' ? Math.abs(Number(p.monthlyContribution) || 0) : p[f];
+    unitWords(input);
   });
 
   el.periodList.addEventListener('click', function (ev) {
@@ -2141,10 +2143,13 @@
     var input = ev.target.closest('[data-field]');
     if (!input) return;
     var field = input.dataset.field;
-    // A cleared or negative time is mid-typing, not month 0 or "every month" (Until's blank means to the end).
-    if ((field === 'repeatEvery' || field === 'atMonth' || field === 'repeatUntil') && input.value !== '' &&
-        !(Number(input.value) >= 0)) return;
-    if ((field === 'repeatEvery' || field === 'atMonth') && input.value === '') return;
+    /* A blank, unreadable or negative time is mid-typing, not month 0 or "every
+       month" (Until's blank means to the end); a blank amount is not $0 yet. */
+    var timeF = field === 'repeatEvery' || field === 'atMonth' || field === 'repeatUntil';
+    if (timeF && !(field === 'repeatUntil' && input.value === '') && !(plainNumber(input.value) && Number(input.value) >= 0)) return;
+    if (field === 'amount' && !plainNumber(input.value)) return;
+    // Every is at least a month: 0 would mean "every month" behind a field that says 0.
+    if (field === 'repeatEvery' && timeFromInput(input.value, unitOf(w.everyUnit, w.repeatEvery)) < 1) return;
 
     if (field === 'repeat') {
       // The checkbox is a view of repeatEvery: 0 means "does not repeat".
@@ -2222,12 +2227,14 @@
   // Leaving a time field shows the time in use again (a blank Until means to the end, and stays blank).
   el.windfallList.addEventListener('focusout', function (ev) {
     var input = ev.target, f = input.dataset && input.dataset.field;
-    if (f !== 'repeatEvery' && f !== 'atMonth' && f !== 'repeatUntil') return;
-    if (input.value === '' ? f === 'repeatUntil' : Number(input.value) >= 0) return;
+    if (f !== 'repeatEvery' && f !== 'atMonth' && f !== 'repeatUntil' && f !== 'amount') return;
     var w = state.windfalls[Number(input.closest('.windfall').dataset.index)];
-    input.value = f === 'repeatEvery' ? timeDisplay(w.repeatEvery || 12, unitOf(w.everyUnit, w.repeatEvery || 12))
+    // Always the value in use: whole months, the last readable entry.
+    input.value = f === 'amount' ? (Number(w.amount) ? w.amount : '')
+      : f === 'repeatEvery' ? timeDisplay(w.repeatEvery || 12, unitOf(w.everyUnit, w.repeatEvery || 12))
       : f === 'atMonth' ? timeDisplay(w.anchor ? w.anchorOffset : w.atMonth, unitOf(w.atUnit, w.anchor ? w.anchorOffset : w.atMonth))
       : timeDisplay(untilShown(w), unitOf(w.untilUnit, untilShown(w) || 0));
+    if (f !== 'amount') unitWords(input);
   });
 
   el.windfallList.addEventListener('click', function (ev) {
@@ -2439,19 +2446,23 @@
     el.themeToggle.querySelectorAll('[data-theme-choice]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.dataset.themeChoice === Theme.get()));
     });
-    /* An OS flip can land mid-typing: the rebuilt cards get the focus and caret
-       back, so the next keystroke goes where the last one did. */
-    var a = document.activeElement, card = a && a.closest && a.closest('.period, .windfall');
-    var at = card && a.dataset.field ? { list: card.parentNode, index: card.dataset.index, field: a.dataset.field,
-      start: a.selectionStart, end: a.selectionEnd } : null;
-    renderPeriods();
-    renderWindfalls();
+    /* Recoloured in place, never rebuilt: an OS flip can land mid-typing, and a
+       rebuilt number field loses its caret (a browser gives no way to put it back). */
+    recolorCards();
     renderResults();
-    if (!at) return;
-    var back = at.list.querySelector('[data-index="' + at.index + '"] [data-field="' + at.field + '"]');
-    if (!back) return;
-    back.focus();
-    try { if (at.start !== null) back.setSelectionRange(at.start, at.end); } catch (e) { /* not a text field */ }
+  }
+  function recolorCards() {
+    Array.prototype.forEach.call(el.periodList.children, function (li) {
+      var p = state.periods[Number(li.dataset.index)];
+      if (!p) return;
+      li.style.setProperty('--period-color', Chart.colorFor(p.colorSlot));
+      setNodeColors(li, p.colorSlot);
+      li.querySelectorAll('.swatch').forEach(function (sw) { sw.style.background = Chart.colorFor(Number(sw.dataset.slot)); });
+    });
+    Array.prototype.forEach.call(el.windfallList.children, function (li) {
+      var w = state.windfalls[Number(li.dataset.index)], glyph = li.querySelector('.extra-glyph-wrap');
+      if (w && glyph) glyph.innerHTML = Chart.shapeGlyph(w.shapeSlot, 14);
+    });
   }
 
   el.themeToggle.addEventListener('click', function (ev) {
@@ -2468,6 +2479,8 @@
   syncViewControls();
   el.exampleNote.hidden = !state.isExample;
   el.reset.hidden = !!state.isExample;
+  renderPeriods();
+  renderWindfalls();
   repaintForTheme();
   announceReady = true;
   syncSharedNote();
