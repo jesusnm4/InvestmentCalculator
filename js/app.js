@@ -693,7 +693,9 @@
   function anchorOptions(w) {
     // The first season starts with the plan: its entry is the plan-start clock, named for the season.
     var first = state.periods.length ? escapeHtml(shortName(seasonName(state.periods[0], 0))) : 'The plan start';
-    return '<option value=""' + (w.anchor ? '' : ' selected') + '>' + first + '</option>' +
+    // Anchored to the season now first: that is the plan-start clock, the same option.
+    var onFirst = !w.anchor || (state.periods.length && w.anchor === state.periods[0].id);
+    return '<option value=""' + (onFirst ? ' selected' : '') + '>' + first + '</option>' +
       state.periods.slice(1).map(function (p, k) {
         return '<option value="' + escapeAttr(p.id) + '"' + (w.anchor === p.id ? ' selected' : '') + '>' +
           escapeHtml(shortName(seasonName(p, k + 1))) + '</option>';
@@ -885,9 +887,9 @@
     state.windfalls.forEach(function (w) {
       if (w.anchor) {
         var span = spans.filter(function (sp) { return sp.id === w.anchor; })[0];
-        // Its season was deleted, or became the first (whose start is the plan start):
-        // keep the month it last had, measured from the plan start.
-        if (!span || span === spans[0]) { w.anchor = null; }
+        // Its season was deleted: keep the month it last had, measured from the plan start.
+        // Moved to the top, it keeps following its season (whose start is now the plan start).
+        if (!span) { w.anchor = null; }
         else {
           w.atMonth = span.start + 1 + w.anchorOffset;
           // Until counts from the same season start ("until 10 yrs" = 10 yrs into it).
@@ -1049,24 +1051,13 @@
     /* Running out without any withdrawals (a big negative extra) still needs
        saying; with withdrawals the headline already says it. */
     // A real below-zero stretch caused by a planned expense; nothing else earns this warning.
-    var dipOnly = !depleted && !endsBelow && t.lowestBalance < 0 && t.monthsBelowZero > 0 &&
-      state.windfalls.some(function (w) { return Number(w.amount) < 0; });
-    // The headline already states a run-out or a below-zero ending; the warning line is for a dip that recovers.
-    el.depletionWarn.hidden = !dipOnly;
-    if (!el.depletionWarn.hidden) {
-      var at = dipOnly ? t.dippedAt : t.depletedAt;
-      var during = periodAt(projection, at);
-      // A recovered dip is still worth saying: for those months the money was not there.
-      // A recovered dip is borrowing against the plan: say how deep and for how long.
-      el.depletionWarn.textContent = dipOnly
-        ? 'A planned expense takes the balance ' + Chart.money0.format(-t.lowestBalance) + ' below zero ' +
-          inSeasonText(projection, at) + ', for ' + Chart.durationLabel(t.monthsBelowZero) +
-          ' (money borrowed against the plan), then it recovers.'
-        : 'The balance goes below zero ' + inSeasonText(projection, at) + '. After that the plan is short.';
-    }
-    // The expense behind a recovered dip, for its own lever.
+    var hasExpense = state.windfalls.some(function (w) { return Number(w.amount) < 0; });
+    var dipOnly = !depleted && !endsBelow && t.lowestBalance < 0 && t.monthsBelowZero > 0 && hasExpense;
+    // A dip that recovered before the money later ran out: the headline names the run-out, this names the dip.
+    var dipFirst = depleted && !endsBelow && t.dippedAt !== null && t.dippedAt < t.depletedAt && t.lowestBalance < 0 && hasExpense;
+    // The expense behind the dip, named (and given its own lever when the dip recovers).
     var dipCulprit = -1;
-    if (dipOnly) {
+    if (dipOnly || dipFirst) {
       var latestDip = -1;
       state.windfalls.forEach(function (w, wi) {
         if (!(Number(w.amount) < 0)) return;
@@ -1075,8 +1066,17 @@
         });
       });
     }
+    // The headline already states a run-out or a below-zero ending; this line is for a dip that recovers.
+    el.depletionWarn.hidden = !(dipOnly || dipFirst);
+    if (!el.depletionWarn.hidden) {
+      var dipName = dipCulprit >= 0 ? (state.windfalls[dipCulprit].name || 'Extra ' + (dipCulprit + 1)) : 'A planned expense';
+      // A recovered dip is borrowing against the plan: say which expense, how deep and for how long.
+      el.depletionWarn.textContent = dipName + ' takes the balance ' + Chart.money0.format(-t.lowestBalance) + ' below zero ' +
+        inSeasonText(projection, t.dippedAt) + ', for ' + Chart.durationLabel(t.monthsBelowZero) +
+        ' (money borrowed against the plan), then it recovers' + '.';
+    }
     // Ending below zero gets the dip's lever: the expense size that would keep it above zero.
-    renderLever(depleted, drawdown, culprit, today, endsBelow ? culprit : dipCulprit);
+    renderLever(depleted, drawdown, culprit, today, endsBelow ? culprit : dipOnly ? dipCulprit : -1);
     // A season the 100-year cap cut short only "lasts" because it ends early: no "you could withdraw more".
     if (drawdown && !depleted && trimmed) el.leverNote.hidden = true;
 
@@ -1222,7 +1222,7 @@
       depletedLabel: depleted ? 'Runs out \u00b7 ' + outWhen : null,
       depletedLabelShort: depleted ? 'Runs out' : null,
       belowZero: dipRanges(projection, endsBelow), belowZeroLabel: endsBelow ? 'Below zero from here'
-        : dipOnly ? Chart.money0.format(-t.lowestBalance) + ' below zero' : null,
+        : dipOnly || dipFirst ? Chart.money0.format(-t.lowestBalance) + ' below zero' : null,
       label: 'Projected balance. ' + summary,
       height: chartHeight
     });
@@ -1866,11 +1866,18 @@
     var focusAt = index, focusSel = '[data-field="name"]';
     if (action === 'delete') {
       var removed = state.periods.splice(index, 1)[0];
+      // Its extras lose their anchor with it (syncAnchors); undo puts those back too.
+      var anchored = state.windfalls.filter(function (w) { return w.anchor === removed.id; })
+        .map(function (w) { return { w: w, offset: w.anchorOffset, until: w.untilOffset }; });
       focusAt = Math.min(index, state.periods.length - 1);
       // Every card is collapsed after a delete: focus lands on the next one's row, not a hidden field.
       focusSel = '.card-summary';
       offerUndo('\u201c' + seasonName(removed, index) + '\u201d deleted', function () {
-        state.periods.splice(index, 0, removed);
+        state.periods.splice(Math.min(index, state.periods.length), 0, removed);
+        anchored.forEach(function (a) {
+          if (state.windfalls.indexOf(a.w) < 0) return;
+          a.w.anchor = removed.id; a.w.anchorOffset = a.offset; a.w.untilOffset = a.until;
+        });
         expanded = removed;
         save();
         renderPeriods();
@@ -1939,13 +1946,17 @@
     focusIn(el.periodList, index, '[data-flow="' + mode + '"]');
     offerUndo(note || (seasonName(p, index) + (mode === 'save' ? ' now saves ' + Chart.money0.format(Math.abs(Number(p.monthlyContribution) || 0)) + ' a month'
         : mode === 'percent' ? ' now withdraws ' + (Number(p.withdrawPercent) || 0) + '% a year (the ' + Calc.SAFE_WITHDRAWAL_PERCENT + '% rule\u2019s method)' : ' now withdraws a fixed amount')), function () {
-      state.periods[index] = JSON.parse(before);
-      // The restored season is a new object: keep it the open card, so undo does not lose your place.
-      expanded = state.periods[index];
+      // Restored in place, wherever it has moved since: undo follows the season, not its old position.
+      var at = state.periods.indexOf(p);
+      if (at < 0) return;
+      var was = JSON.parse(before);
+      Object.keys(p).forEach(function (k) { delete p[k]; });
+      Object.assign(p, was);
+      expanded = p;
       save();
       renderPeriods();
       renderResults();
-      focusIn(el.periodList, index, '[data-flow]');
+      focusIn(el.periodList, at, '[data-flow]');
     }, p);
   }
 
@@ -2193,9 +2204,10 @@
         ? '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d now repeats every ' + Chart.durationLabel(w.repeatEvery) + ': ' + tally.count +
           ' payments' + (Number(w.amount) ? ', ' + Chart.money0.format(tally.total) + ' in total' : '')
         : '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d no longer repeats', function () {
-        state.windfalls[wi].repeatEvery = wasEvery;
-        state.windfalls[wi].repeatUntil = wasUntil;
-        state.windfalls[wi].untilSeason = wasUntilSeason;
+        // The extra itself, even if others were deleted or added since.
+        w.repeatEvery = wasEvery;
+        w.repeatUntil = wasUntil;
+        w.untilSeason = wasUntilSeason;
         save();
         renderWindfalls();
         renderResults();
@@ -2290,8 +2302,10 @@
     renderWindfalls();
     renderResults();
     // Undoable like adding a season (it starts at $0, but it is still a new card).
-    var at = state.windfalls.length - 1;
+    var addedExtra = state.windfalls[state.windfalls.length - 1];
     offerUndo('Extra added', function () {
+      var at = state.windfalls.indexOf(addedExtra);
+      if (at < 0) return;
       state.windfalls.splice(at, 1);
       save();
       renderWindfalls();
@@ -2338,8 +2352,11 @@
       added.scrollIntoView({ block: 'center' });
     }
     // A new season copies the last one's numbers; say so, and offer the way back.
-    var at = state.periods.length - 1;
+    var addedSeason = state.periods[state.periods.length - 1];
     offerUndo(copying ? 'Copied \u201c' + lastName + '\u201d' : 'Season added, saving $0 a month', function () {
+      // The season itself, wherever it has been moved since.
+      var at = state.periods.indexOf(addedSeason);
+      if (at < 0) return;
       state.periods.splice(at, 1);
       save();
       renderPeriods();

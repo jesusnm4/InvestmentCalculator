@@ -1305,6 +1305,88 @@ def small_round_21(env):
     expect(not bad, '; '.join(bad))
 
 
+def _names(s):
+    return [p['name'] + ('/' + p['flow'] if p['flow'] == 'withdraw' else '') for p in s.stored()['periods']]
+
+
+@check
+def undo_after_reorder_touches_only_its_own_season(env):
+    bad = []
+    st = plan([season(n, 60, amt=100) for n in 'ABCD'] + [season('E', 120, flow='withdraw', slot=4)])
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(st)
+    pg.click('#add-period')
+    pg.fill('.period:nth-child(6) [data-field="name"]', 'F')
+    pg.click('.period:nth-child(6) [data-action="up"]')
+    pg.click('#undo-link')
+    _names(s) != ['A', 'B', 'C', 'D', 'E/withdraw'] and bad.append('undo add after a move: %s' % _names(s))
+    pg = s.open(st)
+    pg.click('.period:nth-child(5) .card-summary')
+    pg.click('.period:nth-child(5) [data-flow="save"]')
+    pg.click('.period:nth-child(5) [data-action="up"]')
+    pg.click('#undo-link')
+    _names(s) != ['A', 'B', 'C', 'E/withdraw', 'D'] and bad.append('undo switch after a move: %s' % _names(s))
+    ids = [p['id'] for p in s.stored()['periods']]
+    len(set(ids)) != len(ids) and bad.append('duplicate season ids: %s' % ids)
+    # Extras: undo of a repeat after deleting an earlier extra still reaches its own extra.
+    pg = s.open(plan([season('S', 120, amt=100)], [extra('X', 12, 100), extra('Y', 24, 100)]))
+    pg.check('#windfall-list li:nth-child(2) [data-field="repeat"]')
+    pg.click('#windfall-list li:nth-child(1) [data-action="delete"]')
+    pg.click('#undo-link'); pg.click('#undo-link')
+    w = {x['name']: x['repeatEvery'] for x in s.stored()['windfalls']}
+    w != {'X': 0, 'Y': 0} and bad.append('undo repeat after a delete: %s' % w)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def anchors_survive_moves_and_undo(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    st = plan([season('Saving', 120, amt=500), season('Growing', 120, slot=1), season('Retirement', 300, flow='withdraw', slot=2)],
+              [dict(extra('Gift', 121, 1000), anchor=None)])
+    pg = s.open(st)
+    pg.select_option('#windfall-list [data-field="anchor"]', label='Growing')
+    pg.click('.period:nth-child(2) .card-summary')
+    pg.click('.period:nth-child(2) [data-action="up"]')
+    w = s.stored()['windfalls'][0]
+    (w.get('anchor') is None or w['atMonth'] != 1) and bad.append('moved to the top: anchor %r, month %r' % (w.get('anchor'), w['atMonth']))
+    pg.click('.period:nth-child(1) [data-action="down"]')
+    w = s.stored()['windfalls'][0]
+    w['atMonth'] != 121 and bad.append('moved back: month %r' % w['atMonth'])
+    # Undoing a season delete brings back its extras' anchors.
+    pg = s.open(st)
+    pg.select_option('#windfall-list [data-field="anchor"]', label='Retirement')
+    before = s.stored()['windfalls'][0]
+    pg.click('.period:nth-child(3) .card-summary')
+    pg.click('.period:nth-child(3) [data-action="delete"]')
+    pg.click('#undo-link')
+    after = s.stored()['windfalls'][0]
+    (after.get('anchor') != before.get('anchor') or after['atMonth'] != before['atMonth']) and \
+        bad.append('undo delete: anchor %r -> %r, month %r -> %r' % (before.get('anchor'), after.get('anchor'), before['atMonth'], after['atMonth']))
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def expense_that_sinks_the_plan_is_named(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    base = [season('Saving', 120, amt=500, rate=7), season('Growing', 120, rate=5, slot=1),
+            season('Retirement', 300, flow='withdraw', unit='dollars', amt=1500, slot=2)]
+    s.open(plan(base, [extra('Roof', 12, -80000)]))
+    head, warn = s.text('#final-amount') or '', s.text('#depletion-warn') or ''
+    'Roof' not in head and bad.append('headline: %r' % head)
+    'Roof' not in warn and bad.append('dip warning: %r' % warn)
+    label = s.pg.evaluate("[...document.querySelectorAll('.chart-svg text')].map(t => t.textContent).filter(t => /below zero/.test(t))")
+    not label and bad.append('no dip label on the chart')
+    # A dip that recovers names its expense too.
+    s.open(plan([season('Saving', 120, amt=500, rate=7)], [extra('Wedding', 12, -20000)]))
+    'Wedding' not in (s.text('#depletion-warn') or '') and bad.append('recovered dip: %r' % s.text('#depletion-warn'))
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
 # ---------------------------------------------------------------- run
 
 def main():
