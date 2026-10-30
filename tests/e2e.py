@@ -656,7 +656,8 @@ def withdrawing_plan_in_debt_does_not_run_out(env):
     pg = s.open(plan([season('Saving', 240, amt=500, rate=7), season('Retirement', 300, flow='withdraw', slot=2)],
                      [extra('House', 12, -150000)]))
     head = s.text('#final-amount')
-    expect(head.startswith('Ends ') and 'below zero' in head, 'debt in a withdrawing plan: %r' % head)
+    # The 4% season starts with nothing: said as that (#23), never as a run-out.
+    expect('nothing to withdraw' in head and 'House' in head and 'below zero' in s.text('#final-sub'), 'debt in a withdrawing plan: %r / %r' % (head, s.text('#final-sub')))
     expect('Short by' not in s.text('#final-sub'), 'debt called a shortfall: %r' % s.text('#final-sub'))
     bar = pg.text_content('#result-bar-value')
     expect('Runs out' not in bar, 'bar says runs out: %r' % bar)
@@ -667,7 +668,8 @@ def withdrawing_plan_in_debt_does_not_run_out(env):
     # A real unpaid withdrawal after the expense still runs out.
     s.open(plan([season('Saving', 240, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)],
                 [extra('House', 12, -150000)]))
-    expect(s.text('#final-amount').startswith('Runs out'), 'unpaid withdrawals: %r' % s.text('#final-amount'))
+    # Withdrawing dollars from the same empty start: the same answer, whichever way it withdraws.
+    expect('nothing to withdraw' in s.text('#final-amount'), 'unpaid withdrawals: %r' % s.text('#final-amount'))
     s.close()
 
 
@@ -779,7 +781,7 @@ def debt_then_runout_keeps_the_debt_in_sight(env):
     pg = s.open(plan([season('Saving', 240, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=600, slot=2)],
                      [extra('House', 12, -150000)]))
     head = s.text('#final-amount')
-    expect(head.startswith('Runs out') and 'after House' in head, 'culprit lost: %r' % head)
+    expect('after House' in head, 'culprit lost: %r' % head)
     expect(s.text('#kpi-third-label') == 'Owed at the end', 'third figure: %s' % s.text('#kpi-third-label'))
     expect('while there was money' not in s.text('#kpi-growth-note'), 'growth note: %r' % s.text('#kpi-growth-note'))
     expect((s.text('#lever-note') or '').startswith('An expense'), 'lever: %r' % s.text('#lever-note'))
@@ -1243,9 +1245,9 @@ def one_clock_for_when(env):
 def small_round_21(env):
     bad = []
     s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
-    # The 100-year cap leaves Retirement no time: "Will it last?" has no answer, so the label is the amount.
+    # The 100-year cap leaves Retirement no time: still the plan's question (owner, #23), the answer says why.
     s.open(plan([season('Saving', 1300, amt=500), season('Retirement', 120, flow='withdraw', slot=2)]))
-    s.text('#final-label') != 'Final amount' and bad.append('cap label %r over %r' % (s.text('#final-label'), s.text('#final-amount')))
+    s.text('#final-label') != 'Will it last?' and bad.append('cap label %r over %r' % (s.text('#final-label'), s.text('#final-amount')))
     # Seasons after the last withdrawal: say which end the money is left at.
     s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', slot=2), season('Legacy', 120, slot=3)]))
     '45 yrs' not in (s.text('#final-sub') or '') and bad.append('sub-line: %r' % s.text('#final-sub'))
@@ -1374,10 +1376,14 @@ def expense_that_sinks_the_plan_is_named(env):
     s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
     base = [season('Saving', 120, amt=500, rate=7), season('Growing', 120, rate=5, slot=1),
             season('Retirement', 300, flow='withdraw', unit='dollars', amt=1500, slot=2)]
+    # Retirement starts empty here: named by the headline.
     s.open(plan(base, [extra('Roof', 12, -80000)]))
-    head, warn = s.text('#final-amount') or '', s.text('#depletion-warn') or ''
+    head = s.text('#final-amount') or ''
     'Roof' not in head and bad.append('headline: %r' % head)
-    'Roof' not in warn and bad.append('dip warning: %r' % warn)
+    # A dip that recovers before the money runs out: the warning names it, with its own depth.
+    s.open(plan(base, [extra('Roof', 12, -20000)]))
+    warn = s.text('#depletion-warn') or ''
+    ('Roof' not in warn or 'recovers' not in warn) and bad.append('dip warning: %r' % warn)
     label = s.pg.evaluate("[...document.querySelectorAll('.chart-svg text')].map(t => t.textContent).filter(t => /below zero/.test(t))")
     not label and bad.append('no dip label on the chart')
     # A dip that recovers names its expense too.
@@ -1498,6 +1504,135 @@ def small_round_22(env):
     pg = s.open(plan([season('W' * 80, 120, amt=500), season('X' * 80, 120, flow='withdraw', slot=2)], [extra('Y' * 80, 12, 1000)]))
     over = pg.evaluate('document.documentElement.scrollWidth - innerWidth')
     over > 0 and bad.append('80-char names scroll the page %dpx sideways' % over)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+# ---------------------------------------------------------------- invariants (guards against regressions)
+
+INVARIANTS_JS = """(() => {
+  const st = JSON.parse(localStorage.getItem('%s')), p = Calc.project(st), t = p.totals;
+  const txt = id => (document.getElementById(id) && !document.getElementById(id).hidden ? document.getElementById(id).textContent : '');
+  const head = txt('final-amount'), sub = txt('final-sub'), warn = txt('depletion-warn'), lever = txt('lever-note');
+  const label = txt('final-label'), bar = document.querySelector('.result-bar-label').textContent;
+  const all = document.getElementById('results').textContent, bad = [];
+  if (/NaN|Infinity|\u221e/.test(all)) bad.push('NaN or infinity on screen');
+  if (t.finalAmount < 0 && /recovers/.test(head + sub + warn)) bad.push('"recovers" on a plan that ends below zero');
+  const unpaid = p.points.some(pt => pt.short > 0);
+  if (/^Lasts/.test(head) && (unpaid || t.finalAmount < 0)) bad.push('"Lasts" with unpaid months or debt');
+  if (/^Runs out/.test(head) && !unpaid) bad.push('"Runs out" with nothing unpaid');
+  if (label !== bar && !(label === 'Shortfall at the end' && bar === 'Final amount')) bad.push('labels differ: ' + label + ' / ' + bar);
+  const withdraws = st.periods.some(q => q.flow === 'withdraw');
+  if (withdraws !== (label === 'Will it last?')) bad.push('label ' + label + ' for a plan that ' + (withdraws ? 'withdraws' : 'does not withdraw'));
+  // A withdrawing season that starts with nothing: said the same way however it withdraws.
+  const empty = p.perPeriod.find((pp, i) => Calc.isWithdrawing(st.periods[i]) && pp.months > 0 && pp.startBalance <= 0);
+  if (empty && !/nothing to withdraw/.test(head)) bad.push('a withdrawing season starts empty but the headline says: ' + head);
+  if (empty) { const i = p.perPeriod.indexOf(empty), row = document.querySelectorAll('.period [data-role="sum-meta"]')[i];
+    if (row && !/nothing to withdraw/.test(row.textContent)) bad.push('the empty season row says: ' + row.textContent); }
+  const fed = st.startingAmount > 0 || st.periods.some(q => q.flow !== 'withdraw' && q.monthlyContribution > 0) || st.windfalls.some(w => w.amount > 0);
+  if (!fed && /still last|comfortably/.test(lever)) bad.push('a plan with no money is told it lasts comfortably');
+  return bad;
+})()""" % KEY
+
+
+def _matrix():
+    sv = lambda **k: season('Saving', 120, amt=500, rate=7, **k)
+    gr = season('Growing', 120, rate=5, slot=1)
+    pct = season('Retirement', 300, flow='withdraw', slot=2)
+    usd = lambda a: season('Retirement', 300, flow='withdraw', unit='dollars', amt=a, slot=2)
+    return {
+        'saving only': plan([sv()]),
+        'withdraw % lasts': plan([sv(), gr, pct]),
+        'withdraw $ lasts': plan([sv(), gr, usd(300)]),
+        'withdraw $ runs out': plan([sv(), gr, usd(900)]),
+        'dip recovers, saving': plan([sv()], [extra('Wedding', 12, -20000)]),
+        'dip recovers, then runs out': plan([sv(), gr, usd(1500)], [extra('Roof', 12, -20000)]),
+        'sunk for good, $': plan([sv(), gr, usd(360)], [extra('Big', 12, -150000)]),
+        'sunk for good, %': plan([sv(), gr, pct], [extra('Big', 12, -150000)]),
+        'retirement starts empty, %': plan([sv(), gr, pct], [extra('Car', 180, -120000)]),
+        'retirement starts empty, $': plan([sv(), gr, usd(360)], [extra('Car', 180, -120000)]),
+        'debt after run-out': plan([sv(), gr, pct], [extra('Care', 300, -60000, every=12)]),
+        'saving debt ending': plan([season('Saving', 120, amt=100)], [extra('House', 60, -80000)]),
+        '100-year cap': plan([season('Saving', 1300, amt=500), pct]),
+        'zero plan': plan([season('Saving', 120, amt=0, rate=7), gr, pct], start=0),
+        'seasons after retirement': plan([sv(), pct, season('Legacy', 120, slot=3)]),
+    }
+
+
+@check
+def state_matrix_invariants(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    for name, st in _matrix().items():
+        s.open(st)
+        for b in s.pg.evaluate(INVARIANTS_JS):
+            bad.append('%s: %s' % (name, b))
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+UNDO_STATE_JS = """(() => { const st = JSON.parse(localStorage.getItem('%s'));
+  // Reordering is not an undoable step (parked), so order is not compared; everything else is.
+  const k = a => a.map(x => JSON.stringify(x)).sort();
+  return JSON.stringify({ periods: k(st.periods.map(p => [p.name, p.flow, p.withdrawUnit, p.months, p.monthlyContribution])),
+    windfalls: k(st.windfalls.map(w => [w.name, w.amount, w.repeatEvery, w.anchor || null])) }); })()""" % KEY
+
+
+@check
+def undo_walk_returns_to_the_start(env):
+    import random
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    st = plan([season('A', 60, amt=100), season('B', 60, amt=200, slot=1), season('C', 120, flow='withdraw', slot=2)],
+              [extra('X', 24, 1000), extra('Y', 70, -500)])
+    actions = ['add_season', 'delete_season', 'up', 'down', 'flow', 'add_extra', 'delete_extra', 'repeat', 'reset', 'keep']
+    for seed in range(6):
+        rnd = random.Random(seed)
+        pg = s.open(st)
+        start = pg.evaluate(UNDO_STATE_JS)
+        done = []
+        for _ in range(8):
+            a = rnd.choice(actions)
+            pg.set_default_timeout(3000)
+            n = pg.locator('.period').count()
+            m = pg.locator('#windfall-list > li').count()
+            i = rnd.randrange(max(1, n)) + 1
+            if a == 'add_season' and n < 40:
+                pg.click('#add-period')
+            elif a == 'delete_season' and n > 1:
+                pg.click('.period:nth-child(%d) .card-summary' % i) if not pg.is_visible('.period:nth-child(%d) [data-action="delete"]' % i) else None
+                pg.click('.period:nth-child(%d) [data-action="delete"]' % i)
+            elif a in ('up', 'down') and n > 1:
+                j = rnd.randrange(2, n + 1) if a == 'up' else rnd.randrange(1, n)
+                pg.click('.period:nth-child(%d) .card-summary' % j) if not pg.is_visible('.period:nth-child(%d) [data-action="%s"]' % (j, a)) else None
+                pg.click('.period:nth-child(%d) [data-action="%s"]' % (j, a))
+            elif a == 'flow' and n:
+                pg.click('.period:nth-child(%d) .card-summary' % i) if not pg.is_visible('.period:nth-child(%d) [data-flow="save"]' % i) else None
+                cur = pg.evaluate("i => document.querySelector('.period:nth-child(' + i + ') [data-flow][aria-pressed=true]').dataset.flow", i)
+                pg.click('.period:nth-child(%d) [data-flow="%s"]' % (i, rnd.choice([f for f in ('save', 'percent', 'dollars') if f != cur])))
+            elif a == 'add_extra':
+                pg.click('#add-windfall')
+            elif a == 'delete_extra' and m:
+                pg.click('#windfall-list > li:nth-child(%d) [data-action="delete"]' % (rnd.randrange(m) + 1))
+            elif a == 'repeat' and m:
+                pg.click('#windfall-list > li:nth-child(%d) [data-field="repeat"]' % (rnd.randrange(m) + 1))
+            elif a == 'reset':
+                pg.click('#reset-btn') if pg.is_visible('#reset-btn') else None
+            elif a == 'keep':
+                pg.click('#keep-baseline') if pg.is_visible('#keep-baseline') else None
+            else:
+                continue
+            done.append(a)
+            pg.keyboard.press('Escape')
+        for _ in range(12):
+            if not pg.is_visible('#undo-link'):
+                break
+            pg.click('#undo-link')
+        end = pg.evaluate(UNDO_STATE_JS)
+        ids = [p['id'] for p in s.stored()['periods']]
+        end != start and bad.append('seed %d %s: plan did not come back' % (seed, done))
+        end != start and print('  seed %d\n   start %s\n   end   %s' % (seed, start, end), file=sys.stderr)
+        len(set(ids)) != len(ids) and bad.append('seed %d: duplicate ids' % seed)
     s.close()
     expect(not bad, '; '.join(bad))
 

@@ -973,7 +973,36 @@
     var belowCause = endsBelow && culprit >= 0 ? state.windfalls[culprit].name || 'Extra ' + (culprit + 1) : '';
     if (endsBelow) depleted = false;
 
-    if (drawdown && !endsBelow) {
+    /* A withdrawing season that starts with nothing (an expense emptied it first,
+       or nothing was ever put in): it pays nothing at all. Said the same way
+       whether it withdraws a percent (which comes to $0) or dollars (unpaid from
+       its first month): "Retirement starts with nothing to withdraw". */
+    var emptyAt = -1;
+    nominal.perPeriod.forEach(function (pp, i) {
+      if (emptyAt < 0 && pp.months > 0 && Calc.isWithdrawing(state.periods[i]) && pp.startBalance <= 0) emptyAt = i;
+    });
+    var emptyCause = -1;
+    if (emptyAt >= 0) {
+      var emptyFrom = nominal.perPeriod[emptyAt].startMonth, lateExp = -1;
+      state.windfalls.forEach(function (w, wi) {
+        if (!(Number(w.amount) < 0)) return;
+        Calc.windfallMonths(w, t.totalMonths).forEach(function (mth) { if (mth <= emptyFrom && mth > lateExp) { lateExp = mth; emptyCause = wi; } });
+      });
+    }
+    // Money ever put in: without any, there is nothing to project.
+    var fed = Number(state.startingAmount) > 0 || state.windfalls.some(function (w) { return Number(w.amount) > 0; }) ||
+      state.periods.some(function (p) { return p.flow !== 'withdraw' && Number(p.monthlyContribution) > 0; });
+
+    if (emptyAt >= 0) {
+      var emptyName = shortName(seasonName(state.periods[emptyAt], emptyAt));
+      el.finalLabel.textContent = 'Will it last?';
+      el.finalAmount.textContent = emptyName + ' starts with nothing to withdraw' +
+        (emptyCause >= 0 ? ', after ' + (state.windfalls[emptyCause].name || 'Extra ' + (emptyCause + 1)) : '');
+      el.finalSub.textContent = (t.finalAmount <= -1 ? 'Ends ' + Chart.money0.format(-t.finalAmount) + ' below zero'
+          : Chart.money0.format(t.finalAmount) + ' at the end') + ' \u00b7 ' + Chart.durationLabel(t.totalMonths) + ', ' + seasons;
+      el.resultBarValue.textContent = 'Nothing to withdraw';
+      if (culprit < 0) culprit = emptyCause;
+    } else if (drawdown && !endsBelow) {
       el.finalLabel.textContent = 'Will it last?';
       // "Lasts through Retirement", not "lasts all 45 yrs": the saving years are not the question.
       var lastDraw = drawing[drawing.length - 1];
@@ -1015,8 +1044,8 @@
       // The bar is a glance: millions in short form, so "left" never falls off a phone.
       el.resultBarValue.textContent = depleted ? 'Runs out in ' + outSeason : 'Lasts \u00b7 ' + barMoney(t.finalAmount) + ' left';
     } else if (cappedDraw) {
-      // A season with no time cannot last or run out: the question has no answer, so the label is the amount.
-      el.finalLabel.textContent = 'Final amount';
+      // Still the plan's question (it has a withdrawing season); the answer says why there is none.
+      el.finalLabel.textContent = 'Will it last?';
       // Every withdrawing season the cap leaves out, not only the first.
       var cappedNames = cappedAll.map(function (pp) { return seasonName(state.periods[pp.index], pp.index); });
       el.finalAmount.textContent = (cappedNames.length > 1
@@ -1054,7 +1083,15 @@
     var hasExpense = state.windfalls.some(function (w) { return Number(w.amount) < 0; });
     var dipOnly = !depleted && !endsBelow && t.lowestBalance < 0 && t.monthsBelowZero > 0 && hasExpense;
     // A dip that recovered before the money later ran out: the headline names the run-out, this names the dip.
-    var dipFirst = depleted && !endsBelow && t.dippedAt !== null && t.dippedAt < t.depletedAt && t.lowestBalance < 0 && hasExpense;
+    var dipBack = null, dipDepth = 0;
+    if (depleted && !endsBelow && t.dippedAt !== null && t.dippedAt < t.depletedAt) {
+      for (var dk = t.dippedAt; dk < t.depletedAt; dk++) {
+        if (nominal.points[dk].balance >= 0) { dipBack = dk; break; }
+        dipDepth = Math.min(dipDepth, projection.points[dk].balance);
+      }
+    }
+    // Only a dip that really came back above $0 before the run-out "recovers".
+    var dipFirst = dipBack !== null && dipDepth < 0 && hasExpense && emptyAt < 0;
     // The expense behind the dip, named (and given its own lever when the dip recovers).
     var dipCulprit = -1;
     if (dipOnly || dipFirst) {
@@ -1071,12 +1108,18 @@
     if (!el.depletionWarn.hidden) {
       var dipName = dipCulprit >= 0 ? (state.windfalls[dipCulprit].name || 'Extra ' + (dipCulprit + 1)) : 'A planned expense';
       // A recovered dip is borrowing against the plan: say which expense, how deep and for how long.
-      el.depletionWarn.textContent = dipName + ' takes the balance ' + Chart.money0.format(-t.lowestBalance) + ' below zero ' +
-        inSeasonText(projection, t.dippedAt) + ', for ' + Chart.durationLabel(t.monthsBelowZero) +
+      el.depletionWarn.textContent = dipName + ' takes the balance ' + Chart.money0.format(-(dipFirst ? dipDepth : t.lowestBalance)) + ' below zero ' +
+        inSeasonText(projection, t.dippedAt) + ', for ' + Chart.durationLabel(dipFirst ? dipBack - t.dippedAt : t.monthsBelowZero) +
         ' (money borrowed against the plan), then it recovers' + '.';
     }
     // Ending below zero gets the dip's lever: the expense size that would keep it above zero.
-    renderLever(depleted, drawdown, culprit, today, endsBelow ? culprit : dipOnly ? dipCulprit : -1);
+    // An empty withdrawing season gets the run-out levers: what would leave it something to withdraw.
+    renderLever(depleted || emptyAt >= 0, drawdown, culprit, today, endsBelow ? culprit : dipOnly ? dipCulprit : -1);
+    // Nothing ever put in: no lever has anything to work with, and "it lasts" would be hollow.
+    if (!fed) {
+      el.leverNote.textContent = 'Add a starting amount or monthly savings to see a projection.';
+      el.leverNote.hidden = false;
+    }
     // A season the 100-year cap cut short only "lasts" because it ends early: no "you could withdraw more".
     if (drawdown && !depleted && trimmed) el.leverNote.hidden = true;
 
@@ -1180,6 +1223,8 @@
       if (!pp.months && pp.truncated) sumMeta.textContent = 'Past the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit: gets no time';
       // Wholly after the run-out: nothing is left in it to grow or withdraw.
       else if (depleted && pp.months && pp.startMonth >= t.depletedAt) sumMeta.textContent += ' \u00b7 after the money ran out';
+      // Starts with nothing: its "4% withdrawn" would read as income it never pays.
+      else if (i === emptyAt) sumMeta.textContent += ' \u00b7 nothing to withdraw';
       // Cut short by the cap: the row shows the length it really gets.
       else if (pp.truncated) sumMeta.textContent = sumMeta.textContent.replace(/^[^\u00b7]+/, Chart.durationLabel(pp.months) + ' (cut by the limit) ');
       // Long form, plus a compact one ("20–45 yrs") phones use beside the buttons.
@@ -1224,7 +1269,8 @@
       depletedLabel: depleted ? 'Runs out \u00b7 ' + outWhen : null,
       depletedLabelShort: depleted ? 'Runs out' : null,
       belowZero: dipRanges(projection, endsBelow), belowZeroLabel: endsBelow ? 'Below zero from here'
-        : dipOnly || dipFirst ? Chart.money0.format(-t.lowestBalance) + ' below zero' : null,
+        : dipOnly ? Chart.money0.format(-t.lowestBalance) + ' below zero'
+        : dipFirst ? Chart.money0.format(-dipDepth) + ' below zero' : null,
       label: 'Projected balance. ' + summary,
       height: chartHeight
     });
@@ -2406,14 +2452,15 @@
   });
 
   el.reset.addEventListener('click', function () {
-    var before = JSON.stringify(state);
+    // The plan itself, not a copy: older undo steps hold its seasons and extras and must still find them.
+    var before = state;
     // Starting over from a shared plan is a change like any edit: keep your own plan aside first.
     if (sharedMode) keepOwnAside();
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
     state = defaultState();
     renderAll();
     offerUndo('Replaced with the example plan', function () {
-      state = JSON.parse(before);
+      state = before;
       renderAll();
     });
     handFocus([el.reset, el.undoLink, el.startingAmount]);

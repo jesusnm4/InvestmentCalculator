@@ -217,7 +217,8 @@
       }
     }
     var yMin = Math.min(0, lo);
-    var yMax = Math.max(hi, yMin + 1);
+    // At least $100 tall: an all-zero plan would otherwise tick in cents ($0.5).
+    var yMax = Math.max(hi, yMin + 100);
     // Try a few tick counts and keep the one that wastes the least headroom.
     var step = 0, best = Infinity;
     for (var tc = 4; tc <= 6; tc++) {
