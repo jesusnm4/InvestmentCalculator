@@ -117,9 +117,11 @@
   function withMinus(nf) {
     return { format: function (v) { return nf.format(v).replace('-', '\u2212'); } };
   }
-  var money0 = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }));
   var money2 = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   var compact = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }));
+  // Whole dollars, until a sum is past a trillion: thirteen digits nobody reads, so "$1T".
+  var whole = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }));
+  var money0 = { format: function (v) { return Math.abs(v) >= 1e12 ? compact.format(v) : whole.format(v); } };
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {

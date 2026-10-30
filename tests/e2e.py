@@ -157,8 +157,9 @@ def phone_fits_and_targets(env):
     pg.click('#add-windfall')
     small = pg.evaluate("""[...document.querySelectorAll('button, input, select, summary, a, label.repeat-toggle')].filter(e => {
         if (!e.offsetParent || e.closest('details:not([open]) > :not(summary)') || e.classList.contains('skip-link')) return false;
-        // Documented exceptions: unit pickers inset in a 44px field; boxes inside 44px labels.
-        if (e.closest('.unit-select') || (e.type === 'checkbox' || e.type === 'radio')) return false;
+        // Documented exception: boxes inside 44px labels. A unit picker is as tall as its field (below), not 44 wide.
+        if (e.type === 'checkbox' || e.type === 'radio') return false;
+        if (e.closest('.unit-select')) return e.getBoundingClientRect().height < e.closest('.unit-field').querySelector('input').getBoundingClientRect().height - 0.5;
         const r = e.getBoundingClientRect();
         return r.width < 44 || r.height < 44;
       }).map(e => (e.id || e.className || e.tagName) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
@@ -1633,6 +1634,102 @@ def undo_walk_returns_to_the_start(env):
         end != start and bad.append('seed %d %s: plan did not come back' % (seed, done))
         end != start and print('  seed %d\n   start %s\n   end   %s' % (seed, start, end), file=sys.stderr)
         len(set(ids)) != len(ids) and bad.append('seed %d: duplicate ids' % seed)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def round_23_p2_p3(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    # A longer plan that runs out at the same month is not "no change" (and its neighbour: same length really is).
+    st = plan([season('Saving', 120, amt=500, rate=7), season('Grow', 120, slot=1),
+               season('Ret', 240, flow='withdraw', unit='dollars', amt=2000, slot=2)], start=50000)
+    pg = s.open(st)
+    pg.click('#keep-baseline')
+    'Kept.' not in (s.text('#baseline-delta') or '') and bad.append('just kept: %r' % s.text('#baseline-delta'))
+    pg.click('#add-period')
+    d = s.text('#baseline-delta') or ''
+    ('Kept.' in d or not pg.is_visible('#keep-baseline')) and bad.append('longer plan reads as unchanged: %r' % d)
+    # Spoken summary: no double period.
+    pg.wait_for_timeout(1000)
+    '..' in (pg.text_content('#live-summary') or '') and bad.append('double period: %r' % pg.text_content('#live-summary')[-80:])
+    # Undoing a season delete keeps edits made to its extras since (and restores untouched ones).
+    st = plan([season('A', 60, amt=100), season('B', 60, slot=1), season('C', 60, slot=2)], [extra('Y', 12, 100), extra('Z', 12, 100)])
+    pg = s.open(st)
+    for k in (1, 2):
+        pg.select_option('#windfall-list > li:nth-child(%d) [data-field="anchor"]' % k, label='B')
+    pg.click('.period:nth-child(2) .card-summary')
+    pg.click('.period:nth-child(2) [data-action="delete"]')
+    pg.select_option('#windfall-list > li:nth-child(1) [data-field="anchor"]', label='C')
+    pg.fill('#windfall-list > li:nth-child(1) [data-field="atMonth"]', '2')
+    pg.locator('#windfall-list > li:nth-child(1) [data-field="atMonth"]').blur()
+    edited = s.stored()['windfalls'][0]
+    pg.click('#undo-link')
+    w = s.stored()['windfalls']
+    ids = {p['name']: p['id'] for p in s.stored()['periods']}
+    # Anchor and offset, not atMonth: re-inserting B legitimately moves C's start.
+    (w[0].get('anchor') != edited.get('anchor') or w[0].get('anchorOffset') != edited.get('anchorOffset')) and bad.append(
+        'undo overwrote a later edit: %r+%r -> %r+%r' % (edited.get('anchor'), edited.get('anchorOffset'), w[0].get('anchor'), w[0].get('anchorOffset')))
+    w[1].get('anchor') != ids.get('B') and bad.append('untouched extra not re-anchored: %r' % w[1].get('anchor'))
+    # A reorder is an edit: the stale undo toast goes.
+    pg = s.open(st)
+    pg.click('.period:nth-child(3) .card-summary')
+    pg.click('.period:nth-child(3) [data-action="delete"]')
+    pg.click('.period:nth-child(1) .card-summary')
+    pg.click('.period:nth-child(1) [data-action="down"]')
+    pg.is_visible('#toast') and bad.append('undo toast still up after a reorder: %r' % s.text('#toast-text'))
+    # Vast sums read in short form everywhere, not only in the bar.
+    big = plan([season('Saving', 120, amt=500)]); big['startingAmount'] = 999999999999
+    s.open(big)
+    re.search(r'\$\d{1,3}(,\d{3}){4,}', s.pg.text_content('#results')) and bad.append('raw 13-digit sum on screen')
+    s.close()
+    # 320: the flow choice fits its track and the theme switch clears the name.
+    s = Session(env['webkit'], env['base'], viewport={'width': 320, 'height': 800}, is_mobile=True, has_touch=True)
+    pg = s.open()
+    pg.tap('.period:nth-child(1) .card-summary')
+    fit = pg.evaluate("(() => { const t = document.querySelector('.period .flow-row .segmented'); return t.scrollWidth - t.clientWidth; })()")
+    fit > 0 and bad.append('flow choice overflows its track by %dpx' % fit)
+    hit = pg.evaluate("""(() => { const h = document.querySelector('.masthead h1').getBoundingClientRect(), t = document.getElementById('theme-toggle').getBoundingClientRect();
+        return t.left < h.right && t.top < h.bottom && t.bottom > h.top; })()""")
+    hit and bad.append('theme switch overlaps the name')
+    # Phone toasts keep the control just used in view: portrait (toast at the top) and landscape (bottom).
+    for vw, vh in ((390, 844), (844, 390)):
+        pg.set_viewport_size({'width': vw, 'height': vh})
+        pg.goto(env['base'] + '/'); pg.wait_for_selector('#final-amount')
+        pg.tap('.period:nth-child(3) .card-summary')
+        # Instant: the page scrolls smoothly, and the choice must sit where the toast will land when tapped.
+        at = pg.evaluate("""(() => { const q = '.period:nth-child(3) [data-flow="dollars"]', r = document.querySelector(q).getBoundingClientRect();
+            window.scrollBy({ top: r.top - (innerHeight > 500 ? 20 : innerHeight - 70), behavior: 'instant' });
+            const f = document.querySelector(q).getBoundingClientRect(); return innerHeight > 500 ? f.top < 70 : f.bottom > innerHeight - 70; })()""")
+        at or bad.append('%dx%d: setup did not put the choice under the toast' % (vw, vh))
+        pg.tap('.period:nth-child(3) [data-flow="dollars"]')
+        pg.wait_for_timeout(800)
+        cov = pg.evaluate("""(() => { const t = document.getElementById('toast'); if (t.hidden) return null;
+            const a = t.getBoundingClientRect(), f = document.querySelector('.period:nth-child(3) [data-flow="dollars"]').getBoundingClientRect();
+            return a.bottom > f.top && a.top < f.bottom ? [a.top, a.bottom, f.top, f.bottom] : null; })()""")
+        cov and bad.append('%dx%d: the toast covers the tapped choice %s' % (vw, vh, cov))
+    # Its neighbours: the repeat's revealed Every field, and the next extra after a delete.
+    clear = """(sels => { const t = document.getElementById('toast'); if (t.hidden) return null;
+        const a = t.getBoundingClientRect();
+        return sels.filter(q => { const f = document.querySelector(q).getBoundingClientRect(); return a.bottom > f.top && a.top < f.bottom; }); })"""
+    place = """(q => { const r = document.querySelector(q).getBoundingClientRect();
+        window.scrollBy({ top: r.top - (innerHeight > 500 ? 20 : innerHeight - 70), behavior: 'instant' }); })"""
+    three = plan([season('Saving', 120, amt=500)], [extra('One', 12, 100), extra('Two', 24, 100), extra('Three', 36, 100)])
+    for vw, vh in ((390, 844), (844, 390)):
+        pg.set_viewport_size({'width': vw, 'height': vh})
+        s.open(three)
+        pg.evaluate(place, '#windfall-list > li:nth-child(2) [data-field="repeat"]')
+        pg.tap('#windfall-list > li:nth-child(2) [data-field="repeat"]')
+        pg.wait_for_timeout(300)
+        hit = pg.evaluate(clear, ['#windfall-list > li:nth-child(2) [data-field="repeat"]', '#windfall-list > li:nth-child(2) [data-field="repeatEvery"]'])
+        hit and bad.append('%dx%d: the repeat toast covers %s' % (vw, vh, hit))
+        s.open(three)
+        pg.evaluate(place, '#windfall-list > li:nth-child(1) [data-action="delete"]')
+        pg.tap('#windfall-list > li:nth-child(1) [data-action="delete"]')
+        pg.wait_for_timeout(300)
+        hit = pg.evaluate(clear, ['#windfall-list > li:nth-child(1) [data-field="name"]'])
+        hit and bad.append('%dx%d: the delete toast covers the next extra\'s name' % (vw, vh))
     s.close()
     expect(not bad, '; '.join(bad))
 

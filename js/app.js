@@ -1279,7 +1279,7 @@
     // After the chart: the legend repeats season names only when the chart could not fit them.
     renderLegend(projection, baseline, !!(el.chart.__chart && el.chart.__chart.allLabels));
     announce(summary + (el.leverNote.hidden ? '' : ' ' + el.leverNote.textContent) +
-      (el.baselineDelta.hidden ? '' : ' ' + el.baselineDelta.textContent + '.'));
+      (el.baselineDelta.hidden ? '' : ' ' + el.baselineDelta.textContent.replace(/\.?$/, '.')));
   }
 
   /* One sentence on what would change the outcome. Short: how much less to
@@ -1569,7 +1569,8 @@
       var nowEnd = nowOut === null ? projection.totals.totalMonths : nowOut;
       var thenEnd = thenOut === null ? baseline.length - 1 : thenOut;
       var gap = nowEnd - thenEnd;
-      var same = gap === 0 && Math.round(projection.totals.finalAmount - then) === 0;
+      // Same run-out and ending, but a different length is still a change.
+      var same = gap === 0 && !otherSpan && Math.round(projection.totals.finalAmount - then) === 0;
       // Nothing changed since keeping it: there is nothing to keep instead.
       if (same) el.keepBaseline.hidden = true;
       /* Outcomes before time: a plan that now lasts beats a baseline that ran out,
@@ -1932,7 +1933,8 @@
       offerUndo('\u201c' + seasonName(removed, index) + '\u201d deleted', function () {
         state.periods.splice(Math.min(index, state.periods.length), 0, removed);
         anchored.forEach(function (a) {
-          if (state.windfalls.indexOf(a.w) < 0) return;
+          // Re-anchored or moved by hand since the delete: that edit wins.
+          if (state.windfalls.indexOf(a.w) < 0 || a.w.anchor || a.w.atMonth !== a.atAfter) return;
           a.w.anchor = removed.id; a.w.anchorOffset = a.offset; a.w.untilOffset = a.until;
         });
         expanded = removed;
@@ -1954,6 +1956,10 @@
     }
 
     save();
+    // What the delete left each extra at, so undo can tell a later hand edit from none.
+    if (action === 'delete') anchored.forEach(function (a) { a.atAfter = a.w.atMonth; });
+    // A reorder is an edit: an undo offer about something else is stale now (the Undo link keeps it).
+    else if (!el.toast.hidden) hideToast();
     renderPeriods();
     renderResults();
     // The rebuild drops focus to <body>; put it back where the user was. On touch,
@@ -2121,6 +2127,7 @@
     el.toast.hidden = false;
     speakToast(top.text);
     startToastTimer(UNDO_MS);
+    keepClearOfToast();
   }
   /* Screen readers hear a toast from a standing live region: one that is itself
      un-hidden is announced unreliably. Emptied first, so the same words twice are
@@ -2142,7 +2149,27 @@
     el.toast.hidden = false;
     speakToast(text);
     startToastTimer(5000);
+    keepClearOfToast();
   }
+  /* Phones: the toast spans the screen (at the top, or at the bottom in landscape),
+     so it can land on the control just used, or on what it revealed (`also`).
+     Scroll them clear of it; a box taller than the room left keeps its top in view. */
+  function keepClearOfToast(also) {
+    if (window.innerWidth > 900 || el.toast.hidden) return;
+    var a = document.activeElement, boxes = [also];
+    if (a && a !== document.body && !el.toast.contains(a)) boxes.push(a);
+    boxes = boxes.filter(function (e) { return e && e.offsetParent; }).map(function (e) { return e.getBoundingClientRect(); });
+    if (!boxes.length) return;
+    var vh = window.innerHeight, t = el.toast.getBoundingClientRect();
+    var top = Math.min.apply(null, boxes.map(function (r) { return r.top; }));
+    var bottom = Math.max.apply(null, boxes.map(function (r) { return r.bottom; }));
+    if (bottom < 0 || top > vh) return;
+    var from = t.top < vh / 2 ? t.bottom + 8 : 8, to = t.top < vh / 2 ? vh - 8 : t.top - 8;
+    bottom = Math.min(bottom, top + (to - from));
+    var by = top < from ? top - from : bottom > to ? bottom - to : 0;
+    if (by) window.scrollBy({ top: by, behavior: 'instant' });
+  }
+
   /* Desktop: the toast floats over the results column. If that would cover the
      chart's keys or the breakdown title, it lifts to sit just above them (over the
      plot, which is a picture, not text). Re-checked as the page scrolls. */
@@ -2292,6 +2319,7 @@
         renderWindfalls();
         renderResults();
       }, null, '\u201c' + (w.name || 'Extra ' + (wi + 1)) + '\u201d ' + (input.checked ? 'lands once again' : 'repeats again'));
+      if (input.checked) keepClearOfToast(li.querySelector('.repeat-fields'));
 
     } else if (field === 'fixed') {
       w.fixed = input.value === 'yes';

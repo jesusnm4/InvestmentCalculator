@@ -113,6 +113,12 @@ body {
 @media (max-width: 900px) {
   .masthead { padding: 20px 16px 0; }
 }
+/* The narrowest phones: the theme switch takes its own row under the tagline, clear of the name,
+   and the flow choice's labels may wrap ("Withdraw" over "$") rather than overflow their track. */
+@media (max-width: 359px) {
+  .masthead .segmented { grid-column: 1 / -1; grid-row: 3; justify-self: start; margin: 10px 0 0 40px; }
+  .flow-row .segmented button { flex-wrap: wrap; column-gap: 4px; line-height: 1.15; padding: 2px 4px; }
+}
 
 .panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 16px; }
 .panel-head h2 { margin: 0; white-space: nowrap; }
@@ -374,7 +380,9 @@ input::placeholder { color: var(--muted); opacity: 1; }
 /* Years / months picker set inside a time field, divided by a hairline. */
 .unit-field { position: relative; display: block; }
 .unit-field input { padding-right: 86px; }
-.unit-select { position: absolute; top: 1px; right: 1px; bottom: 1px; display: flex; }
+/* Flush with the field's edge, so the picker is as tall as the field (its hit area included);
+   it is transparent, so the field's own border still draws round it. */
+.unit-select { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
 .unit-select::after {
   content: ""; position: absolute; right: 11px; top: 50%; width: 5px; height: 5px;
   margin-top: -4px; pointer-events: none; color: var(--muted);
@@ -385,7 +393,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
   width: auto; height: 100%; padding: 0 26px 0 10px;
   -webkit-appearance: none; appearance: none;
   background: transparent; color: var(--ink-2); font-size: var(--text-data); cursor: pointer;
-  border: none; border-left: 1px solid var(--line); border-radius: 0 7px 7px 0;
+  border: none; border-left: 1px solid var(--line); border-radius: 0 8px 8px 0;
 }
 .unit-select select:hover { color: var(--ink); }
 .months-note { color: var(--muted); font-size: var(--text-note); white-space: nowrap; }
