@@ -1387,6 +1387,61 @@ def expense_that_sinks_the_plan_is_named(env):
     expect(not bad, '; '.join(bad))
 
 
+@check
+def until_junk_keeps_the_last_value(env):
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    pg = s.open(plan([season('Saving', 360, amt=500)], [dict(extra('Bonus', 12, 1000, every=12), repeatUntil=120, untilUnit='years')]))
+    bad = []
+    for typed in ('abc', '-5', '.', '1e9'):
+        pg.fill('#windfall-list [data-field="repeatUntil"]', '10')
+        pg.locator('#windfall-list [data-field="repeatUntil"]').blur()
+        pg.focus('#windfall-list [data-field="repeatUntil"]')
+        pg.keyboard.press('ControlOrMeta+a')
+        pg.keyboard.type(typed)
+        pg.locator('#windfall-list [data-field="repeatUntil"]').blur()
+        u = s.stored()['windfalls'][0]['repeatUntil']
+        shown = pg.input_value('#windfall-list [data-field="repeatUntil"]')
+        # Junk never moves it silently: the field shows exactly what the math uses (blank = to the end).
+        agree = (u is None and shown == '') or (shown != '' and u == round(float(shown) * 12))
+        (not agree or (typed in ('-5', '.') and u != 120)) and bad.append('%r: until %r, field %r' % (typed, u, shown))
+    s.close()
+    expect(not bad, 'junk in Until changed the plan: %s' % bad)
+
+
+@check
+def phone_toast_and_keyboard_stay_out_of_the_way(env):
+    bad = []
+    for h in (664, 553):
+        s = Session(env['webkit'], env['base'], viewport={'width': 375, 'height': h}, is_mobile=True, has_touch=True)
+        pg = s.open()
+        pg.tap('#add-period')
+        pg.wait_for_timeout(300)
+        hit = pg.evaluate("""(() => { const t = document.getElementById('toast').getBoundingClientRect();
+            const f = document.querySelector('.period:last-child [data-field="name"]').getBoundingClientRect();
+            return document.getElementById('toast').hidden ? null : (t.bottom > f.top && t.top < f.bottom) ? [t.top, t.bottom, f.top, f.bottom] : null; })()""")
+        hit and bad.append('%d tall: toast over the new card name %s' % (h, hit))
+        s.close()
+    s = Session(env['webkit'], env['base'], viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
+    pg = s.open(plan([season('Saving', 120, amt=500)], [extra('A', 12, 100), extra('B', 24, 100)]))
+    pg.tap('#windfall-list li:nth-child(1) [data-action="delete"]')
+    pg.wait_for_timeout(100)
+    tag = pg.evaluate("document.activeElement.tagName + '.' + (document.activeElement.dataset.field || '')")
+    tag.startswith('INPUT') and bad.append('deleting an extra focuses %s (keyboard pops up)' % tag)
+    pg.tap('#toast-undo')
+    pg.wait_for_timeout(100)
+    tag = pg.evaluate("document.activeElement.tagName + '.' + (document.activeElement.dataset.field || '')")
+    tag.startswith('INPUT') and bad.append('undoing it focuses %s' % tag)
+    # Scrolling to the results with a toast up: the toast steps aside.
+    pg.tap('#add-windfall'); pg.wait_for_timeout(100)
+    pg.evaluate("document.getElementById('results').scrollIntoView()"); pg.wait_for_timeout(300)
+    over = pg.evaluate("""(() => { const t = document.getElementById('toast'); if (t.hidden) return null;
+        const a = t.getBoundingClientRect(), h = document.querySelector('.hero').getBoundingClientRect();
+        return a.bottom > h.top && a.top < h.bottom ? [a.top, a.bottom, h.top] : null; })()""")
+    over and bad.append('toast over the hero %s' % over)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
 # ---------------------------------------------------------------- run
 
 def main():

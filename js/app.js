@@ -11,6 +11,7 @@
 
   var el = {
     startingAmount: document.getElementById('starting-amount'),
+    results:        document.getElementById('results'),
     periodList:     document.getElementById('period-list'),
     periodEmpty:    document.getElementById('period-empty'),
     addPeriod:      document.getElementById('add-period'),
@@ -1882,7 +1883,9 @@
         save();
         renderPeriods();
         renderResults();
-        focusIn(el.periodList, index, '[data-field="name"]');
+        var back = el.periodList.children[Math.min(index, state.periods.length - 1)];
+        if (touch() && back) { back.tabIndex = -1; back.focus({ preventScroll: true }); }
+        else focusIn(el.periodList, index, '[data-field="name"]');
       }, null, '\u201c' + seasonName(removed, index) + '\u201d is back');
     } else if (action === 'up' && index > 0) {
       state.periods.splice(index - 1, 0, state.periods.splice(index, 1)[0]);
@@ -1958,6 +1961,14 @@
       renderResults();
       focusIn(el.periodList, at, '[data-flow]');
     }, p);
+  }
+
+  // An extra's name on a pointer; on touch the card itself, so no keyboard pops up.
+  function focusExtra(index) {
+    var li = el.windfallList.children[index];
+    if (!li) return;
+    if (touch()) { li.tabIndex = -1; li.focus({ preventScroll: true }); }
+    else focusIn(el.windfallList, index, '[data-field="name"]');
   }
 
   function touch() {
@@ -2093,7 +2104,16 @@
       if (clear) { el.toast.style.bottom = b + 'px'; return; }
     }
   }
-  window.addEventListener('scroll', function () { if (!el.toast.hidden) placeToast(); }, { passive: true });
+  /* Phones: the toast sits at the top, so scrolling the results into view (to see
+     what the change did) puts it over the answer. It steps aside then; the Undo
+     link beside the plan title keeps the way back. */
+  var resultsInView = false;
+  window.addEventListener('scroll', function () {
+    var inView = el.results.getBoundingClientRect().top < window.innerHeight * 0.5;
+    if (inView && !resultsInView && window.innerWidth <= 900 && !el.toast.hidden) hideToast();
+    resultsInView = inView;
+    if (!el.toast.hidden) placeToast();
+  }, { passive: true });
 
   function startToastTimer(ms) {
     placeToast();
@@ -2177,6 +2197,8 @@
     var input = ev.target.closest('[data-field]');
     if (!input) return;
     var field = input.dataset.field;
+    // Half-typed junk ("1e", "abc") reads as blank in a number box; blank Until would mean "to the end".
+    if (input.validity && input.validity.badInput) return;
     /* A blank, unreadable or negative time is mid-typing, not month 0 or "every
        month" (Until's blank means to the end); a blank amount is not $0 yet. */
     var timeF = field === 'repeatEvery' || field === 'atMonth' || field === 'repeatUntil';
@@ -2282,14 +2304,14 @@
     save();
     renderWindfalls();
     renderResults();
-    if (state.windfalls.length) focusIn(el.windfallList, Math.min(index, state.windfalls.length - 1), '[data-field="name"]');
+    if (state.windfalls.length) focusExtra(Math.min(index, state.windfalls.length - 1));
     else el.addWindfall.focus();
     offerUndo('\u201c' + (removed.name || 'Extra ' + (index + 1)) + '\u201d deleted', function () {
       state.windfalls.splice(index, 0, removed);
       save();
       renderWindfalls();
       renderResults();
-      focusIn(el.windfallList, index, '[data-field="name"]');
+      focusExtra(index);
     }, null, '\u201c' + (removed.name || 'Extra ' + (index + 1)) + '\u201d is back');
   });
 
@@ -2350,6 +2372,12 @@
       if (touch()) { added.tabIndex = -1; added.focus({ preventScroll: true }); }
       else added.querySelector('[data-field="name"]').focus({ preventScroll: true });
       added.scrollIntoView({ block: 'center' });
+      // Phones: the toast sits at the top, so a tall card starts below it, not under it.
+      // (The toast is raised just after this; it is 12px down and about 62px tall.)
+      var clearTop = 96;
+      if (window.innerWidth <= 900 && added.getBoundingClientRect().top < clearTop) {
+        window.scrollBy(0, added.getBoundingClientRect().top - clearTop);
+      }
     }
     // A new season copies the last one's numbers; say so, and offer the way back.
     var addedSeason = state.periods[state.periods.length - 1];
