@@ -543,7 +543,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .tip-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: var(--text-note); color: var(--ink-2); }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: var(--text-note); color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
 .legend[hidden] { display: none; }
 .legend-meta { color: var(--muted); }
 .legend-dash { color: var(--muted); flex: none; }
@@ -560,7 +560,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
   margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);
 }
 .extras-legend[hidden] { display: none; }
-.extra-item { display: flex; align-items: center; gap: 6px; font-size: var(--text-note); color: var(--ink-2); }
+.extra-item { display: flex; align-items: center; gap: 6px; font-size: var(--text-note); color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
 .extra-meta { color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* One-off named in the tooltip, under the balance and period lines. */
@@ -633,6 +633,10 @@ input::placeholder { color: var(--muted); opacity: 1; }
 /* A native select drawn like the unit picker: same chevron, and it takes the field's height on touch. */
 .select-wrap { position: relative; display: block; }
 .select-wrap select { width: 100%; height: 100%; -webkit-appearance: none; appearance: none; padding-right: 30px; }
+/* A long season name in a select or a table cell wraps or truncates; it never widens the page. */
+.select-wrap, .anchor-row > *, .windfall-grid > *, .windfall-list > li, .period-list > li { min-width: 0; }
+.select-wrap select { max-width: 100%; text-overflow: ellipsis; }
+.breakdown .cell, .months-note, .field-note, .warn-note { overflow-wrap: anywhere; }
 .select-wrap::after {
   content: ""; position: absolute; right: 12px; top: 50%; width: 5px; height: 5px;
   margin-top: -4px; pointer-events: none; color: var(--muted);

@@ -1442,6 +1442,66 @@ def phone_toast_and_keyboard_stay_out_of_the_way(env):
     expect(not bad, '; '.join(bad))
 
 
+@check
+def small_round_22(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    two = plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=300, slot=2)])
+    pg = s.open(two)
+    pg.click('.period:nth-child(2) .card-summary')
+    pg.click('.period:nth-child(2) [data-flow="percent"]')
+    t = s.text('#toast-text') or ''
+    ('(the 4% rule)' not in t or re.search(r'\)\s*\(', t)) and bad.append('switch toast: %r' % t)
+    pg.click('.period:nth-child(2) [data-flow="save"]')
+    pg.click('#toast-undo')
+    t = s.text('#toast-text') or ''
+    'Retirement' not in t and bad.append('undo toast: %r' % t)
+    # Inflation follows the shared rule: junk keeps the last value.
+    for typed in ('1e9', '-5'):
+        pg.fill('#inflation', typed); pg.locator('#inflation').blur()
+        pg.input_value('#inflation') != '2.5' and bad.append('inflation %r -> %r' % (typed, pg.input_value('#inflation')))
+    # The return hint sits with the return, above the Each month choice.
+    pg.click('.period:nth-child(1) .card-summary')
+    order = pg.evaluate("""(() => { const li = document.querySelector('.period'); const h = [...li.querySelectorAll('.field-note.wide')].find(e => /returns before inflation/.test(e.textContent));
+        const f = li.querySelector('[data-role="flow-note"]'); return h && f ? h.getBoundingClientRect().top < f.getBoundingClientRect().top : null; })()""")
+    order is not True and bad.append('return hint below the Each month field')
+    # Baseline row: the result before the actions; no "over 0 mo".
+    pg.click('#keep-baseline')
+    pg.fill('.period:nth-child(1) [data-field="monthlyContribution"]', '600')
+    first = pg.evaluate("(() => { const d = document.getElementById('baseline-delta'), k = document.getElementById('keep-baseline'); return !!(d.compareDocumentPosition(k) & Node.DOCUMENT_POSITION_FOLLOWING); })()")
+    not first and bad.append('baseline row leads with an action')
+    for _ in range(2):
+        pg.click('.period:nth-child(1) .card-summary') if not pg.is_visible('.period:nth-child(1) [data-action="delete"]') else None
+        pg.click('.period:nth-child(1) [data-action="delete"]')
+    '0 mo' in (s.text('#baseline-delta') or '') and bad.append('no seasons: %r' % s.text('#baseline-delta'))
+    # Crosshair readable (3:1).
+    pg = s.open(two)
+    stroke = pg.evaluate("document.querySelector('.chart-svg .crosshair').getAttribute('stroke')")
+    stroke.lower() != '#6e6c66' and bad.append('crosshair stroke %s' % stroke)
+    # A debt ending: no season colour below $0.
+    pg = s.open(plan([season('Saving', 120, amt=100)], [extra('House', 60, -80000)]))
+    low = pg.evaluate("""(() => { const c = document.getElementById('chart').__chart, zero = c.y(0);
+        return [...document.querySelectorAll('.chart-svg path')].filter(p => /url\\(#/.test(p.getAttribute('fill') || ''))
+          .some(p => (p.getAttribute('d').match(/[\\d.]+ [\\d.]+/g) || []).some(xy => +xy.split(' ')[1] > zero + 0.5)); })()""")
+    low and bad.append('season fill below $0 in a debt ending')
+    # Seasons after the money ran out say so in their rows.
+    pg = s.open(plan([season('Saving', 12, rate=4), season('Retirement', 120, flow='withdraw', unit='dollars', amt=900, slot=2), season('Later', 120, slot=3)], start=1000))
+    meta = pg.text_content('.period:nth-child(3) [data-role="sum-meta"]')
+    'ran out' not in meta and bad.append('season after a run-out: %r' % meta)
+    # Absurd balances get no "save $100 more".
+    st = plan([season('Saving', 600, amt=500, rate=7)]); st['startingAmount'] = 1e12
+    s.open(st)
+    'Saving $100 more' in (s.text('#lever-note') or '') and bad.append('lever at $1e12: %r' % s.text('#lever-note'))
+    s.close()
+    # 80-character unbroken names at 320.
+    s = Session(env['webkit'], env['base'], viewport={'width': 320, 'height': 700}, is_mobile=True, has_touch=True)
+    pg = s.open(plan([season('W' * 80, 120, amt=500), season('X' * 80, 120, flow='withdraw', slot=2)], [extra('Y' * 80, 12, 1000)]))
+    over = pg.evaluate('document.documentElement.scrollWidth - innerWidth')
+    over > 0 and bad.append('80-char names scroll the page %dpx sideways' % over)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
 # ---------------------------------------------------------------- run
 
 def main():

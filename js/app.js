@@ -556,8 +556,12 @@
               '<input type="number" step="0.1" data-field="annualRatePercent" aria-label="Expected yearly return, season ' + n + '" aria-describedby="rate-note-' + n + '" value="' + escapeAttr(p.annualRatePercent) + '">' +
             '</span>' +
             '<span class="field-note rate-note" data-role="rate-note" id="rate-note-' + n + '" hidden></span>' +
-            // Said once, on the first card, where the question first comes up.
           '</label>' +
+          // Said once, on the first card, right under the return it explains.
+          (i === 0 ? '<div class="field-note wide">Enter returns before inflation; the results take it off for you. ' +
+            '<details class="hint-more"><summary>What\u2019s typical?</summary>' +
+            'The S&amp;P 500 has averaged about 10% a year before inflation since the 1920s (about 7% after); ' +
+            'a mix with bonds usually earns less. Past returns don\u2019t guarantee future ones.</details></div>' : '') +
           '<div class="field wide">' +
             '<span class="field-label" id="flow-label-' + n + '">Each month</span>' +
             '<div class="flow-row">' +
@@ -571,11 +575,6 @@
             '</div>' +
             '<p class="field-note" data-role="flow-note" id="flow-note-' + n + '"></p>' +
           '</div>' +
-          // Said once, on the first card, where the question first comes up.
-          (i === 0 ? '<div class="field-note wide">Enter returns before inflation; the results take it off for you. ' +
-            '<details class="hint-more"><summary>What\u2019s typical?</summary>' +
-            'The S&amp;P 500 has averaged about 10% a year before inflation since the 1920s (about 7% after); ' +
-            'a mix with bonds usually earns less. Past returns don\u2019t guarantee future ones.</details></div>' : '') +
         '</div>' +
         '<details class="more" data-role="more"' + (open ? ' open' : '') + '>' +
           '<summary>More options <span class="more-sum" data-role="more-sum"></span></summary>' +
@@ -1179,6 +1178,8 @@
       // Collapsed, a capped season would look normal; say so in its row.
       var sumMeta = li.querySelector('[data-role="sum-meta"]');
       if (!pp.months && pp.truncated) sumMeta.textContent = 'Past the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit: gets no time';
+      // Wholly after the run-out: nothing is left in it to grow or withdraw.
+      else if (depleted && pp.months && pp.startMonth >= t.depletedAt) sumMeta.textContent += ' \u00b7 after the money ran out';
       // Cut short by the cap: the row shows the length it really gets.
       else if (pp.truncated) sumMeta.textContent = sumMeta.textContent.replace(/^[^\u00b7]+/, Chart.durationLabel(pp.months) + ' (cut by the limit) ');
       // Long form, plus a compact one ("20–45 yrs") phones use beside the buttons.
@@ -1353,7 +1354,8 @@
         // A plan losing money gets no "save more" pitch: the return is the thing to look at.
         // Nor when a return looks like a typo, or the plan is already at the 100-year limit.
         var odd = state.periods.some(rateFlagged), capped = base.perPeriod.some(function (pp) { return pp.truncated; });
-        if (gain >= 1 && base.totals.totalGrowth >= 0 && !odd && !capped) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
+        // A gain lost in the rounding of a vast balance is not advice.
+        if (gain >= 1 && gain >= Math.abs(base.totals.finalAmount) * 1e-4 && base.totals.totalGrowth >= 0 && !odd && !capped) text = 'Saving $100 more a month would add about ' + Chart.money0.format(Math.round(gain / 100) * 100) + ' by the end.';
       }
     }
     // The tag sits right after the $/month figure it qualifies, not at the end of the sentence.
@@ -1500,7 +1502,13 @@
        don't colour the gap a win or a loss. */
     var nowSpan = projection.totals.totalMonths, thenSpan = baseline.length - 1;
     var otherSpan = nowSpan !== thenSpan;
-    var spans = otherSpan ? ' (over ' + Chart.durationLabel(nowSpan) + '; the baseline ran ' + Chart.durationLabel(thenSpan) + ')' : '';
+    var spans = otherSpan ? ' (this plan runs ' + Chart.durationLabel(nowSpan) + '; the baseline ran ' + Chart.durationLabel(thenSpan) + ')' : '';
+    if (!nowSpan) {
+      // No seasons left: there is nothing to compare over time, only where the baseline ended.
+      el.baselineDelta.className = 'baseline-delta';
+      el.baselineDelta.textContent = 'No seasons now; the baseline ended at ' + Chart.money0.format(then);
+      return;
+    }
     /* When the question is "will it last", compare in time: how much longer or
        shorter the money lasts than the baseline did. */
     var nowOut = projection.totals.depletedAt;
@@ -1521,6 +1529,8 @@
       /* Outcomes before time: a plan that now lasts beats a baseline that ran out,
          however long either timeline is. The time gap is for two run-outs. */
       el.baselineDelta.innerHTML = same ? 'Kept. The dashed line is your kept plan; change anything to compare.'
+        : nowOut === null && !Calc.hasWithdrawals(state) ? 'No withdrawals now; the baseline ran out ' +
+          (state.baseline.outText || 'after ' + Chart.durationLabel(thenOut))
         : nowOut === null ? '<span class="up">Lasts now</span>; the baseline ran out ' +
           (state.baseline.outText || 'after ' + Chart.durationLabel(thenOut))
         : thenOut === null ? '<span class="down">' + (projection.points.some(function (pt) { return pt.short > 0; })
@@ -1948,7 +1958,9 @@
     renderResults();
     focusIn(el.periodList, index, '[data-flow="' + mode + '"]');
     offerUndo(note || (seasonName(p, index) + (mode === 'save' ? ' now saves ' + Chart.money0.format(Math.abs(Number(p.monthlyContribution) || 0)) + ' a month'
-        : mode === 'percent' ? ' now withdraws ' + (Number(p.withdrawPercent) || 0) + '% a year (the ' + Calc.SAFE_WITHDRAWAL_PERCENT + '% rule\u2019s method)' : ' now withdraws a fixed amount')), function () {
+        : mode === 'percent' ? ' now withdraws ' + (Number(p.withdrawPercent) || 0) + '% a year' +
+          (Number(p.withdrawPercent) === Calc.SAFE_WITHDRAWAL_PERCENT ? ' (the ' + Calc.SAFE_WITHDRAWAL_PERCENT + '% rule)' : ', raised with prices')
+        : ' now withdraws a set amount, rising with prices')), function () {
       // Restored in place, wherever it has moved since: undo follows the season, not its old position.
       var at = state.periods.indexOf(p);
       if (at < 0) return;
@@ -1960,7 +1972,7 @@
       renderPeriods();
       renderResults();
       focusIn(el.periodList, at, '[data-flow]');
-    }, p);
+    }, p, seasonName(p, index) + ' is back as it was');
   }
 
   // An extra's name on a pointer; on touch the card itself, so no keyboard pops up.
@@ -2056,7 +2068,7 @@
     if (undoStack.length > 1) {
       var count = document.createElement('span');
       count.setAttribute('aria-hidden', 'true');
-      count.textContent = ' (' + undoStack.length + ' to undo)';
+      count.textContent = ' \u00b7 ' + undoStack.length + ' to undo';
       el.toastText.appendChild(count);
     }
     el.toastUndo.hidden = false;
@@ -2437,10 +2449,9 @@
   });
 
   el.inflation.addEventListener('input', function () {
-    // A cleared field is mid-typing, not 0%: keep the last rate until there is a number.
-    if (this.value === '') return;
-    var v = Number(this.value);
-    state.inflationPercent = isFinite(v) ? Math.min(50, Math.max(0, v)) : DEFAULT_INFLATION;
+    // The shared rule: blank, junk ("1e9") or negative keeps the last rate, shown again on leaving.
+    if (!plainNumber(this.value) || Number(this.value) < 0) return;
+    state.inflationPercent = Math.min(50, Number(this.value));
     save();
     renderResults();
   });

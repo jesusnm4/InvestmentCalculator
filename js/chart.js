@@ -290,7 +290,8 @@
       for (var k = pp.startMonth; k <= segEnd; k++) {
         var px = x(k).toFixed(2), py = y(val(k)).toFixed(2);
         d.push((k === pp.startMonth ? 'M' : 'L') + px + ' ' + py);
-        a.push('L' + px + ' ' + py);
+        // The season's fill stays above $0: below it is debt, which the Loss Red wash shows.
+        a.push('L' + px + ' ' + y(Math.max(0, val(k))).toFixed(2));
       }
       svg.push('<path d="M' + x(pp.startMonth).toFixed(2) + ' ' + yBase.toFixed(2) + a.join('') +
                'L' + x(segEnd).toFixed(2) + ' ' + yBase.toFixed(2) + 'Z" fill="url(#' + gradIds[pp.index] + ')"/>');
@@ -455,7 +456,7 @@
 
     // --- hover layer ---
     svg.push('<line class="crosshair" x1="0" y1="' + m.t + '" x2="0" y2="' + (m.t + plotH) +
-             '" stroke="' + C.axis + '" stroke-width="1" opacity="0"/>');
+             '" stroke="' + C.muted + '" stroke-width="1" opacity="0"/>');
     svg.push('<circle class="hover-dot" r="5" fill="' + C.surface + '" stroke="#000" stroke-width="2" opacity="0"/>');
     svg.push('<rect class="hover-target" x="' + m.l + '" y="' + m.t + '" width="' + plotW +
              '" height="' + plotH + '" fill="transparent"/>');
