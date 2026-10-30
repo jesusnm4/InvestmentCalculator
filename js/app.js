@@ -102,6 +102,10 @@
   var PLAN_HASH = '#plan=';
   // The most seasons, and the most extras, one plan holds (saved or shared).
   var MAX_ITEMS = 40;
+  // The largest amount any field takes ($1 trillion): past it a typed sum is a slip, kept out like any junk.
+  var MAX_MONEY = 1e12;
+  // A literal, not MAX_MONEY: load() runs before that var is set.
+  function clampMoney(v) { v = Number(v) || 0; return Math.max(-1e12, Math.min(1e12, v)); }
   function encodePlan() {
     var json = JSON.stringify({ startingAmount: state.startingAmount, inflationPercent: state.inflationPercent,
                                 periods: state.periods, windfalls: state.windfalls });
@@ -363,11 +367,11 @@
       if (!parsed || !Array.isArray(parsed.periods)) return null;
       // A link is typed by no one but could be edited by anyone: keep it to plan-sized plans.
       parsed.periods = parsed.periods.filter(function (p) { return p && typeof p === 'object'; }).slice(0, MAX_ITEMS);
-      parsed.startingAmount = Math.max(0, Number(parsed.startingAmount) || 0);
+      parsed.startingAmount = Math.max(0, clampMoney(parsed.startingAmount));
       parsed.periods.forEach(function (p) {
         p.name = String(p.name === undefined || p.name === null ? '' : p.name).slice(0, 80);
         p.months = Math.max(0, Math.floor(Number(p.months) || 0));
-        p.monthlyContribution = Number(p.monthlyContribution) || 0;
+        p.monthlyContribution = clampMoney(p.monthlyContribution);
         p.annualRatePercent = clampRate(p.annualRatePercent);
         // Absent before extras could be anchored to a season.
         if (typeof p.id !== 'string' || !p.id) p.id = newPeriodId();
@@ -390,7 +394,7 @@
       parsed.windfalls.forEach(function (w) {
         w.name = String(w.name === undefined || w.name === null ? '' : w.name).slice(0, 80);
         w.atMonth = Math.max(0, Math.floor(Number(w.atMonth) || 0));
-        w.amount = Number(w.amount) || 0;
+        w.amount = clampMoney(w.amount);
         // Absent before extras could repeat; 0 means "does not repeat".
         w.repeatEvery = Math.max(0, Math.floor(Number(w.repeatEvery) || 0));
         w.repeatUntil = (w.repeatUntil === null || w.repeatUntil === undefined || w.repeatUntil === '')
@@ -806,10 +810,14 @@
       var every = Math.max(0, Math.floor(Number(w.repeatEvery) || 0));
       var within = periodAt(projection, at);
       var anchorIdx = w.anchor ? state.periods.map(function (p) { return p.id; }).indexOf(w.anchor) : -1;
+      var anchorPp = anchorIdx >= 0 ? projection.perPeriod[anchorIdx] : null;
+      // Inside its season, said in the season's own terms; past its end (or a season with no time), counted from its start.
+      var inAnchor = anchorPp && at > anchorPp.startMonth && at <= anchorPp.endMonth;
       var lands = anchorIdx >= 0
         // Said in the season's own terms, the way it was set.
-        ? 'Lands ' + Chart.durationLabel(atShown(w)) + ' into ' +
-          shortName(seasonName(state.periods[anchorIdx], anchorIdx)) + ' (' + Chart.durationLabel(at) + ' into the plan)'
+        ? 'Lands ' + Chart.durationLabel(atShown(w)) + (inAnchor ? ' into ' : ' after the start of ') +
+          shortName(seasonName(state.periods[anchorIdx], anchorIdx)) + ' (' + Chart.durationLabel(at) + ' into the plan' +
+          (!inAnchor && within ? ', during ' + within : '') + ')'
         : at
         ? 'Lands at ' + Chart.durationLabel(at) + (within ? ', during ' + within : '')
         : 'Lands at the start';
@@ -831,11 +839,15 @@
 
       var warn = li.querySelector('[data-role="warn"]');
       var unapplied = projection.unappliedWindfalls.indexOf(i) >= 0;
-      warn.hidden = !unapplied;
+      // A repeat told to stop before it starts still pays once: say why there are no more.
+      var stopsFirst = !unapplied && every && w.repeatUntil !== null && w.repeatUntil !== undefined && Number(w.repeatUntil) < at;
+      warn.hidden = !unapplied && !stopsFirst;
       if (unapplied) {
         warn.textContent = horizon
           ? 'Never lands — the projection ends at ' + Chart.durationLabel(horizon) + '.'
           : 'Never lands \u2014 there are no seasons yet.';
+      } else if (stopsFirst) {
+        warn.textContent = 'Until is before At, so it lands once and does not repeat.';
       }
     });
   }
@@ -1010,9 +1022,13 @@
       var shortBy = t.totalShortfall + Math.max(0, -t.finalAmount);
       /* A lifetime shortfall is a number nobody can picture; per month, over how long, is.
          The total stays in "How it adds up" and the table. */
-      var shortMonths = projection.points.filter(function (pt) { return pt.short > 0; }).length;
-      var shortText = shortMonths && t.totalShortfall >= 1
-        ? 'About ' + Chart.money0.format(Math.round(t.totalShortfall / shortMonths / 10) * 10) + ' a month unpaid for ' + Chart.durationLabel(shortMonths)
+      /* Counted after the month it runs out, which was partly paid: the headline's time plus
+         this one make up the withdrawing time, and the average is the amount typed. */
+      var unpaid = projection.points.filter(function (pt) { return pt.short > 0 && (!depleted || pt.month > t.depletedAt); });
+      var shortMonths = unpaid.length;
+      var shortSum = unpaid.reduce(function (sum, pt) { return sum + pt.short; }, 0);
+      var shortText = shortMonths && shortSum >= 1
+        ? 'About ' + Chart.money0.format(Math.round(shortSum / shortMonths / 10) * 10) + ' a month unpaid for ' + Chart.durationLabel(shortMonths)
         : 'Short by ' + Chart.money0.format(shortBy);
       var through = 'Lasts through ' + shortName(seasonName(state.periods[lastDraw.index], lastDraw.index));
       // A withdrawing season the 100-year cap cut short does not get to say "lasts through" plainly.
@@ -1042,7 +1058,8 @@
         (!depleted ? ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals' : '');
       // The bar gets the short form, so it stays on one line on a phone.
       // The bar is a glance: millions in short form, so "left" never falls off a phone.
-      el.resultBarValue.textContent = depleted ? 'Runs out in ' + outSeason : 'Lasts \u00b7 ' + barMoney(t.finalAmount) + ' left';
+      // When first: on the narrowest phones only the season's name gives way to the ellipsis.
+      el.resultBarValue.textContent = depleted ? 'Runs out ' + outWhen : 'Lasts \u00b7 ' + barMoney(t.finalAmount) + ' left';
     } else if (cappedDraw) {
       // Still the plan's question (it has a withdrawing season); the answer says why there is none.
       el.finalLabel.textContent = 'Will it last?';
@@ -1066,6 +1083,8 @@
       el.finalAmount.textContent = Chart.money0.format(t.finalAmount);
       el.finalSub.textContent = t.totalMonths
         ? Chart.durationLabel(t.totalMonths) + ', ' + seasons
+        // Seasons with no length are still seasons: say what is missing.
+        : state.periods.length ? 'No time yet: give a season a length. This is just the starting amount.'
         : 'No seasons yet: this is just the starting amount.';
       el.resultBarValue.textContent = Chart.money0.format(t.finalAmount);
     }
@@ -1207,7 +1226,7 @@
       var income = t.totalMonths && t.finalAmount > 0 ? Calc.safeWithdrawal(t.finalAmount).perMonth : 0;
       el.thirdLabel.textContent = 'Monthly income';
       el.income.textContent = t.totalMonths ? Chart.money0.format(income) : '—';
-      el.incomeNote.textContent = !t.totalMonths ? 'add a season first'
+      el.incomeNote.textContent = !t.totalMonths ? (state.periods.length ? 'give a season a length first' : 'add a season first')
         : t.finalAmount > 0 ? 'under the ' + Calc.SAFE_WITHDRAWAL_PERCENT + '% rule' : 'needs a positive balance';
     }
 
@@ -1252,7 +1271,7 @@
     renderExtrasLegend(projection);
     renderTable(projection, drawdown, today ? nominal : null);
     // Spoken with the same words as the headline, so what is heard matches what is shown.
-    var summary = !t.totalMonths ? 'No seasons yet.'
+    var summary = !t.totalMonths ? (state.periods.length ? 'No time yet.' : 'No seasons yet.')
       : drawdown && !endsBelow
         ? (depleted ? el.finalAmount.textContent + '.'
                     : 'The money lasts all ' + Chart.durationLabel(t.totalMonths) + ', ending with ' +
@@ -1345,7 +1364,9 @@
           parts.push('An expense of ' + expenseAmount(culprit, k) + ' would make it last');
         }
       }
-      if (scale !== null && scale > 0 && scale < 1) {
+      // A level that rounds to nothing ("$0/month") is no advice: only the other levers are.
+      var less = one ? amount(one * scale, true) : '';
+      if (scale !== null && scale > 0 && scale < 1 && !/^(\$0\/month|0%)$/.test(less) && !/(^| )(\$0\/month|0%) in /.test(perSeason(scale))) {
         parts.push(one
           ? 'Withdrawing ' + amount(one * scale, true) + ' instead of ' + amount(one) + ' would make it last'
           : perSeason(scale) ? 'Withdrawing ' + perSeason(scale) + ' would make it last'
@@ -1518,9 +1539,11 @@
 
   // "+151% on top of what you paid in" reads at a glance; "151% of" did not.
   function growthNote(ratio) {
-    var pct = Math.round(ratio * 100);
+    // Rounded toward what is left: "100% less" only when nothing at all is.
+    var pct = ratio < 0 && ratio > -1 ? Math.max(-99, Math.round(ratio * 100)) : Math.round(ratio * 100);
     // Past 1,000% a percent stops meaning anything: say how many times over.
-    if (pct >= 1000) return Math.round(ratio + 1).toLocaleString('en-US') + '\u00d7 what you paid in';
+    // A multiple past a million is said short too ("2.1M×", "5.6 × 10⁵⁴×"), like the sums beside it.
+    if (pct >= 1000) return (ratio + 1 >= 1e6 ? Chart.compact.format(ratio + 1).replace('$', '') : Math.round(ratio + 1).toLocaleString('en-US')) + '\u00d7 what you paid in';
     return pct >= 0 ? '+' + pct + '% on top of what you paid in' : Math.abs(pct) + '% less than you paid in';
   }
 
@@ -1582,8 +1605,11 @@
           (state.baseline.outText || 'after ' + Chart.durationLabel(thenOut))
         : thenOut === null ? '<span class="down">' + (projection.points.some(function (pt) { return pt.short > 0; })
             ? 'Runs out now' : 'Ends below zero now') + '</span>; the baseline lasted'
-        : gap === 0 ? 'Lasts as long as the baseline'
+        // Both run out: "lasts" would claim it survives, so say when, against the baseline.
+        : gap === 0 ? (nowOut !== null ? 'Runs out at the same time as the baseline' : 'Lasts as long as the baseline')
         // Longer, but still running out, is not a win to colour green.
+        : nowOut !== null ? '<span class="' + (gap > 0 ? '' : 'down') + '">Runs out ' + Chart.durationLabel(Math.abs(gap)) +
+          (gap > 0 ? ' later' : ' earlier') + '</span> than the baseline'
         : '<span class="' + (gap > 0 ? '' : 'down') + '">Lasts ' + Chart.durationLabel(Math.abs(gap)) +
           (gap > 0 ? ' longer' : ' shorter') + '</span> than the baseline';
       // On another timeline the outcome is said plainly, without a win or loss colour.
@@ -1754,7 +1780,7 @@
         { html: '<span class="swatch-dot' + (periodMeta()[i].reused ? ' hollow' : '') + '" style="background:' + Chart.colorFor(p.colorSlot) +
             ';color:' + Chart.colorFor(p.colorSlot) + '"></span>' + escapeHtml(seasonName(p, i)) },
         { html: Chart.durationLabel(pp.months) },
-        { html: (Number(p.annualRatePercent) || 0) + '%<span class="unit"> / yr</span>' },
+        { html: String(Number(p.annualRatePercent) || 0).replace('-', '\u2212') + '%<span class="unit"> / yr</span>' },
         { html: paid(pp.contributed, typed && typed.perPeriod[i].contributed) }
       ].concat(out(pp.withdrawn), [
         { html: extraText(pp.windfalls) },
@@ -1803,7 +1829,8 @@
     var t = String(text).replace(/[\s$,]/g, '');
     var m = /^(\d*\.?\d*)([kKmM]?)$/.exec(t);
     if (!m || !/\d/.test(m[1])) return null;
-    return Number(m[1]) * (/k/i.test(m[2]) ? 1e3 : /m/i.test(m[2]) ? 1e6 : 1);
+    var v = Number(m[1]) * (/k/i.test(m[2]) ? 1e3 : /m/i.test(m[2]) ? 1e6 : 1);
+    return v <= MAX_MONEY ? v : null;
   }
   function formatMoneyInput(n) {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(n) || 0);
@@ -1862,7 +1889,8 @@
   var NUMBER_FIELDS = ['months', 'monthlyContribution', 'withdrawPercent', 'annualRatePercent'];
   // Only a rate may be negative; a blank or negative entry elsewhere is mid-typing or a slip.
   function usable(input) {
-    return plainNumber(input.value) && (input.dataset.field === 'annualRatePercent' || Number(input.value) >= 0);
+    return plainNumber(input.value) && (input.dataset.field === 'annualRatePercent' || Number(input.value) >= 0) &&
+      (input.dataset.field !== 'monthlyContribution' || Number(input.value) <= MAX_MONEY);
   }
   // A number as people type one: no blank, no "1e9" (a number box takes it; nobody means it).
   function plainNumber(v) { return v !== '' && !/e/i.test(v) && isFinite(Number(v)); }
@@ -2056,8 +2084,8 @@
   var undoStack = [], toastTimer = null, typedSinceOffer = false;
   /* The results column is pinned only while it fits the window: an opened
      "About these numbers" would otherwise run off the bottom, unreachable. */
-  /* On a desktop the chart gives up height (down to 220px) so the column still
-     fits a laptop window and stays pinned; only past that does it scroll. */
+  /* On a desktop the chart gives up height (down to 220px, 140px in windows under
+     760px tall) so the column still fits a laptop window and stays pinned; only past that does it scroll. */
   var chartHeight = 320, fitting = false;
   function fitPin() {
     // Looked up here: the first render runs before this part of the file.
@@ -2069,7 +2097,8 @@
     var fold = Math.min(room, window.innerHeight - pageTop - 16);
     if (!fitting && window.innerWidth > 900) {
       var rest = resultsPanel.offsetHeight - chartHeight;
-      var want = Math.max(220, Math.min(320, Math.floor(fold - rest)));
+      // A laptop window under 760px tall lets it go shorter still, rather than lose the pinned column.
+      var want = Math.max(window.innerHeight < 760 ? 140 : 220, Math.min(320, Math.floor(fold - rest)));
       if (want !== chartHeight) {
         chartHeight = want;
         fitting = true;
@@ -2085,6 +2114,8 @@
   // `toggle` does not bubble, so listen in the capture phase for every disclosure in the column.
   document.getElementById('results').addEventListener('toggle', fitPin, true);
   window.addEventListener('resize', fitPin);
+  // The first fit can run before the web fonts settle the column's height: fit again once they have.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPin);
 
   // Back to the one-line row, with focus on it so the keyboard user is not lost.
   function collapseCard(li) {
@@ -2288,7 +2319,7 @@
        month" (Until's blank means to the end); a blank amount is not $0 yet. */
     var timeF = field === 'repeatEvery' || field === 'atMonth' || field === 'repeatUntil';
     if (timeF && !(field === 'repeatUntil' && input.value === '') && !(plainNumber(input.value) && Number(input.value) >= 0)) return;
-    if (field === 'amount' && !plainNumber(input.value)) return;
+    if (field === 'amount' && !(plainNumber(input.value) && Math.abs(Number(input.value)) <= MAX_MONEY)) return;
     // Every is at least a month: 0 would mean "every month" behind a field that says 0.
     if (field === 'repeatEvery' && timeFromInput(input.value, unitOf(w.everyUnit, w.repeatEvery)) < 1) return;
 
@@ -2588,8 +2619,14 @@
   // height would feed the ResizeObserver its own output) and on theme flips.
   var lastChartWidth = 0;
   if (typeof ResizeObserver === 'function') {
+    // On the next frame, not inside the observer: a render there that changes layout again
+    // ("ResizeObserver loop completed with undelivered notifications").
+    var resizeFrame = 0;
     new ResizeObserver(function () {
-      if (el.chart.clientWidth !== lastChartWidth) renderResults();
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(function () {
+        if (el.chart.clientWidth !== lastChartWidth) renderResults();
+      });
     }).observe(el.chart);
   } else {
     window.addEventListener('resize', renderResults);

@@ -118,10 +118,20 @@
     return { format: function (v) { return nf.format(v).replace('-', '\u2212'); } };
   }
   var money2 = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-  var compact = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }));
+  var short = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }));
+  /* Past a thousand trillion "T" runs out of letters ("$1201T", "$969,173.3T"): powers of ten
+     instead, "$2.7 × 10⁵⁵", which only absurd returns ever reach. */
+  var sci = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'scientific', maximumFractionDigits: 1 }));
+  var SUP = { '-': '\u207b', 0: '\u2070', 1: '\u00b9', 2: '\u00b2', 3: '\u00b3', 4: '\u2074', 5: '\u2075', 6: '\u2076', 7: '\u2077', 8: '\u2078', 9: '\u2079' };
+  function powers(v) {
+    return sci.format(v).replace(/E(-?\d+)$/, function (m, e) { return ' \u00d7 10' + e.replace(/./g, function (c) { return SUP[c]; }); });
+  }
+  // A sum that rounds to nothing is $0, never "−$0".
+  function unsigned(v, step) { return Math.abs(v) < step / 2 ? 0 : v; }
+  var compact = { format: function (v) { v = unsigned(v, 0.1); return Math.abs(v) >= 1e15 ? powers(v) : short.format(v); } };
   // Whole dollars, until a sum is past a trillion: thirteen digits nobody reads, so "$1T".
   var whole = withMinus(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }));
-  var money0 = { format: function (v) { return Math.abs(v) >= 1e12 ? compact.format(v) : whole.format(v); } };
+  var money0 = { format: function (v) { v = unsigned(v, 1); return Math.abs(v) >= 1e12 ? compact.format(v) : whole.format(v); } };
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {

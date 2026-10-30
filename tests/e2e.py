@@ -1557,6 +1557,10 @@ def _matrix():
         '100-year cap': plan([season('Saving', 1300, amt=500), pct]),
         'zero plan': plan([season('Saving', 120, amt=0, rate=7), gr, pct], start=0),
         'seasons after retirement': plan([sv(), pct, season('Legacy', 120, slot=3)]),
+        'repeat stops before it starts': plan([sv(), gr, usd(900)], [dict(extra('Gift', 60, 10000, every=12), repeatUntil=24)]),
+        'a season with no time': plan([season('Saving', 0, amt=500)]),
+        'largest amounts, wild return': plan([dict(season('Wild', 1200, amt=1e12, rate=100), compounding='daily'), pct], start=1e12),
+        'high inflation run-out': dict(plan([season('Saving', 600, amt=500, rate=7), usd(2000)]), inflationPercent=50),
     }
 
 
@@ -1730,6 +1734,156 @@ def round_23_p2_p3(env):
         pg.wait_for_timeout(300)
         hit = pg.evaluate(clear, ['#windfall-list > li:nth-child(1) [data-field="name"]'])
         hit and bad.append('%dx%d: the delete toast covers the next extra\'s name' % (vw, vh))
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def repeat_until_before_at_still_lands_once(env):
+    # The first payment always lands; Until only stops repeats. Note, math and legend agree.
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    base = [season('Saving', 120, amt=500, rate=7), season('R', 300, flow='withdraw', unit='dollars', amt=900, slot=1)]
+    def until(w, u):
+        w = dict(w); w['repeatUntil'] = u; return w
+    cases = [('before', until(extra('Gift', 60, 10000, every=12), 24), 1, True),
+             ('equal', until(extra('Gift', 60, 10000, every=12), 60), 1, False),
+             ('after', until(extra('Gift', 60, 10000, every=12), 84), 3, False)]
+    for name, w, n, warned in cases:
+        pg = s.open(plan(base, [w]))
+        got = pg.evaluate("(() => { const st = JSON.parse(localStorage.getItem('%s')); const p = Calc.project(st); return [p.totals.totalWindfalls, Calc.windfallMonths(st.windfalls[0], p.totals.totalMonths).length]; })()" % KEY)
+        got[1] != n and bad.append('%s: lands %d times, expected %d' % (name, got[1], n))
+        note = s.text('#windfall-list [data-role="at-note"]') or ''
+        warn = s.text('#windfall-list [data-role="warn"]') or ''
+        'Lands at 5 yrs' not in note and bad.append('%s: note %r' % (name, note))
+        if warned:
+            'Until' not in warn and bad.append('%s: no word that Until is before At: %r' % (name, warn))
+            not s.text('#extras-legend') and bad.append('%s: legend empty though it lands' % name)
+        elif warn:
+            bad.append('%s: unexpected warning %r' % (name, warn))
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def runout_durations_add_up(env):
+    # Headline + unpaid stretch = the withdrawing time; the unpaid amount is the one typed (today's dollars).
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    for amt in (900, 1200, 2000):
+        pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=amt, slot=2)]))
+        head, sub, note = s.text('#final-amount'), s.text('#final-sub'), s.text('#kpi-income-note')
+        dur = lambda t: (lambda m: (int(m.group(1) or 0) * 12 + int(m.group(2) or 0)) if m else None)(
+            re.search(r'(?:(\d+)y (\d+)m|(\d+) yrs?|(\d+) mo)', t) and re.search(r'(\d+)y (\d+)m', t) or None)
+        def months(t):
+            m = re.search(r'(\d+)y (\d+)m', t)
+            if m: return int(m.group(1)) * 12 + int(m.group(2))
+            m = re.search(r'(\d+) yrs?', t)
+            if m: return int(m.group(1)) * 12
+            m = re.search(r'(\d+) mo', t)
+            return int(m.group(1)) if m else None
+        out = months(head.split('into')[0])
+        unpaid = re.search(r'About (\$[\d,]+) a month unpaid for (.+?)(?: ·|$)', sub or '')
+        if not unpaid:
+            bad.append('%d: no unpaid line %r' % (amt, sub)); continue
+        u = months(unpaid.group(2))
+        out + u != 300 and bad.append('%d: %r + %r != 25 yrs' % (amt, head, unpaid.group(0)))
+        unpaid.group(1) != '${:,}'.format(amt) and bad.append('%d: unpaid amount %s' % (amt, unpaid.group(1)))
+        paid = months(note.split('first')[1].split(' of')[0]) if 'first' in note else 0
+        not (out - 1 <= paid <= out) and bad.append('%d: fully paid %r vs runs out %r' % (amt, note, head))
+    s.close()
+    # The phone bar keeps the when.
+    s = Session(env['webkit'], env['base'], viewport={'width': 320, 'height': 700}, is_mobile=True, has_touch=True)
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)]))
+    pg.evaluate('window.scrollTo(0, 400)'); pg.wait_for_timeout(200)
+    bar = s.text('#result-bar-value') or ''
+    not re.search(r'\d', bar) and bad.append('phone bar loses when: %r' % bar)
+    # The when is on screen whole; only the season's name may give way to the ellipsis.
+    clipped = pg.evaluate("""(() => { const b = document.getElementById('result-bar-value'), t = b.firstChild, m = /\\d[^a-z]*(mo|yrs?|m)\\b/.exec(t.textContent);
+        if (!m) return true; const r = document.createRange(); r.setStart(t, 0); r.setEnd(t, m.index + m[0].length);
+        return r.getBoundingClientRect().right > b.getBoundingClientRect().right - 12; })()""")
+    clipped and bad.append('phone bar clips the when: %r' % bar)
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def short_laptop_keeps_results_pinned(env):
+    # 1280x720 and 1280x700 (a laptop window), with three extras: the chart stays beside the plan.
+    bad = []
+    xs = [extra('A', 60, 20000), extra('B', 204, -15000), extra('C', 348, 8000)]
+    for h in (700, 720):
+        s = Session(env['chromium'], env['base'], viewport={'width': 1280, 'height': h})
+        pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Grow', 120, slot=1),
+                          season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)], xs))
+        # Editing the last extra, as in the report.
+        pg.evaluate("document.querySelector('#windfall-list > li:last-child').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(200)
+        # Pinned, and the answer and the whole chart are on screen (the column may end with the plan's end).
+        r = pg.evaluate("""(() => { const r = document.getElementById('results'), c = document.querySelector('.chart').getBoundingClientRect(),
+            a = document.getElementById('final-amount').getBoundingClientRect();
+            return { pos: getComputedStyle(r).position, unpinned: r.classList.contains('unpinned'), answer: a.top, chartTop: c.top, chartBottom: c.bottom, vh: innerHeight }; })()""")
+        (r['pos'] != 'sticky' or r['unpinned'] or r['answer'] < 0 or r['chartTop'] < 0 or r['chartBottom'] > r['vh']) and bad.append('1280x%d: %s' % (h, r))
+        s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def round_24_p3(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    ret = lambda amt: season('Retirement', 300, flow='withdraw', unit='dollars', amt=amt, slot=2)
+    # Both run out: "Runs out … later/earlier than the baseline", never "Lasts … longer".
+    for first, second, word in ((1200, 900, 'later'), (900, 1200, 'earlier')):
+        pg = s.open(plan([season('Saving', 120, amt=500, rate=7), ret(first)]))
+        pg.click('#keep-baseline')
+        pg.click('.period:nth-child(2) .card-summary')
+        pg.fill('.period:nth-child(2) [data-field="monthlyContribution"]', str(second))
+        d = s.text('#baseline-delta') or ''
+        (not d.startswith('Runs out') or word not in d or 'Lasts' in d) and bad.append('baseline %d->%d: %r' % (first, second, d))
+    # Anchored to a 0-month season, or past its season's end: never "into" a season it is not in.
+    st = plan([season('Saving', 120, amt=500), season('Zero', 0, slot=1), season('R', 120, slot=2)], [extra('E', 0, 100), extra('F', 0, 100)])
+    st['periods'][0]['id'] = 'a1'; st['periods'][1]['id'] = 'z0'; st['periods'][2]['id'] = 'r2'
+    st['windfalls'][0].update(anchor='z0', anchorOffset=0)
+    st['windfalls'][1].update(anchor='a1', anchorOffset=200)
+    s.open(st)
+    n0 = s.pg.text_content('#windfall-list > li:nth-child(1) [data-role="at-note"]')
+    n1 = s.pg.text_content('#windfall-list > li:nth-child(2) [data-role="at-note"]')
+    'into Zero' in n0 and bad.append('0-month season named: %r' % n0)
+    'into Saving' in n1 and bad.append('past the season still "into" it: %r' % n1)
+    # Absurd amounts: refused like any junk (the last value stays), and nothing scrolls sideways.
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7)]))
+    for digits in (300, 400):
+        pg.fill('#starting-amount', '1' + '0' * digits)
+        pg.locator('#starting-amount').blur()
+        s.stored()['startingAmount'] != 10000 and bad.append('%d-digit start stored as %r' % (digits, s.stored()['startingAmount']))
+    pg.click('.period:nth-child(1) .card-summary')
+    pg.fill('.period:nth-child(1) [data-field="monthlyContribution"]', '1' + '0' * 300)
+    s.stored()['periods'][0]['monthlyContribution'] != 500 and bad.append('300-digit monthly amount taken')
+    # The largest amount allowed, at the wildest return allowed, for 100 years: readable, no NaN, no sideways scroll.
+    huge = plan([dict(season('Wild', 1200, amt=1e12, rate=100), compounding='daily')], start=1e12)
+    pg = s.open(huge)
+    txt = pg.text_content('#results')
+    ('∞' in txt or 'NaN' in txt) and bad.append('infinite/NaN figures')
+    pg.evaluate('document.documentElement.scrollWidth > innerWidth') and bad.append('huge plan scrolls sideways')
+    re.search(r'\d[\d,]{19,}', txt) and bad.append('a figure runs to 20+ characters: %r' % re.search(r'\d[\d,]{19,}', txt).group(0)[:30])
+    # Compact figures group the same way; a negative return reads with a real minus.
+    re.search(r'\$\d{4,}(\.\d)?T', txt) and bad.append('ungrouped trillions: %r' % re.search(r'\$\d{4,}(\.\d)?T', txt).group(0))
+    pg = s.open(plan([season('Down', 12, rate=-100)]))
+    '-100%' in pg.text_content('#breakdown-body') and bad.append('hyphen-minus in the Return column')
+    # 50% inflation: no "−$0", no "$0/month" lever.
+    st = plan([season('Saving', 600, amt=500, rate=7), ret(2000)]); st['inflationPercent'] = 50
+    pg = s.open(st)
+    txt = pg.text_content('#results') + pg.text_content('#breakdown-body')
+    '−$0' in re.sub(r'−\$0[\d,.]', '', txt) and bad.append('a "−$0" figure')
+    re.search(r'Withdrawing \$0/month', txt) and bad.append('lever suggests $0/month')
+    pg.evaluate('Chart.money0.format(-0.4)') != '$0' and bad.append('a rounded-away loss reads %r' % pg.evaluate('Chart.money0.format(-0.4)'))
+    # A season with no length is a season, not "no seasons".
+    pg = s.open(plan([season('S', 0)]))
+    ('No seasons' in (s.text('#final-sub') or '') or 'add a season' in (s.text('#kpi-income-note') or '')) and bad.append(
+        '0-month season reads as none: %r / %r' % (s.text('#final-sub'), s.text('#kpi-income-note')))
+    # Nearly all lost is not "100% less".
+    pg = s.open(plan([season('Down', 12, amt=50, rate=-1200)]))
+    '100% less' in (pg.text_content('#results') or '') and pg.evaluate("Calc.project(JSON.parse(localStorage.getItem('%s'))).totals.finalAmount" % KEY) >= 1 and bad.append('"100% less" with money left')
     s.close()
     expect(not bad, '; '.join(bad))
 

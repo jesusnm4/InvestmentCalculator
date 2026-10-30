@@ -138,11 +138,17 @@ body {
 .back-link { display: inline-block; margin-top: 16px; }
 /* Desktop: the results column (answer, figures, chart) stays beside whichever
    season you are editing. The breakdown lives in its own panel below both
-   columns, so the pinned column fits on one screen. Short windows scroll normally. */
-@media (min-width: 901px) and (min-height: 760px) {
+   columns, so the pinned column fits on one screen (a 1280x720 laptop window included:
+   app.js shortens the chart to fit). Shorter windows, or a column that still won't fit, scroll normally. */
+@media (min-width: 901px) and (min-height: 600px) {
   .results { position: sticky; top: 16px; }
   /* Taller than the window (an open disclosure): pinning would hide its end, so it scrolls. */
   .results.unpinned { position: static; }
+}
+/* Laptop windows: the pinned column is nearly as tall as the window, so it rides up with the plan's
+   end. Room under the plan keeps the answer in view while the last extra is edited. */
+@media (min-width: 901px) and (min-height: 600px) and (max-height: 759px) {
+  .setup { margin-bottom: 64px; }
 }
 /* A quiet text action: underlined in the ruled-line tone, firming on hover. */
 .link-btn {

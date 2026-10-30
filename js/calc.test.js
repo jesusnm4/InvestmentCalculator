@@ -348,6 +348,11 @@
     ok(m.join(',') === '12,18,24,30', 'got ' + JSON.stringify(m));
   });
 
+  test('windfallMonths: repeatUntil before atMonth still lands once', function () {
+    var m = Calc.windfallMonths({ atMonth: 60, repeatEvery: 12, repeatUntil: 24 }, 240);
+    ok(m.length === 1 && m[0] === 60, 'got ' + JSON.stringify(m));
+  });
+
   test('windfallMonths: repeatUntil past the horizon is clamped', function () {
     var m = Calc.windfallMonths({ atMonth: 0, repeatEvery: 12, repeatUntil: 9999 }, 24);
     ok(m.join(',') === '0,12,24', 'got ' + JSON.stringify(m));

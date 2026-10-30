@@ -99,6 +99,8 @@
       ? horizon
       : Math.floor(num(until));
     if (stop > horizon) stop = horizon;
+    // An Until before At stops the repeats, not the first payment: that lands like a one-off.
+    if (stop < at && at <= horizon) return [at];
 
     var months = [];
     for (var mth = at; mth <= stop; mth += every) months.push(mth);
