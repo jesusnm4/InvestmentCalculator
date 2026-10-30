@@ -668,7 +668,10 @@
       ? (Number(p.monthlyContribution) ? Chart.money0.format(Number(p.monthlyContribution)) + '/mo saved' : 'no saving')
       : mode === 'percent' ? (Number(p.withdrawPercent) || 0) + '% withdrawn'
       : Chart.money0.format(Math.abs(Number(p.monthlyContribution) || 0)) + '/mo withdrawn';
-    li.querySelector('[data-role="sum-name"]').textContent = p.name || 'Untitled season';
+    var sumName = li.querySelector('[data-role="sum-name"]');
+    sumName.textContent = p.name || 'Untitled season';
+    // Two lines at most; the whole name stays in the field and on hover.
+    sumName.title = p.name || '';
     var rateOdd = rateFlagged(p);
     li.querySelector('[data-role="sum-meta"]').textContent =
       (months ? Chart.durationLabel(months) : 'no length') + ' \u00b7 ' + each + ' \u00b7 ' + (Number(p.annualRatePercent) || 0) + '% return' +
@@ -1002,12 +1005,16 @@
       el.finalSub.textContent = (!depleted && trimmed ? shortName(seasonName(state.periods[trimmed.index], trimmed.index)) + ' cut to ' +
           Chart.durationLabel(trimmed.months) + ' by the ' + (Calc.MAX_TOTAL_MONTHS / 12) + '-year limit \u00b7 ' : '') + (depleted
         ? shortText + debtNote + ' \u00b7 ' + planYear
-        : Chart.money0.format(t.finalAmount) + ' left at the end') +
+        : Chart.money0.format(t.finalAmount) + (lastDraw.index < state.periods.length - 1
+            // Seasons follow the last withdrawal: "the end" is the plan's, so say when.
+            ? ' left at ' + Chart.durationLabel(t.totalMonths) : ' left at the end')) +
         (!depleted ? ' \u00b7 ' + Chart.durationLabel(drawMonths) + ' of withdrawals' : '');
       // The bar gets the short form, so it stays on one line on a phone.
-      el.resultBarValue.textContent = depleted ? 'Runs out in ' + outSeason : 'Lasts \u00b7 ' + Chart.money0.format(t.finalAmount) + ' left';
+      // The bar is a glance: millions in short form, so "left" never falls off a phone.
+      el.resultBarValue.textContent = depleted ? 'Runs out in ' + outSeason : 'Lasts \u00b7 ' + barMoney(t.finalAmount) + ' left';
     } else if (cappedDraw) {
-      el.finalLabel.textContent = 'Will it last?';
+      // A season with no time cannot last or run out: the question has no answer, so the label is the amount.
+      el.finalLabel.textContent = 'Final amount';
       // Every withdrawing season the cap leaves out, not only the first.
       var cappedNames = cappedAll.map(function (pp) { return seasonName(state.periods[pp.index], pp.index); });
       el.finalAmount.textContent = (cappedNames.length > 1
@@ -1539,10 +1546,14 @@
   /* Screen readers hear the result once typing settles, not on every keystroke,
      and not on first load — the page itself says it then. */
   var announceTimer = null, announceReady = false;
+  function barMoney(n) { return Math.abs(n) >= 1e6 ? Chart.compact.format(n) : Chart.money0.format(n); }
+  var lastAnnounced = null;
   function announce(text) {
-    if (!announceReady) return;
+    // Nothing new (a theme flip, keeping a baseline): nothing to say again.
+    if (!announceReady) { lastAnnounced = text; return; }
     clearTimeout(announceTimer);
-    announceTimer = setTimeout(function () { el.liveSummary.textContent = text; }, 900);
+    if (text === lastAnnounced) return;
+    announceTimer = setTimeout(function () { lastAnnounced = text; el.liveSummary.textContent = text; }, 900);
   }
 
   /* One place for the explanations, closed by default: today's dollars,
@@ -1914,7 +1925,8 @@
           ? Math.round(monthlyToday / 10) * 10
           : 0;
         if (from === 'percent' && monthlyToday > 0) {
-          note = 'Now a fixed ' + Chart.money0.format(p.monthlyContribution) + '/month (about ' +
+          // Dollars withdrawn still rise with prices: not "fixed".
+          note = 'Now ' + Chart.money0.format(p.monthlyContribution) + '/month in today\u2019s dollars (about ' +
             (Number(p.withdrawPercent) || 0) + '%)';
         }
       } else if (!(Number(p.withdrawPercent) > 0)) {
@@ -2266,7 +2278,7 @@
       renderWindfalls();
       renderResults();
       focusIn(el.windfallList, index, '[data-field="name"]');
-    });
+    }, null, '\u201c' + (removed.name || 'Extra ' + (index + 1)) + '\u201d is back');
   });
 
   /* The most seasons and extras a plan holds: load() keeps no more than this, so
@@ -2461,7 +2473,10 @@
     /* Recoloured in place, never rebuilt: an OS flip can land mid-typing, and a
        rebuilt number field loses its caret (a browser gives no way to put it back). */
     recolorCards();
+    var month = el.chart.__month;
     renderResults();
+    // The chart is redrawn: a readout someone is stepping through comes back where it was.
+    if (document.activeElement === el.chart && typeof month === 'number' && el.chart.__showAt) el.chart.__showAt(month);
   }
   function recolorCards() {
     Array.prototype.forEach.call(el.periodList.children, function (li) {

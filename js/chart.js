@@ -532,7 +532,9 @@
           ? '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>' + esc(period.name || ('Season ' + (pt.periodIndex + 1))) + '</div>'
           : '<div class="tip-period"><span class="tip-dot" style="background:' + color + '"></span>Starting amount</div>') +
         (ctx.baseline && ctx.baseline[month] !== undefined
-          ? '<div class="tip-baseline">Baseline ' + esc(money0.format(ctx.baseline[month])) + '</div>' : '') +
+          ? '<div class="tip-baseline">Baseline ' + esc(money0.format(ctx.baseline[month])) + '</div>'
+          // A plan longer than its baseline: past its end, say so rather than going quiet.
+          : ctx.baseline ? '<div class="tip-baseline">Baseline ended at ' + esc(durationLabel(ctx.baseline.length - 1)) + '</div>' : '') +
         (ctx.windfalls[month] || []).map(function (w) {
           return '<div class="tip-windfall">' + esc(money0.format(w.amount)) + ' &middot; ' +
                  esc(w.name || 'extra') + '</div>';

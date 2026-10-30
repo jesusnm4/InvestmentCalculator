@@ -376,7 +376,7 @@ def screen_reader_names(env):
     pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', unit='dollars', amt=900, slot=2)]))
     chart = pg.evaluate("[document.getElementById('chart').getAttribute('role'), document.getElementById('chart').getAttribute('aria-label')]")
     expect(chart[0] == 'group' and chart[1], 'focusable chart has no role/name: %s' % chart)
-    pg.fill('#starting-amount', '10001')  # the page speaks after an edit, not on load
+    pg.fill('#starting-amount', '20000')  # the page speaks after an edit that changes the answer, not on load
     pg.wait_for_timeout(1100)
     spoken, shown = pg.text_content('#live-summary'), s.text('#final-amount')
     expect(shown in spoken, 'announcement %r does not use the visible answer %r' % (spoken, shown))
@@ -1235,6 +1235,72 @@ def one_clock_for_when(env):
     pg.wait_for_timeout(50)
     delta = s.text('#baseline-delta') or ''
     when and when.group(1) not in delta and bad.append('headline said %r; the baseline delta says %r' % (when.group(1), delta))
+    s.close()
+    expect(not bad, '; '.join(bad))
+
+
+@check
+def small_round_21(env):
+    bad = []
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900})
+    # The 100-year cap leaves Retirement no time: "Will it last?" has no answer, so the label is the amount.
+    s.open(plan([season('Saving', 1300, amt=500), season('Retirement', 120, flow='withdraw', slot=2)]))
+    s.text('#final-label') != 'Final amount' and bad.append('cap label %r over %r' % (s.text('#final-label'), s.text('#final-amount')))
+    # Seasons after the last withdrawal: say which end the money is left at.
+    s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', slot=2), season('Legacy', 120, slot=3)]))
+    '45 yrs' not in (s.text('#final-sub') or '') and bad.append('sub-line: %r' % s.text('#final-sub'))
+    # Switching 4% to dollars: the amount still rises with prices, so it is not "fixed".
+    pg = s.open(plan([season('Saving', 120, amt=500, rate=7), season('Retirement', 300, flow='withdraw', slot=2)]))
+    pg.click('.period:nth-child(2) .card-summary')
+    pg.click('.period:nth-child(2) [data-flow="dollars"]')
+    'fixed' in (s.text('#toast-text') or '') and bad.append('toast: %r' % s.text('#toast-text'))
+    # Undoing a deleted extra is said like a season's.
+    pg = s.open(plan([season('Saving', 120, amt=500)], [extra('Car', 12, -5000)]))
+    pg.click('#windfall-list [data-action="delete"]')
+    pg.click('#toast-undo')
+    'is back' not in (s.text('#toast-text') or '') and bad.append('undo: %r' % s.text('#toast-text'))
+    # The readout stays on a theme flip while the chart has focus.
+    pg.focus('#chart'); pg.keyboard.press('ArrowRight'); pg.keyboard.press('ArrowRight')
+    pg.emulate_media(color_scheme='dark'); pg.wait_for_timeout(50)
+    s.text('.chart-tooltip .tip-head') != '1 yr' and bad.append('readout after a flip: %r' % s.text('.chart-tooltip .tip-head'))
+    pg.emulate_media(color_scheme='light')
+    # A flip with nothing new to say re-reads nothing.
+    pg.wait_for_timeout(1000)
+    pg.evaluate("window.__said = 0; new MutationObserver(() => window.__said++).observe(document.getElementById('live-summary'), {childList: true, characterData: true, subtree: true})")
+    pg.emulate_media(color_scheme='dark'); pg.wait_for_timeout(1100)
+    pg.evaluate('window.__said') and bad.append('a theme flip re-read the result')
+    # A plan longer than its baseline: past the baseline's end the readout says it ended.
+    pg = s.open(plan([season('Saving', 120, amt=500)]))
+    pg.click('#keep-baseline')
+    pg.click('.period:nth-child(1) .card-summary')
+    pg.fill('.period:nth-child(1) [data-field="months"]', '20')
+    pg.focus('#chart'); pg.keyboard.press('End'); pg.wait_for_timeout(50)
+    'Baseline ended' not in (pg.text_content('.chart-tooltip') or '') and bad.append('past the baseline: %r' % pg.text_content('.chart-tooltip'))
+    s.close()
+    # Dark: the toast's Undo on hover keeps 4.5:1.
+    s = Session(env['chromium'], env['base'], viewport={'width': 1440, 'height': 900}, color_scheme='dark')
+    pg = s.open(plan([season('Saving', 120, amt=500)], [extra('Car', 12, -5000)]))
+    pg.click('#windfall-list [data-action="delete"]')
+    pg.hover('#toast-undo'); pg.wait_for_timeout(300)
+    r = pg.evaluate("""(() => { const rgba = c => { const n = c.match(/[\\d.]+/g).map(Number); return n.length === 3 ? n.concat(1) : n; };
+        const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+        const u = document.getElementById('toast-undo'), t = document.getElementById('toast');
+        const base = rgba(getComputedStyle(t).backgroundColor), over = rgba(getComputedStyle(u).backgroundColor), fg = rgba(getComputedStyle(u).color);
+        const bg = [0, 1, 2].map(i => over[i] * over[3] + base[i] * (1 - over[3]));
+        const x = L(fg), y = L(bg); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); })()""")
+    r < 4.5 and bad.append('dark Undo hover %.2f:1' % r)
+    s.close()
+    # Phone 320: long names end in an ellipsis, and a big amount fits the result bar.
+    s = Session(env['webkit'], env['base'], viewport={'width': 320, 'height': 700}, is_mobile=True, has_touch=True)
+    long = 'Retirement' + 'Supercalifragilistic' * 11
+    pg = s.open(plan([season(long, 480, amt=5000, rate=7), season('Spend', 120, flow='withdraw', unit='dollars', amt=100, slot=2)]))
+    nm = pg.evaluate("""(() => { const e = document.querySelector('[data-role=sum-name]'), cs = getComputedStyle(e);
+        return [e.scrollHeight > e.clientHeight + 1 ? cs.textOverflow + '/' + (cs.webkitLineClamp || cs.lineClamp) : 'fits', e.title]; })()""")
+    (nm[0] not in ('fits',) and 'ellipsis' not in nm[0] and '2' not in nm[0]) and bad.append('long name cut bare: %s' % nm[0])
+    pg.evaluate('window.scrollTo(0, 400)'); pg.wait_for_timeout(200)
+    cut = pg.evaluate("(() => { const v = document.querySelector('.result-bar-value'); return v.offsetParent ? v.scrollWidth - v.clientWidth : -1; })()")
+    cut > 0 and bad.append('result bar cut by %dpx: %r' % (cut, pg.text_content('.result-bar-value')))
     s.close()
     expect(not bad, '; '.join(bad))
 
